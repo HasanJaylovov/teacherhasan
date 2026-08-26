@@ -1,0 +1,843 @@
+
+import { GoogleGenAI } from "https://esm.sh/@google/genai";
+// ==========================================
+// 👨‍🏫 TEACHER HASAN - GEMINI LIVE
+// ==========================================
+
+console.log("📚 Teacher Hasan app.js yuklandi");
+
+let liveSession = null;
+let audioContext = null;
+let mediaStream = null;
+let sourceNode = null;
+let processorNode = null;
+
+let isRunning = false;
+let nextAudioTime = 0;
+
+// ==========================================
+// DOM
+// ==========================================
+
+document.addEventListener("DOMContentLoaded", () => {
+
+    console.log("✅ HTML yuklandi");
+
+    const startBtn = document.getElementById("startBtn");
+    const stopBtn = document.getElementById("stopBtn");
+    const status = document.getElementById("status");
+    const transcript = document.getElementById("transcript");
+
+    if (!startBtn || !stopBtn || !status || !transcript) {
+
+        console.error("❌ HTML elementlari topilmadi!");
+
+        console.log({
+            startBtn,
+            stopBtn,
+            status,
+            transcript
+        });
+
+        return;
+    }
+
+    console.log("✅ Barcha HTML elementlari topildi");
+
+    // ==========================================
+    // STATUS
+    // ==========================================
+
+    function setStatus(text) {
+        status.textContent = text;
+    }
+
+    // ==========================================
+    // TRANSCRIPT
+    // ==========================================
+
+    function addTranscript(text) {
+
+        if (!text) return;
+
+        const oldText = transcript.textContent.trim();
+
+        transcript.textContent =
+            oldText
+                ? oldText + "\n" + text
+                : text;
+
+        transcript.scrollTop =
+            transcript.scrollHeight;
+    }
+
+    // ==========================================
+    // BASE64 -> UINT8ARRAY
+    // ==========================================
+
+    function base64ToBytes(base64) {
+
+        const binary =
+            atob(base64);
+
+        const bytes =
+            new Uint8Array(
+                binary.length
+            );
+
+        for (
+            let i = 0;
+            i < binary.length;
+            i++
+        ) {
+
+            bytes[i] =
+                binary.charCodeAt(i);
+        }
+
+        return bytes;
+    }
+
+    // ==========================================
+    // ARRAYBUFFER -> BASE64
+    // ==========================================
+
+    function arrayBufferToBase64(buffer) {
+
+        const bytes =
+            new Uint8Array(buffer);
+
+        let binary = "";
+
+        const chunkSize = 0x8000;
+
+        for (
+            let i = 0;
+            i < bytes.length;
+            i += chunkSize
+        ) {
+
+            const chunk =
+                bytes.subarray(
+                    i,
+                    Math.min(
+                        i + chunkSize,
+                        bytes.length
+                    )
+                );
+
+            binary +=
+                String.fromCharCode(
+                    ...chunk
+                );
+        }
+
+        return btoa(binary);
+    }
+
+    // ==========================================
+    // FLOAT32 -> PCM16
+    // ==========================================
+
+    function floatTo16BitPCM(float32Array) {
+
+        const buffer =
+            new ArrayBuffer(
+                float32Array.length * 2
+            );
+
+        const view =
+            new DataView(buffer);
+
+        let offset = 0;
+
+        for (
+            let i = 0;
+            i < float32Array.length;
+            i++
+        ) {
+
+            let sample =
+                Math.max(
+                    -1,
+                    Math.min(
+                        1,
+                        float32Array[i]
+                    )
+                );
+
+            view.setInt16(
+                offset,
+                sample < 0
+                    ? sample * 0x8000
+                    : sample * 0x7fff,
+                true
+            );
+
+            offset += 2;
+        }
+
+        return buffer;
+    }
+
+    // ==========================================
+    // PLAY PCM AUDIO
+    // ==========================================
+
+    function playPCM(base64Audio) {
+
+        if (!audioContext) return;
+
+        try {
+
+            const bytes =
+                base64ToBytes(
+                    base64Audio
+                );
+
+            const samples =
+                new Int16Array(
+                    bytes.buffer,
+                    bytes.byteOffset,
+                    Math.floor(
+                        bytes.byteLength / 2
+                    )
+                );
+
+            const audioBuffer =
+                audioContext.createBuffer(
+                    1,
+                    samples.length,
+                    24000
+                );
+
+            const channel =
+                audioBuffer.getChannelData(0);
+
+            for (
+                let i = 0;
+                i < samples.length;
+                i++
+            ) {
+
+                channel[i] =
+                    samples[i] / 32768;
+            }
+
+            const audioSource =
+                audioContext.createBufferSource();
+
+            audioSource.buffer =
+                audioBuffer;
+
+            audioSource.connect(
+                audioContext.destination
+            );
+
+            const startTime =
+                Math.max(
+                    audioContext.currentTime,
+                    nextAudioTime
+                );
+
+            audioSource.start(
+                startTime
+            );
+
+            nextAudioTime =
+                startTime +
+                audioBuffer.duration;
+
+        } catch (error) {
+
+            console.error(
+                "🔊 Audio playback xatosi:",
+                error
+            );
+        }
+    }
+
+    // ==========================================
+    // START TEACHER
+    // ==========================================
+
+    async function startTeacher() {
+
+        if (isRunning) return;
+
+        try {
+
+            console.log(
+                "🎤 START bosildi"
+            );
+
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+
+            setStatus(
+                "🔄 Teacher Hasan ulanmoqda..."
+            );
+
+            // ==================================
+            // AUDIO CONTEXT
+            // ==================================
+
+            audioContext =
+                new AudioContext({
+                    sampleRate: 24000
+                });
+
+            await audioContext.resume();
+
+            nextAudioTime =
+                audioContext.currentTime;
+
+            console.log(
+                "🔊 AudioContext tayyor"
+            );
+
+            // ==================================
+            // GET EPHEMERAL TOKEN
+            // ==================================
+
+            const tokenResponse =
+                await fetch(
+                    "/api/live-token"
+                );
+
+            if (!tokenResponse.ok) {
+
+                const errorData =
+                    await tokenResponse
+                        .json()
+                        .catch(() => ({}));
+
+                throw new Error(
+                    errorData.error ||
+                    "Live token olishda xato."
+                );
+            }
+
+            const tokenData =
+                await tokenResponse.json();
+
+            console.log(
+                "🔑 Ephemeral token olindi"
+            );
+
+            console.log(
+                "🤖 Model:",
+                tokenData.model
+            );
+
+            const token =
+                tokenData.token;
+
+            // ==================================
+            // LOAD GEMINI SDK
+            // ==================================
+
+            
+
+            console.log(
+                "📦 GoogleGenAI mavjud"
+            );
+
+            // ==================================
+            // CREATE AI CLIENT
+            // ==================================
+
+            const client =
+                new GoogleGenAI({
+                    apiKey: token,
+                    httpOptions: {
+                        apiVersion: "v1alpha"
+                    }
+                });
+
+            console.log(
+                "🤖 Gemini client yaratildi"
+            );
+
+            // ==================================
+            // CONNECT LIVE
+            // ==================================
+
+            console.log(
+                "🔗 Gemini Live ulanmoqda..."
+            );
+
+            liveSession =
+                await client.live.connect({
+
+                    model:
+                        tokenData.model,
+
+                    config: {
+
+                        responseModalities: [
+                            "AUDIO"
+                        ],
+
+                        inputAudioTranscription: {},
+
+                        outputAudioTranscription: {},
+
+                        systemInstruction: `
+Siz TEACHER HASANsiz.
+
+O'zbekistondagi o'quvchilarga
+ingliz tilini o'rgatuvchi professional,
+samimiy va sabrli AI English Teacher bo'ling.
+
+Asosan ravon o'zbek tilida gapiring.
+
+Inglizcha misollarni sodda tushuntiring.
+
+O'quvchi inglizcha gapirsa:
+- xatolarini muloyim tuzating;
+- to'g'ri variantni ayting;
+- o'zbek tilida qisqa tushuntiring.
+
+A1-C1 darajaga moslashing.
+
+Speaking mashqlarida inglizcha savollar bering.
+
+Grammar, Vocabulary, Fluency va
+Pronunciation bo'yicha qisqa maslahat bering.
+
+Javoblarni juda uzun qilmang.
+
+Tabiiy suhbat qiling.
+
+O'quvchini doimo rag'batlantiring.
+
+O'zingizni Teacher Hasan deb tanishtiring.
+`,
+
+                        thinkingConfig: {
+                            thinkingLevel: "minimal"
+                        }
+                    },
+
+                    callbacks: {
+
+                        onopen: () => {
+
+                            console.log(
+                                "🟢 Gemini Live Ulandi"
+                            );
+
+                            setStatus(
+                                "🟢 Teacher Hasan tinglamoqda..."
+                            );
+
+                            addTranscript(
+                                "👨‍🏫 Teacher Hasan: Salom! Men Teacher Hasanman. Ingliz tilini birga mashq qilamiz."
+                            );
+                        },
+
+                        onmessage: (
+                            message
+                        ) => {
+
+                            console.log(
+                                "📩 Gemini message:",
+                                message
+                            );
+
+                            // ==================================
+                            // INPUT TRANSCRIPT
+                            // ==================================
+
+                            const inputText =
+                                message
+                                    ?.serverContent
+                                    ?.inputTranscription
+                                    ?.text;
+
+                            if (inputText) {
+
+                                addTranscript(
+                                    "👤 Siz: " +
+                                    inputText
+                                );
+                            }
+
+                            // ==================================
+                            // OUTPUT TRANSCRIPT
+                            // ==================================
+
+                            const outputText =
+                                message
+                                    ?.serverContent
+                                    ?.outputTranscription
+                                    ?.text;
+
+                            if (outputText) {
+
+                                addTranscript(
+                                    "👨‍🏫 Teacher Hasan: " +
+                                    outputText
+                                );
+                            }
+
+                            // ==================================
+                            // AUDIO
+                            // ==================================
+
+                            const parts =
+                                message
+                                    ?.serverContent
+                                    ?.modelTurn
+                                    ?.parts;
+
+                            if (
+                                Array.isArray(parts)
+                            ) {
+
+                                for (
+                                    const part of parts
+                                ) {
+
+                                    const audioData =
+                                        part
+                                            ?.inlineData
+                                            ?.data;
+
+                                    if (
+                                        audioData
+                                    ) {
+
+                                        playPCM(
+                                            audioData
+                                        );
+                                    }
+                                }
+                            }
+
+                            // ==================================
+                            // TURN COMPLETE
+                            // ==================================
+
+                            if (
+                                message
+                                    ?.serverContent
+                                    ?.turnComplete
+                            ) {
+
+                                console.log(
+                                    "✅ Teacher Hasan javobi tugadi"
+                                );
+                            }
+                        },
+
+                        onerror: (
+                            error
+                        ) => {
+
+                            console.error(
+                                "❌ Gemini Live error:",
+                                error
+                            );
+
+                            setStatus(
+                                "❌ Gemini Live xatosi"
+                            );
+                        },
+
+                        onclose: (
+                            event
+                        ) => {
+
+                            console.log(
+                                "🔴 Gemini Live yopildi:",
+                                event
+                            );
+
+                            if (isRunning) {
+
+                                setStatus(
+                                    "🔴 Ulanish yopildi"
+                                );
+                            }
+                        }
+                    }
+                });
+
+            console.log(
+                "✅ Gemini Live session tayyor"
+            );
+
+            // ==================================
+            // MICROPHONE
+            // ==================================
+
+            mediaStream =
+                await navigator
+                    .mediaDevices
+                    .getUserMedia({
+
+                        audio: {
+
+                            channelCount: 1,
+
+                            echoCancellation: true,
+
+                            noiseSuppression: true,
+
+                            autoGainControl: true
+                        }
+                    });
+
+            console.log(
+                "🎤 Mikrofon ruxsati berildi"
+            );
+
+            sourceNode =
+                audioContext
+                    .createMediaStreamSource(
+                        mediaStream
+                    );
+
+            processorNode =
+                audioContext
+                    .createScriptProcessor(
+                        4096,
+                        1,
+                        1
+                    );
+
+            sourceNode.connect(
+                processorNode
+            );
+
+            // Destinationga ulash
+            // mikrofon ovozini qaytarmaslik uchun
+            const silentGain =
+                audioContext.createGain();
+
+            silentGain.gain.value = 0;
+
+            processorNode.connect(
+                silentGain
+            );
+
+            silentGain.connect(
+                audioContext.destination
+            );
+
+            // ==================================
+            // SEND MICROPHONE AUDIO
+            // ==================================
+
+            processorNode.onaudioprocess =
+                (event) => {
+
+                    if (
+                        !isRunning ||
+                        !liveSession
+                    ) {
+                        return;
+                    }
+
+                    try {
+
+                        const input =
+                            event
+                                .inputBuffer
+                                .getChannelData(0);
+
+                        const pcm =
+                            floatTo16BitPCM(
+                                input
+                            );
+
+                        const base64 =
+                            arrayBufferToBase64(
+                                pcm
+                            );
+
+                        liveSession.sendRealtimeInput({
+
+                            audio: {
+                                data: base64,
+                                mimeType:
+                                    "audio/pcm;rate=24000"
+                            }
+
+                        });
+
+                    } catch (error) {
+
+                        console.error(
+                            "🎤 Audio yuborish xatosi:",
+                            error
+                        );
+                    }
+                };
+
+            isRunning = true;
+
+            setStatus(
+                "🟢 Teacher Hasan tinglamoqda..."
+            );
+
+            console.log(
+                "🎉 TEACHER HASAN ISHLADI!"
+            );
+
+        } catch (error) {
+
+            console.error(
+                "❌ START XATOSI:",
+                error
+            );
+
+            setStatus(
+                "❌ " +
+                (
+                    error.message ||
+                    "Noma'lum xato"
+                )
+            );
+
+            stopTeacher();
+        }
+    }
+
+    // ==========================================
+    // STOP TEACHER
+    // ==========================================
+
+    function stopTeacher() {
+
+        console.log(
+            "🔴 Teacher Hasan STOP"
+        );
+
+        isRunning = false;
+
+        // ==================================
+        // PROCESSOR
+        // ==================================
+
+        if (processorNode) {
+
+            processorNode.disconnect();
+
+            processorNode.onaudioprocess =
+                null;
+
+            processorNode = null;
+        }
+
+        // ==================================
+        // MICROPHONE SOURCE
+        // ==================================
+
+        if (sourceNode) {
+
+            sourceNode.disconnect();
+
+            sourceNode = null;
+        }
+
+        // ==================================
+        // MICROPHONE STREAM
+        // ==================================
+
+        if (mediaStream) {
+
+            mediaStream
+                .getTracks()
+                .forEach(
+                    track =>
+                        track.stop()
+                );
+
+            mediaStream = null;
+        }
+
+        // ==================================
+        // GEMINI SESSION
+        // ==================================
+
+        if (liveSession) {
+
+            try {
+
+                liveSession.close();
+
+            } catch (error) {
+
+                console.warn(
+                    "Session yopishda xato:",
+                    error
+                );
+            }
+
+            liveSession = null;
+        }
+
+        // ==================================
+        // AUDIO CONTEXT
+        // ==================================
+
+        if (audioContext) {
+
+            try {
+
+                audioContext.close();
+
+            } catch (error) {
+
+                console.warn(
+                    "AudioContext yopishda xato:",
+                    error
+                );
+            }
+
+            audioContext = null;
+        }
+
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+
+        setStatus(
+            "⚪ Tayyor. Start tugmasini bosing."
+        );
+
+        console.log(
+            "✅ Teacher Hasan to'xtatildi"
+        );
+    }
+
+    // ==========================================
+    // BUTTONS
+    // ==========================================
+
+    startBtn.addEventListener(
+        "click",
+        startTeacher
+    );
+
+    stopBtn.addEventListener(
+        "click",
+        stopTeacher
+    );
+
+    // ==========================================
+    // INITIAL STATE
+    // ==========================================
+
+    stopBtn.disabled = true;
+
+    setStatus(
+        "⚪ Tayyor. Start tugmasini bosing."
+    );
+
+    console.log(
+        "✅ Teacher Hasan tayyor"
+    );
+});
