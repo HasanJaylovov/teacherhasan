@@ -115,7 +115,7 @@ app.get("/api/live-token", async (req, res) => {
 
                     liveConnectConstraints: {
 
-                        model: LIVE_MODEL,
+                        model: `models/${LIVE_MODEL}`,
 
                         config: {
 
