@@ -459,9 +459,44 @@
         }
 
     </style>
+
+<style>
+.account-bar{position:fixed;top:16px;right:16px;z-index:1000;display:flex;gap:8px;align-items:center}
+.account-bar a,.account-bar button{border:1px solid rgba(255,255,255,.15);background:rgba(10,14,28,.82);color:#fff;padding:9px 13px;border-radius:12px;text-decoration:none;cursor:pointer;backdrop-filter:blur(12px)}
+.account-pill{color:#cbd2e6;font-size:13px;padding:9px 10px}
+</style>
 </head>
 
 <body>
+
+<div id="accountBar" class="account-bar">
+  <span id="accountInfo" class="account-pill">Tekshirilmoqda...</span>
+  <a id="loginLink" href="/login.html">Kirish</a>
+  <a id="registerLink" href="/register.html">Ro‘yxatdan o‘tish</a>
+  <a id="profileLink" href="/profile.html" style="display:none">Profil</a>
+  <button id="logoutBtn" style="display:none">Chiqish</button>
+</div>
+<script>
+(async function(){
+  try{
+    const r=await fetch("/api/me",{credentials:"include"});
+    const d=await r.json();
+    const info=document.getElementById("accountInfo");
+    if(d.authenticated){
+      document.getElementById("loginLink").style.display="none";
+      document.getElementById("registerLink").style.display="none";
+      document.getElementById("profileLink").style.display="";
+      document.getElementById("logoutBtn").style.display="";
+      const a=d.access;
+      info.textContent=d.user.fullName+" • "+(a.mode==="trial"?"🎁 Trial":"⭐ Premium");
+      document.getElementById("logoutBtn").onclick=async()=>{await fetch("/api/auth/logout",{method:"POST",credentials:"include"});location.reload()};
+    }else{
+      info.textContent="Mehmon";
+    }
+  }catch(e){document.getElementById("accountInfo").textContent="Mehmon";}
+})();
+</script>
+
 
 <div class="app">
 
