@@ -1695,6 +1695,7 @@ app.post(
                 ? months
                 : 1;
 
+<<<<<<< HEAD
         const amount =
             safeMonths === 1
                 ? PLAN_1_MONTH
@@ -1702,6 +1703,8 @@ app.post(
                     ? PLAN_2_MONTHS
                     : PLAN_3_MONTHS;
 
+=======
+>>>>>>> fb2133d (Fix profile and add admin premium)
         const plan =
             `${safeMonths} oy`;
 
@@ -1743,6 +1746,11 @@ app.post(
         user.blocked =
             false;
 
+<<<<<<< HEAD
+=======
+        // This is an administrator-granted benefit, not a customer payment.
+        // Keep an audit record with amount 0 so it never inflates revenue.
+>>>>>>> fb2133d (Fix profile and add admin premium)
         db.payments.push({
 
             id:
@@ -1756,6 +1764,7 @@ app.post(
 
             plan,
 
+<<<<<<< HEAD
             amount,
 
             paymentMethod:
@@ -1763,6 +1772,17 @@ app.post(
 
             status:
                 "success",
+=======
+            months: safeMonths,
+
+            amount: 0,
+
+            paymentMethod:
+                "admin_grant",
+
+            status:
+                "admin_grant",
+>>>>>>> fb2133d (Fix profile and add admin premium)
 
             createdAt:
                 now.toISOString()
