@@ -479,7 +479,8 @@
 <script>
 (async function(){
   try{
-    const r=await fetch("/api/me",{credentials:"include"});
+    const token=localStorage.getItem("th_auth_token")||"";
+    const r=await fetch("/api/me",{credentials:"same-origin",headers:token?{Authorization:"Bearer "+token}:{}});
     const d=await r.json();
     const info=document.getElementById("accountInfo");
     if(d.authenticated){
@@ -489,7 +490,7 @@
       document.getElementById("logoutBtn").style.display="";
       const a=d.access;
       info.textContent=d.user.fullName+" • "+(a.mode==="trial"?"🎁 Trial":"⭐ Premium");
-      document.getElementById("logoutBtn").onclick=async()=>{await fetch("/api/auth/logout",{method:"POST",credentials:"include"});location.reload()};
+      document.getElementById("logoutBtn").onclick=async()=>{const token=localStorage.getItem("th_auth_token")||"";await fetch("/api/auth/logout",{method:"POST",credentials:"same-origin",headers:token?{Authorization:"Bearer "+token}:{}});localStorage.removeItem("th_auth_token");location.reload()};
     }else{
       info.textContent="Mehmon";
     }
