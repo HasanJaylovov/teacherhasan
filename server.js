@@ -51,7 +51,10 @@ const PLAN_3_MONTHS =
 // ==============================================
 const ai = GEMINI_API_KEY
     ? new GoogleGenAI({
-        apiKey: GEMINI_API_KEY
+        apiKey: GEMINI_API_KEY,
+        httpOptions: {
+            apiVersion: "v1alpha"
+        }
     })
     : null;
 

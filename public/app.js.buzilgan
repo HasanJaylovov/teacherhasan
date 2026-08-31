@@ -348,9 +348,12 @@ document.addEventListener("DOMContentLoaded", () => {
             // ==================================
 
             const client =
-    new GoogleGenAI({
-        apiKey: token
-    });
+                new GoogleGenAI({
+                    apiKey: token,
+                    httpOptions: {
+                        apiVersion: "v1alpha"
+                    }
+                });
 
             console.log(
                 "🤖 Gemini client yaratildi"
@@ -412,10 +415,7 @@ O'quvchini doimo rag'batlantiring.
 O'zingizni Teacher Hasan deb tanishtiring.
 `,
 
-                        thinkingConfig: {
-                            thinkingLevel: "minimal"
-                        }
-                    },
+                        
 
                     callbacks: {
 
@@ -523,48 +523,10 @@ O'zingizni Teacher Hasan deb tanishtiring.
                                     ?.turnComplete
                             ) {
 
-                                console.log(
-                                    "✅ Teacher Hasan javobi tugadi"
-                                );
-                            }
-                        },
+                               console.log(
+    "🔗 Gemini Live ulanmoqda..."
+);
 
-                        onerror: (
-                            error
-                        ) => {
-
-                            console.error(
-                                "❌ Gemini Live error:",
-                                error
-                            );
-
-                            setStatus(
-                                "❌ Gemini Live xatosi"
-                            );
-                        },
-
-                        onclose: (
-                            event
-                        ) => {
-
-                            console.log(
-                                "🔴 Gemini Live yopildi:",
-                                event
-                            );
-
-                            if (isRunning) {
-
-                                setStatus(
-                                    "🔴 Ulanish yopildi"
-                                );
-                            }
-                        }
-                    }
-                });
-
-            console.log(
-                "✅ Gemini Live session tayyor"
-            );
 
             // ==================================
             // MICROPHONE

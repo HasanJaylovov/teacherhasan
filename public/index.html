@@ -2,20 +2,31 @@
 <html lang="uz">
 <head>
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>Teacher Hasan — AI English Teacher</title>
 
     <style>
-
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
+        }
+
+        :root {
+            --bg: #070a14;
+            --panel: rgba(13, 18, 38, .88);
+            --border: rgba(255,255,255,.10);
+            --text: #ffffff;
+            --muted: #aeb7d0;
+            --primary: #667eea;
+            --secondary: #764ba2;
+        }
+
+        html,
+        body {
+            width: 100%;
+            min-height: 100%;
         }
 
         body {
@@ -27,229 +38,469 @@
 
             min-height: 100vh;
 
+            color: var(--text);
+
             background:
                 radial-gradient(
-                    circle at top left,
-                    #243b80,
-                    transparent 35%
+                    circle at 10% 10%,
+                    rgba(36,59,128,.65),
+                    transparent 32%
                 ),
                 radial-gradient(
-                    circle at bottom right,
-                    #5d2f8e,
-                    transparent 35%
+                    circle at 90% 90%,
+                    rgba(93,47,142,.55),
+                    transparent 32%
                 ),
-                #080b16;
+                #070a14;
+
+            overflow-x: hidden;
+        }
+
+        /* ================================
+           MENU BUTTON
+        ================================= */
+
+        .menu-button {
+            position: fixed;
+
+            top: 22px;
+            left: 22px;
+
+            z-index: 2000;
+
+            width: 52px;
+            height: 52px;
+
+            border: 1px solid rgba(255,255,255,.13);
+            border-radius: 16px;
+
+            background: rgba(12,16,32,.75);
+
+            backdrop-filter: blur(18px);
 
             color: white;
 
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            font-size: 24px;
 
-            padding: 25px;
+            cursor: pointer;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            box-shadow:
+                0 10px 30px rgba(0,0,0,.25);
+
+            transition:
+                transform .2s ease,
+                background .2s ease;
         }
 
-        .app {
+        .menu-button:hover {
+            transform: translateY(-2px);
+            background: rgba(102,126,234,.25);
+        }
+
+        /* ================================
+           OVERLAY
+        ================================= */
+
+        .menu-overlay {
+            position: fixed;
+
+            inset: 0;
+
+            z-index: 1500;
+
+            background: rgba(0,0,0,.55);
+
+            opacity: 0;
+
+            visibility: hidden;
+
+            transition:
+                opacity .3s ease,
+                visibility .3s ease;
+
+            backdrop-filter: blur(3px);
+        }
+
+        .menu-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* ================================
+           SLIDE MENU
+        ================================= */
+
+        .side-menu {
+            position: fixed;
+
+            top: 0;
+            left: 0;
+
+            z-index: 1800;
+
+            width: 330px;
+            max-width: 88vw;
+
+            height: 100vh;
+
+            padding: 25px 18px;
+
+            background:
+                linear-gradient(
+                    180deg,
+                    rgba(13,18,38,.98),
+                    rgba(8,11,22,.98)
+                );
+
+            border-right:
+                1px solid rgba(255,255,255,.10);
+
+            box-shadow:
+                25px 0 70px rgba(0,0,0,.45);
+
+            transform: translateX(-105%);
+
+            transition:
+                transform .35s cubic-bezier(.22,1,.36,1);
+
+            display: flex;
+            flex-direction: column;
+
+            overflow-y: auto;
+        }
+
+        .side-menu.active {
+            transform: translateX(0);
+        }
+
+        /* ================================
+           MENU HEADER
+        ================================= */
+
+        .menu-header {
+            display: flex;
+
+            align-items: center;
+
+            justify-content: space-between;
+
+            padding: 5px 7px 25px;
+
+            border-bottom:
+                1px solid rgba(255,255,255,.08);
+        }
+
+        .menu-brand {
+            display: flex;
+
+            align-items: center;
+
+            gap: 11px;
+        }
+
+        .menu-brand-icon {
+            width: 44px;
+            height: 44px;
+
+            border-radius: 13px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            font-size: 23px;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    var(--primary),
+                    var(--secondary)
+                );
+        }
+
+        .menu-brand-text strong {
+            display: block;
+            font-size: 16px;
+        }
+
+        .menu-brand-text span {
+            display: block;
+
+            margin-top: 3px;
+
+            font-size: 11px;
+
+            color: #8993ad;
+        }
+
+        .close-menu {
+            width: 40px;
+            height: 40px;
+
+            border: 1px solid rgba(255,255,255,.08);
+
+            border-radius: 12px;
+
+            background: rgba(255,255,255,.05);
+
+            color: white;
+
+            font-size: 20px;
+
+            cursor: pointer;
+        }
+
+        /* ================================
+           MENU ITEMS
+        ================================= */
+
+        .menu-section {
+            margin-top: 24px;
+        }
+
+        .menu-section-title {
+            padding: 0 12px 9px;
+
+            color: #68718a;
+
+            font-size: 11px;
+
+            text-transform: uppercase;
+
+            letter-spacing: 1.3px;
+        }
+
+        .menu-item {
             width: 100%;
-            max-width: 1100px;
 
-            min-height: 720px;
+            min-height: 55px;
 
+            display: flex;
+
+            align-items: center;
+
+            gap: 14px;
+
+            padding: 12px 13px;
+
+            margin-bottom: 7px;
+
+            border: 1px solid transparent;
+
+            border-radius: 15px;
+
+            background: transparent;
+
+            color: #d9deeb;
+
+            text-decoration: none;
+
+            cursor: pointer;
+
+            transition:
+                background .2s ease,
+                border .2s ease,
+                transform .2s ease;
+        }
+
+        .menu-item:hover {
+            transform: translateX(4px);
+
+            background:
+                rgba(102,126,234,.13);
+
+            border-color:
+                rgba(102,126,234,.20);
+        }
+
+        .menu-icon {
+            width: 38px;
+            height: 38px;
+
+            flex: 0 0 38px;
+
+            display: flex;
+
+            align-items: center;
+            justify-content: center;
+
+            border-radius: 11px;
+
+            background:
+                rgba(255,255,255,.06);
+
+            font-size: 19px;
+        }
+
+        .menu-item-content {
+            flex: 1;
+        }
+
+        .menu-item-title {
+            display: block;
+
+            font-size: 14px;
+
+            font-weight: 700;
+        }
+
+        .menu-item-description {
+            display: block;
+
+            margin-top: 3px;
+
+            color: #78829c;
+
+            font-size: 11px;
+        }
+
+        .menu-arrow {
+            color: #626c87;
+
+            font-size: 17px;
+        }
+
+        .menu-divider {
+            height: 1px;
+
+            margin: 18px 10px;
+
+            background:
+                rgba(255,255,255,.07);
+        }
+
+        /* ================================
+           ACCOUNT
+        ================================= */
+
+        .menu-account {
+            margin-top: auto;
+
+            padding-top: 18px;
+        }
+
+        .account-status {
+            margin-bottom: 9px;
+
+            padding: 12px;
+
+            border-radius: 13px;
+
+            background:
+                rgba(255,255,255,.04);
+
+            color: #aeb7d0;
+
+            font-size: 12px;
+        }
+
+        .account-actions {
             display: grid;
-            grid-template-columns:
-                380px 1fr;
 
-            overflow: hidden;
+            grid-template-columns: 1fr 1fr;
+
+            gap: 7px;
+        }
+
+        .account-actions a,
+        .account-actions button {
+            min-height: 42px;
 
             border:
-                1px solid
-                rgba(255,255,255,.12);
+                1px solid rgba(255,255,255,.09);
+
+            border-radius: 11px;
+
+            background:
+                rgba(255,255,255,.04);
+
+            color: white;
+
+            text-decoration: none;
+
+            cursor: pointer;
+
+            font-size: 12px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .account-actions a:hover,
+        .account-actions button:hover {
+            background:
+                rgba(102,126,234,.15);
+        }
+
+        /* ================================
+           MAIN APP
+        ================================= */
+
+        .app {
+            width: min(1100px, calc(100% - 40px));
+
+            min-height: calc(100vh - 40px);
+
+            margin: 20px auto;
+
+            border:
+                1px solid rgba(255,255,255,.10);
 
             border-radius: 30px;
 
             background:
-                rgba(12,16,32,.82);
+                rgba(12,16,32,.80);
 
             backdrop-filter:
                 blur(25px);
 
             box-shadow:
-                0 30px 80px
-                rgba(0,0,0,.45);
-        }
+                0 30px 80px rgba(0,0,0,.45);
 
-        /* ==================================
-           LEFT
-        ================================== */
-
-        .sidebar {
-            padding: 35px;
-
-            border-right:
-                1px solid
-                rgba(255,255,255,.08);
+            overflow: hidden;
 
             display: flex;
             flex-direction: column;
-
-            justify-content: space-between;
         }
 
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-
-            font-size: 22px;
-            font-weight: 800;
-        }
-
-        .brand-icon {
-            width: 45px;
-            height: 45px;
-
-            display: flex;
-            align-items: center;
-            justify-content: center;
-
-            border-radius: 14px;
-
-            background:
-                linear-gradient(
-                    135deg,
-                    #667eea,
-                    #764ba2
-                );
-
-            font-size: 24px;
-        }
-
-        .teacher {
-            text-align: center;
-            margin-top: 35px;
-        }
-
-        .avatar {
-            width: 170px;
-            height: 170px;
-
-            margin: auto;
-
-            border-radius: 50%;
-
-            display: flex;
-            align-items: center;
-            justify-content: center;
-
-            font-size: 85px;
-
-            background:
-                linear-gradient(
-                    135deg,
-                    #667eea,
-                    #764ba2
-                );
-
-            box-shadow:
-                0 20px 50px
-                rgba(102,126,234,.35);
-
-            border:
-                5px solid
-                rgba(255,255,255,.15);
-        }
-
-        .teacher h1 {
-            margin-top: 20px;
-
-            font-size: 30px;
-        }
-
-        .teacher p {
-            margin-top: 8px;
-
-            color: #aeb7d0;
-
-            line-height: 1.5;
-        }
-
-        .status {
-            margin-top: 25px;
-
-            padding: 13px 18px;
-
-            border-radius: 14px;
-
-            background:
-                rgba(255,255,255,.06);
-
-            color: #c7cde0;
-
-            font-size: 14px;
-        }
-
-        .status-dot {
-            display: inline-block;
-
-            width: 9px;
-            height: 9px;
-
-            margin-right: 7px;
-
-            border-radius: 50%;
-
-            background: #999;
-        }
-
-        .features {
-            margin-top: 25px;
-
-            display: grid;
-            gap: 10px;
-        }
-
-        .feature {
-            padding: 12px;
-
-            border-radius: 12px;
-
-            background:
-                rgba(255,255,255,.04);
-
-            color: #bfc7db;
-
-            font-size: 14px;
-        }
-
-        /* ==================================
-           RIGHT
-        ================================== */
-
-        .main {
-            display: flex;
-            flex-direction: column;
-
-            min-width: 0;
-        }
+        /* ================================
+           TOP BAR
+        ================================= */
 
         .topbar {
-            padding: 25px 30px;
+            min-height: 82px;
+
+            padding: 18px 30px 18px 92px;
 
             border-bottom:
-                1px solid
-                rgba(255,255,255,.08);
+                1px solid rgba(255,255,255,.08);
 
             display: flex;
 
-            justify-content:
-                space-between;
-
             align-items: center;
+
+            justify-content: space-between;
+
+            gap: 20px;
         }
 
         .topbar-title {
             font-size: 18px;
-            font-weight: 700;
+
+            font-weight: 800;
+        }
+
+        .topbar-subtitle {
+            margin-top: 4px;
+
+            color: #78829c;
+
+            font-size: 12px;
         }
 
         .mode {
@@ -258,26 +509,125 @@
             border-radius: 20px;
 
             background:
-                rgba(102,126,234,.15);
+                rgba(102,126,234,.14);
 
             color: #aebcff;
 
-            font-size: 13px;
+            font-size: 12px;
+
+            white-space: nowrap;
         }
 
-        /* ==================================
-           TRANSCRIPT
-        ================================== */
+        /* ================================
+           MAIN
+        ================================= */
+
+        .main {
+            flex: 1;
+
+            min-width: 0;
+
+            display: flex;
+            flex-direction: column;
+        }
 
         .conversation {
             flex: 1;
 
-            padding: 30px;
+            padding: 45px;
 
             overflow-y: auto;
         }
 
+        /* ================================
+           TEACHER HERO
+        ================================= */
+
+        .teacher-hero {
+            text-align: center;
+
+            max-width: 700px;
+
+            margin: 15px auto 35px;
+        }
+
+        .avatar {
+            width: 150px;
+            height: 150px;
+
+            margin: 0 auto 25px;
+
+            border-radius: 50%;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            font-size: 75px;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #667eea,
+                    #764ba2
+                );
+
+            border:
+                5px solid rgba(255,255,255,.13);
+
+            box-shadow:
+                0 20px 55px rgba(102,126,234,.30);
+        }
+
+        .teacher-hero h1 {
+            font-size: 38px;
+
+            line-height: 1.1;
+        }
+
+        .teacher-hero .subtitle {
+            margin-top: 10px;
+
+            color: #aeb7d0;
+
+            font-size: 15px;
+
+            line-height: 1.6;
+        }
+
+        .ai-badge {
+            display: inline-flex;
+
+            align-items: center;
+
+            gap: 7px;
+
+            margin-top: 18px;
+
+            padding: 8px 14px;
+
+            border-radius: 30px;
+
+            background:
+                rgba(102,126,234,.12);
+
+            border:
+                1px solid rgba(102,126,234,.20);
+
+            color: #b6c1ff;
+
+            font-size: 12px;
+        }
+
+        /* ================================
+           WELCOME
+        ================================= */
+
         .welcome {
+            max-width: 720px;
+
+            margin: 0 auto;
+
             padding: 25px;
 
             border-radius: 20px;
@@ -285,51 +635,97 @@
             background:
                 linear-gradient(
                     135deg,
-                    rgba(102,126,234,.15),
-                    rgba(118,75,162,.12)
+                    rgba(102,126,234,.13),
+                    rgba(118,75,162,.10)
                 );
 
             border:
-                1px solid
-                rgba(255,255,255,.08);
+                1px solid rgba(255,255,255,.08);
         }
 
         .welcome h2 {
-            font-size: 24px;
-            margin-bottom: 10px;
+            font-size: 22px;
+
+            margin-bottom: 9px;
         }
 
         .welcome p {
             color: #aeb7d0;
-            line-height: 1.6;
+
+            line-height: 1.65;
+
+            font-size: 14px;
         }
 
         #transcript {
-            margin-top: 20px;
+            max-width: 720px;
+
+            margin: 20px auto 0;
+
+            min-height: 100px;
+
+            max-height: 270px;
+
+            overflow-y: auto;
 
             white-space: pre-wrap;
 
             line-height: 1.7;
 
             color: #dce2f2;
-
-            min-height: 200px;
-
-            max-height: 360px;
-
-            overflow-y: auto;
         }
 
-        /* ==================================
+        /* ================================
+           STATUS
+        ================================= */
+
+        .status-container {
+            max-width: 720px;
+
+            margin: 20px auto 0;
+
+            text-align: center;
+        }
+
+        .status {
+            display: inline-flex;
+
+            align-items: center;
+
+            padding: 11px 17px;
+
+            border-radius: 30px;
+
+            background:
+                rgba(255,255,255,.05);
+
+            color: #aeb7d0;
+
+            font-size: 13px;
+        }
+
+        .status-dot {
+            display: inline-block;
+
+            width: 8px;
+            height: 8px;
+
+            margin-right: 8px;
+
+            border-radius: 50%;
+
+            background: #999;
+        }
+
+        /* ================================
            CONTROLS
-        ================================== */
+        ================================= */
 
         .controls {
-            padding: 25px 30px;
+            padding: 22px 30px;
 
             border-top:
-                1px solid
-                rgba(255,255,255,.08);
+                1px solid rgba(255,255,255,.08);
 
             display: flex;
 
@@ -337,34 +733,40 @@
 
             justify-content: center;
 
-            gap: 15px;
+            gap: 12px;
         }
 
         button {
+            font-family: inherit;
+        }
+
+        .control-button {
             border: none;
 
             cursor: pointer;
 
-            font-size: 16px;
+            font-size: 15px;
 
             font-weight: 700;
 
-            border-radius: 16px;
+            border-radius: 15px;
 
-            padding: 15px 28px;
+            padding: 14px 27px;
 
             transition:
                 transform .2s,
                 opacity .2s;
         }
 
-        button:hover {
+        .control-button:hover {
             transform: translateY(-2px);
         }
 
-        button:disabled {
+        .control-button:disabled {
             cursor: not-allowed;
+
             opacity: .4;
+
             transform: none;
         }
 
@@ -379,67 +781,70 @@
                 );
 
             box-shadow:
-                0 10px 30px
-                rgba(102,126,234,.3);
+                0 10px 30px rgba(102,126,234,.28);
         }
 
         #stopBtn {
             color: white;
 
             background:
-                rgba(255,70,70,.18);
+                rgba(255,70,70,.16);
 
             border:
-                1px solid
-                rgba(255,70,70,.25);
+                1px solid rgba(255,70,70,.25);
         }
 
-        .mic-icon {
-            margin-right: 7px;
-        }
-
-        /* ==================================
+        /* ================================
            FOOTER
-        ================================== */
+        ================================= */
 
         .footer {
-            padding: 15px 30px;
+            padding: 13px 30px;
 
             text-align: center;
 
             color: #68718a;
 
-            font-size: 12px;
+            font-size: 11px;
         }
 
-        /* ==================================
-           RESPONSIVE
-        ================================== */
+        /* ================================
+           MOBILE
+        ================================= */
 
-        @media (max-width: 850px) {
+        @media (max-width: 700px) {
 
-            body {
-                padding: 10px;
+            .menu-button {
+                top: 14px;
+                left: 14px;
+
+                width: 48px;
+                height: 48px;
             }
 
             .app {
-                grid-template-columns: 1fr;
+                width: calc(100% - 20px);
 
-                min-height: 95vh;
+                min-height: calc(100vh - 20px);
+
+                margin: 10px auto;
+
+                border-radius: 23px;
             }
 
-            .sidebar {
-                border-right: none;
+            .topbar {
+                padding:
+                    76px 18px 18px;
 
-                border-bottom:
-                    1px solid
-                    rgba(255,255,255,.08);
+                align-items: flex-start;
 
-                padding: 25px;
+                flex-direction: column;
+
+                gap: 10px;
             }
 
-            .teacher {
-                margin-top: 20px;
+            .conversation {
+                padding: 25px 15px;
             }
 
             .avatar {
@@ -449,124 +854,397 @@
                 font-size: 55px;
             }
 
-            .teacher h1 {
-                font-size: 24px;
+            .teacher-hero h1 {
+                font-size: 30px;
             }
 
-            .features {
-                display: none;
+            .teacher-hero .subtitle {
+                font-size: 13px;
+            }
+
+            .welcome {
+                padding: 20px;
+            }
+
+            .controls {
+                padding: 18px;
+
+                flex-direction: column;
+            }
+
+            .control-button {
+                width: 100%;
+            }
+
+            .footer {
+                padding: 12px 15px;
             }
         }
 
-    </style>
+        @media (max-width: 400px) {
 
-<style>
-.account-bar{position:fixed;top:16px;right:16px;z-index:1000;display:flex;gap:8px;align-items:center}
-.account-bar a,.account-bar button{border:1px solid rgba(255,255,255,.15);background:rgba(10,14,28,.82);color:#fff;padding:9px 13px;border-radius:12px;text-decoration:none;cursor:pointer;backdrop-filter:blur(12px)}
-.account-pill{color:#cbd2e6;font-size:13px;padding:9px 10px}
-</style>
+            .side-menu {
+                width: 100%;
+                max-width: 100%;
+            }
+
+            .teacher-hero h1 {
+                font-size: 27px;
+            }
+
+            .mode {
+                font-size: 11px;
+            }
+        }
+    </style>
 </head>
 
 <body>
 
-<div id="accountBar" class="account-bar">
-  <span id="accountInfo" class="account-pill">Tekshirilmoqda...</span>
-  <a id="loginLink" href="/login.html">Kirish</a>
-  <a id="registerLink" href="/register.html">Ro‘yxatdan o‘tish</a>
-  <a id="profileLink" href="/profile.html" style="display:none">Profil</a>
-  <button id="logoutBtn" style="display:none">Chiqish</button>
-</div>
-<script>
-(async function(){
-  try{
-    const token=localStorage.getItem("th_auth_token")||"";
-    const r=await fetch("/api/me",{credentials:"same-origin",headers:token?{Authorization:"Bearer "+token}:{}});
-    const d=await r.json();
-    const info=document.getElementById("accountInfo");
-    if(d.authenticated){
-      document.getElementById("loginLink").style.display="none";
-      document.getElementById("registerLink").style.display="none";
-      document.getElementById("profileLink").style.display="";
-      document.getElementById("logoutBtn").style.display="";
-      const a=d.access;
-      info.textContent=d.user.fullName+" • "+(a.mode==="trial"?"🎁 Trial":"⭐ Premium");
-      document.getElementById("logoutBtn").onclick=async()=>{const token=localStorage.getItem("th_auth_token")||"";await fetch("/api/auth/logout",{method:"POST",credentials:"same-origin",headers:token?{Authorization:"Bearer "+token}:{}});localStorage.removeItem("th_auth_token");location.reload()};
-    }else{
-      info.textContent="Mehmon";
-    }
-  }catch(e){document.getElementById("accountInfo").textContent="Mehmon";}
-})();
-</script>
+    <!-- =====================================
+         MENU BUTTON
+    ====================================== -->
+
+    <button
+        id="menuButton"
+        class="menu-button"
+        type="button"
+        aria-label="Menu"
+        aria-expanded="false"
+    >
+        ☰
+    </button>
 
 
-<div class="app">
+    <!-- =====================================
+         OVERLAY
+    ====================================== -->
 
-    <!-- ==================================
-         SIDEBAR
-    ================================== -->
+    <div
+        id="menuOverlay"
+        class="menu-overlay"
+    ></div>
 
-    <aside class="sidebar">
 
-        <div>
+    <!-- =====================================
+         SLIDE MENU
+    ====================================== -->
 
-            <div class="brand">
+    <aside
+        id="sideMenu"
+        class="side-menu"
+        aria-hidden="true"
+    >
 
-                <div class="brand-icon">
+        <div class="menu-header">
+
+            <div class="menu-brand">
+
+                <div class="menu-brand-icon">
                     👨‍🏫
                 </div>
 
-                <span>
-                    Teacher Hasan
-                </span>
+                <div class="menu-brand-text">
 
-            </div>
+                    <strong>
+                        Teacher Hasan
+                    </strong>
 
-            <div class="teacher">
-
-                <div class="avatar">
-                    👨‍🏫
-                </div>
-
-                <h1>
-                    Teacher Hasan
-                </h1>
-
-                <p>
-                    🇺🇿 O‘zbek tilida AI English Teacher
-                </p>
-
-                <div class="status">
-
-                    <span
-                        id="statusDot"
-                        class="status-dot"
-                    ></span>
-
-                    <span id="status">
-                        Tayyor. Start tugmasini bosing.
+                    <span>
+                        AI English Platform
                     </span>
 
                 </div>
 
-                <div class="features">
+            </div>
 
-                    <div class="feature">
-                        🎤 Real-time Speaking
-                    </div>
+            <button
+                id="closeMenu"
+                class="close-menu"
+                type="button"
+                aria-label="Menyuni yopish"
+            >
+                ✕
+            </button>
 
-                    <div class="feature">
-                        🔊 Natural AI Voice
-                    </div>
+        </div>
 
-                    <div class="feature">
-                        🇬🇧 English Practice
-                    </div>
 
-                    <div class="feature">
-                        📊 CEFR Assessment
-                    </div>
+        <div class="menu-section">
+
+            <div class="menu-section-title">
+                Asosiy
+            </div>
+
+
+            <a
+                class="menu-item"
+                href="/"
+            >
+
+                <div class="menu-icon">
+                    🏠
+                </div>
+
+                <div class="menu-item-content">
+
+                    <span class="menu-item-title">
+                        Home
+                    </span>
+
+                    <span class="menu-item-description">
+                        Teacher Hasan AI
+                    </span>
 
                 </div>
+
+                <span class="menu-arrow">
+                    ›
+                </span>
+
+            </a>
+
+
+            <a
+                class="menu-item"
+                href="/speaking-exam.html"
+            >
+
+                <div class="menu-icon">
+                    🎤
+                </div>
+
+                <div class="menu-item-content">
+
+                    <span class="menu-item-title">
+                        Speaking Exam
+                    </span>
+
+                    <span class="menu-item-description">
+                        CEFR Speaking imtihoni
+                    </span>
+
+                </div>
+
+                <span class="menu-arrow">
+                    ›
+                </span>
+
+            </a>
+
+
+            <a
+                class="menu-item"
+                href="/video-lessons.html"
+            >
+
+                <div class="menu-icon">
+                    🔊
+                </div>
+
+                <div class="menu-item-content">
+
+                    <span class="menu-item-title">
+                        Video Lessons
+                    </span>
+
+                    <span class="menu-item-description">
+                        CEFR skill videolari
+                    </span>
+
+                </div>
+
+                <span class="menu-arrow">
+                    ›
+                </span>
+
+            </a>
+
+
+            <a
+                class="menu-item"
+                href="/english-practice.html"
+            >
+
+                <div class="menu-icon">
+                    🇬🇧
+                </div>
+
+                <div class="menu-item-content">
+
+                    <span class="menu-item-title">
+                        English Practice
+                    </span>
+
+                    <span class="menu-item-description">
+                        Vocabulary va testlar
+                    </span>
+
+                </div>
+
+                <span class="menu-arrow">
+                    ›
+                </span>
+
+            </a>
+
+
+            <a
+                class="menu-item"
+                href="/cefr-assessment.html"
+            >
+
+                <div class="menu-icon">
+                    📊
+                </div>
+
+                <div class="menu-item-content">
+
+                    <span class="menu-item-title">
+                        CEFR Assessment
+                    </span>
+
+                    <span class="menu-item-description">
+                        Reading • Listening • Writing
+                    </span>
+
+                </div>
+
+                <span class="menu-arrow">
+                    ›
+                </span>
+
+            </a>
+
+        </div>
+
+
+        <div class="menu-divider"></div>
+
+
+        <div class="menu-section">
+
+            <div class="menu-section-title">
+                Hisob
+            </div>
+
+
+            <a
+                id="menuProfile"
+                class="menu-item"
+                href="/profile.html"
+            >
+
+                <div class="menu-icon">
+                    👤
+                </div>
+
+                <div class="menu-item-content">
+
+                    <span class="menu-item-title">
+                        Profile
+                    </span>
+
+                    <span class="menu-item-description">
+                        Shaxsiy profilingiz
+                    </span>
+
+                </div>
+
+                <span class="menu-arrow">
+                    ›
+                </span>
+
+            </a>
+
+
+            <a
+                class="menu-item"
+                href="/login.html"
+                id="menuLogin"
+            >
+
+                <div class="menu-icon">
+                    🔐
+                </div>
+
+                <div class="menu-item-content">
+
+                    <span class="menu-item-title">
+                        Kirish
+                    </span>
+
+                    <span class="menu-item-description">
+                        Hisobga kirish
+                    </span>
+
+                </div>
+
+                <span class="menu-arrow">
+                    ›
+                </span>
+
+            </a>
+
+
+            <a
+                class="menu-item"
+                href="/register.html"
+                id="menuRegister"
+            >
+
+                <div class="menu-icon">
+                    📝
+                </div>
+
+                <div class="menu-item-content">
+
+                    <span class="menu-item-title">
+                        Ro‘yxatdan o‘tish
+                    </span>
+
+                    <span class="menu-item-description">
+                        Yangi hisob yaratish
+                    </span>
+
+                </div>
+
+                <span class="menu-arrow">
+                    ›
+                </span>
+
+            </a>
+
+        </div>
+
+
+        <div class="menu-account">
+
+            <div
+                id="accountInfo"
+                class="account-status"
+            >
+                👤 Mehmon
+            </div>
+
+
+            <div class="account-actions">
+
+                <a
+                    href="/profile.html"
+                    id="profileAction"
+                    style="display:none"
+                >
+                    👤 Profil
+                </a>
+
+                <button
+                    id="logoutBtn"
+                    type="button"
+                    style="display:none"
+                >
+                    🚪 Chiqish
+                </button>
 
             </div>
 
@@ -574,90 +1252,464 @@
 
     </aside>
 
-    <!-- ==================================
-         MAIN
-    ================================== -->
 
-    <main class="main">
+    <!-- =====================================
+         MAIN APP
+    ====================================== -->
 
-        <div class="topbar">
+    <div class="app">
 
-            <div class="topbar-title">
-                🎓 English Speaking Practice
-            </div>
+        <main class="main">
 
-            <div class="mode">
-                Teacher Hasan Live AI
-            </div>
 
-        </div>
+            <!-- TOPBAR -->
 
-        <section
-            id="conversation"
-            class="conversation"
-        >
+            <header class="topbar">
 
-            <div class="welcome">
+                <div>
 
-                <h2>
-                    Assalomu alaykum! 👋
-                </h2>
+                    <div class="topbar-title">
+                        👨‍🏫 Teacher Hasan AI
+                    </div>
 
-                <p>
-                    Men Teacher Hasanman.
-                    Ingliz tilini birga o‘rganamiz.
-                    Speaking mashq qilish uchun
-                    <b>Start</b> tugmasini bosing
-                    va gapirishni boshlang.
-                </p>
+                    <div class="topbar-subtitle">
+                        Sizning shaxsiy AI English Teacher'ingiz
+                    </div>
 
-            </div>
+                </div>
 
-            <div id="transcript">
-                👨‍🏫 Teacher Hasan:
-                Salom! Men Teacher Hasanman.
-                Ingliz tilini birga mashq qilamiz.
-            </div>
+                <div class="mode">
+                    ✨ Gemini Live AI
+                </div>
 
-        </section>
+            </header>
 
-        <div class="controls">
 
-            <button
-                id="startBtn"
+            <!-- CONVERSATION -->
+
+            <section
+                id="conversation"
+                class="conversation"
             >
-                <span class="mic-icon">
-                    🎤
-                </span>
 
-                Start
-            </button>
+                <div class="teacher-hero">
 
-            <button
-                id="stopBtn"
-            >
-                🔴 Stop
-            </button>
+                    <div class="avatar">
+                        👨‍🏫
+                    </div>
 
-        </div>
+                    <h1>
+                        Teacher Hasan AI
+                    </h1>
 
-        <div class="footer">
+                    <p class="subtitle">
+                        Ingliz tilini ovozli suhbat orqali
+                        tabiiy va interaktiv tarzda o‘rganing.
+                    </p>
 
-            Teacher Hasan AI English Teacher
-            • Powered by Hasan Jaylovov
+                    <div class="ai-badge">
+                        🟢 Natural AI Voice
+                    </div>
 
-        </div>
-
-    </main>
-
-</div>
+                </div>
 
 
-<!-- Gemini SDK orqali import qilinadi -->
-<script
-    type="module"
-    src="/app.js"
-></script>
+                <div class="welcome">
+
+                    <h2>
+                        Assalomu alaykum! 👋
+                    </h2>
+
+                    <p>
+                        Men Teacher Hasanman.
+                        Ingliz tilini birga o‘rganamiz.
+                        Speaking mashq qilish uchun
+                        <b>Start</b> tugmasini bosing
+                        va gapirishni boshlang.
+                    </p>
+
+                </div>
+
+
+                <!-- IMPORTANT:
+                     app.js ushbu elementni ishlatadi.
+                -->
+
+                <div id="transcript">
+                    👨‍🏫 Teacher Hasan:
+                    Salom! Men Teacher Hasanman.
+                    Ingliz tilini birga mashq qilamiz.
+                </div>
+
+
+                <!-- IMPORTANT:
+                     app.js ushbu elementlarni ishlatadi.
+                -->
+
+                <div class="status-container">
+
+                    <div class="status">
+
+                        <span
+                            id="statusDot"
+                            class="status-dot"
+                        ></span>
+
+                        <span id="status">
+                            Tayyor. Start tugmasini bosing.
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- CONTROLS -->
+
+            <div class="controls">
+
+                <button
+                    id="startBtn"
+                    class="control-button"
+                    type="button"
+                >
+                    🎤 Start Speaking
+                </button>
+
+                <button
+                    id="stopBtn"
+                    class="control-button"
+                    type="button"
+                >
+                    🔴 Stop
+                </button>
+
+            </div>
+
+
+            <footer class="footer">
+                Teacher Hasan AI English Teacher
+                • Powered by Hasan Jaylovov
+            </footer>
+
+        </main>
+
+    </div>
+
+
+    <!-- =====================================
+         MENU JAVASCRIPT
+    ====================================== -->
+
+    <script>
+        const menuButton =
+            document.getElementById("menuButton");
+
+        const sideMenu =
+            document.getElementById("sideMenu");
+
+        const menuOverlay =
+            document.getElementById("menuOverlay");
+
+        const closeMenu =
+            document.getElementById("closeMenu");
+
+
+        function openMenu() {
+
+            sideMenu.classList.add("active");
+
+            menuOverlay.classList.add("active");
+
+            sideMenu.setAttribute(
+                "aria-hidden",
+                "false"
+            );
+
+            menuButton.setAttribute(
+                "aria-expanded",
+                "true"
+            );
+
+            document.body.style.overflow = "hidden";
+        }
+
+
+        function closeSideMenu() {
+
+            sideMenu.classList.remove("active");
+
+            menuOverlay.classList.remove("active");
+
+            sideMenu.setAttribute(
+                "aria-hidden",
+                "true"
+            );
+
+            menuButton.setAttribute(
+                "aria-expanded",
+                "false"
+            );
+
+            document.body.style.overflow = "";
+        }
+
+
+        menuButton.addEventListener(
+            "click",
+            openMenu
+        );
+
+
+        closeMenu.addEventListener(
+            "click",
+            closeSideMenu
+        );
+
+
+        menuOverlay.addEventListener(
+            "click",
+            closeSideMenu
+        );
+
+
+        document.addEventListener(
+            "keydown",
+            function(event) {
+
+                if (
+                    event.key === "Escape"
+                ) {
+                    closeSideMenu();
+                }
+
+            }
+        );
+
+
+        /*
+         * Link bosilganda mobile menu yopiladi.
+         */
+
+        document
+            .querySelectorAll(".menu-item")
+            .forEach(function(item) {
+
+                item.addEventListener(
+                    "click",
+                    function() {
+
+                        closeSideMenu();
+
+                    }
+                );
+
+            });
+    </script>
+
+
+    <!-- =====================================
+         ACCOUNT / AUTH
+    ====================================== -->
+
+    <script>
+        (async function() {
+
+            try {
+
+                const token =
+                    localStorage.getItem(
+                        "th_auth_token"
+                    ) || "";
+
+                const response =
+                    await fetch(
+                        "/api/me",
+                        {
+                            credentials:
+                                "same-origin",
+
+                            headers:
+                                token
+                                    ? {
+                                        Authorization:
+                                            "Bearer " +
+                                            token
+                                    }
+                                    : {}
+                        }
+                    );
+
+                const data =
+                    await response.json();
+
+
+                const accountInfo =
+                    document.getElementById(
+                        "accountInfo"
+                    );
+
+
+                const menuLogin =
+                    document.getElementById(
+                        "menuLogin"
+                    );
+
+
+                const menuRegister =
+                    document.getElementById(
+                        "menuRegister"
+                    );
+
+
+                const menuProfile =
+                    document.getElementById(
+                        "menuProfile"
+                    );
+
+
+                const profileAction =
+                    document.getElementById(
+                        "profileAction"
+                    );
+
+
+                const logoutBtn =
+                    document.getElementById(
+                        "logoutBtn"
+                    );
+
+
+                if (data.authenticated) {
+
+                    const access =
+                        data.access || {};
+
+
+                    accountInfo.textContent =
+                        data.user.fullName +
+                        " • " +
+                        (
+                            access.mode === "trial"
+                                ? "🎁 Trial"
+                                : "⭐ Premium"
+                        );
+
+
+                    menuLogin.style.display =
+                        "none";
+
+                    menuRegister.style.display =
+                        "none";
+
+
+                    menuProfile.style.display =
+                        "flex";
+
+
+                    profileAction.style.display =
+                        "flex";
+
+
+                    logoutBtn.style.display =
+                        "flex";
+
+
+                    logoutBtn.onclick =
+                        async function() {
+
+                            const currentToken =
+                                localStorage.getItem(
+                                    "th_auth_token"
+                                ) || "";
+
+
+                            try {
+
+                                await fetch(
+                                    "/api/auth/logout",
+                                    {
+                                        method: "POST",
+
+                                        credentials:
+                                            "same-origin",
+
+                                        headers:
+                                            currentToken
+                                                ? {
+                                                    Authorization:
+                                                        "Bearer " +
+                                                        currentToken
+                                                }
+                                                : {}
+                                    }
+                                );
+
+                            } catch (error) {
+
+                                console.warn(
+                                    "Logout error:",
+                                    error
+                                );
+
+                            }
+
+
+                            localStorage.removeItem(
+                                "th_auth_token"
+                            );
+
+
+                            location.reload();
+
+                        };
+
+                } else {
+
+                    accountInfo.textContent =
+                        "👤 Mehmon";
+
+                    menuProfile.style.display =
+                        "flex";
+
+                }
+
+            } catch (error) {
+
+                console.warn(
+                    "Account check error:",
+                    error
+                );
+
+                const accountInfo =
+                    document.getElementById(
+                        "accountInfo"
+                    );
+
+                if (accountInfo) {
+
+                    accountInfo.textContent =
+                        "👤 Mehmon";
+
+                }
+
+            }
+
+        })();
+    </script>
+
+
+    <!-- =====================================
+         GEMINI LIVE
+         BU SCRIPTNI APP.JS BOSHQAReDI
+    ====================================== -->
+
+    <script
+        type="module"
+        src="/app.js"
+    ></script>
 
 </body>
 </html>
