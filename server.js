@@ -46,6 +46,9 @@ const PLAN_2_MONTHS =
 const PLAN_3_MONTHS =
     Number(process.env.PLAN_3_MONTHS || 99000);
 
+const PRIVACY_POLICY_VERSION = "1.0";
+const OFFER_VERSION = "1.0";
+
 
 // ==============================================// GEMINI CLIENT
 // ==============================================
@@ -426,6 +429,19 @@ app.post(
                     ""
                 );
 
+            const legalAccepted =
+                req.body?.legalAccepted === true ||
+                req.body?.legalAccepted === "true" ||
+                req.body?.legalAccepted === "on";
+
+            if (!legalAccepted) {
+                return res.status(400)
+                    .json({
+                        error:
+                            "Ro‘yxatdan o‘tish uchun Ommaviy oferta va Maxfiylik siyosatini qabul qilishingiz kerak."
+                    });
+            }
+
             if (!fullName) {
 
                 return res.status(400)
@@ -541,7 +557,14 @@ app.post(
                     null,
 
                 speakingCount:
-                    0
+                    0,
+
+                legalConsent: {
+                    accepted: true,
+                    acceptedAt: createdAt.toISOString(),
+                    privacyPolicyVersion: PRIVACY_POLICY_VERSION,
+                    offerVersion: OFFER_VERSION
+                }
             };
 
             db.users.push(user);
@@ -1763,6 +1786,20 @@ app.post(
                 });
         }
 
+        const legalAccepted =
+            req.body?.legalAccepted === true ||
+            req.body?.legalAccepted === "true" ||
+            req.body?.legalAccepted === "on";
+
+        if (!legalAccepted) {
+            return res.status(400)
+                .json({
+                    success: false,
+                    error:
+                        "To‘lovni boshlash uchun Ommaviy oferta va Maxfiylik siyosatini qabul qilishingiz kerak."
+                });
+        }
+
         const months =
             Number(
                 req.body?.months || 1
@@ -1844,6 +1881,13 @@ app.post(
 
             status:
                 "pending",
+
+            legalConsent: {
+                accepted: true,
+                acceptedAt: new Date().toISOString(),
+                privacyPolicyVersion: PRIVACY_POLICY_VERSION,
+                offerVersion: OFFER_VERSION
+            },
 
             createdAt:
                 new Date()
