@@ -90,7 +90,8 @@ document.addEventListener("DOMContentLoaded", () => {
                         fullName: byId("fullName").value,
                         email: byId("email").value,
                         phone: byId("phone").value,
-                        password: byId("password").value
+                        password: byId("password").value,
+                        legalAccepted: byId("legalConsent")?.checked === true
                     })
                 });
 

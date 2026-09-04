@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+
+<html lang="uz"> <head>     <meta charset="UTF-8">     <meta name="viewport" content="width=device-width, initial-scale=1.0">     <title>Teacher Hasan — CEFR Speaking Exam</title>
+
+```
+<link rel="stylesheet" href="/styles.css">
+
+<style>
+    .exam-container {
+        max-width: 900px;
+        margin: 40px auto;
+        padding: 20px;
+    }
+
+    .exam-card {
+        background: rgba(25, 10, 111, 0.95);
+        border-radius: 20px;
+        padding: 30px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.12);
+    }
+
+    .exam-title {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .level-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 12px;
+        margin: 20px 0;
+    }
+
+    .level-btn {
+        padding: 15px;
+        border: 2px solid #ddd;
+        border-radius: 12px;
+        background: rgb(18, 14, 158);
+        cursor: pointer;
+        font-size: 18px;
+        font-weight: bold;
+    }
+
+    .level-btn:hover,
+    .level-btn.active {
+        border-color: #cf4711;
+        background: #eff6ff;
+    }
+
+    .question-box {
+        margin-top: 25px;
+        padding: 25px;
+        border-radius: 15px;
+        background: #083ca4;
+    }
+
+    .question-number {
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
+
+    .question {
+        font-size: 24px;
+        line-height: 1.5;
+        margin-bottom: 20px;
+    }
+
+    .timer {
+        text-align: center;
+        font-size: 42px;
+        font-weight: bold;
+        margin: 20px 0;
+    }
+
+    .exam-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        margin-top: 25px;
+    }
+
+    .exam-btn {
+        padding: 14px 25px;
+        border: none;
+        border-radius: 12px;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: bold;
+    }
+
+    .start-exam {
+        background: #2563eb;
+        color: white;
+    }
+
+    .record-btn {
+        background: #dc2626;
+        color: white;
+    }
+
+    .next-btn {
+        background: #16a34a;
+        color: white;
+    }
+
+    .exam-status {
+        text-align: center;
+        margin-top: 20px;
+        font-weight: 600;
+    }
+
+    .hidden {
+        display: none !important;
+    }
+
+    @media (max-width: 600px) {
+        .level-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .question {
+            font-size: 20px;
+        }
+    }
+</style>
+```
+
+</head>
+
+<body>
+
+<div class="exam-container">
+
+```
+<div class="exam-card">
+
+    <div class="exam-title">
+        <h1>🎤 CEFR Speaking Exam</h1>
+        <p>Teacher Hasan — AI Speaking Assessment</p>
+    </div>
+
+    <!-- LEVEL -->
+    <section id="levelSection">
+
+        <h2>Darajani tanlang</h2>
+
+        <div class="level-grid">
+            <button class="level-btn" data-level="A1">A1</button>
+            <button class="level-btn" data-level="A2">A2</button>
+            <button class="level-btn" data-level="B1">B1</button>
+            <button class="level-btn" data-level="B2">B2</button>
+            <button class="level-btn" data-level="C1">C1</button>
+        </div>
+
+        <div class="exam-buttons">
+            <button id="startExamBtn" class="exam-btn start-exam">
+                🚀 Imtihonni boshlash
+            </button>
+        </div>
+
+    </section>
+
+    <!-- EXAM -->
+    <section id="examSection" class="hidden">
+
+        <div class="question-box">
+
+            <div id="questionNumber" class="question-number">
+                Savol 1 / 5
+            </div>
+
+            <div id="questionText" class="question">
+                Savol yuklanmoqda...
+            </div>
+
+        </div>
+
+        <div id="timer" class="timer">
+            01:00
+        </div>
+
+        <div class="exam-buttons">
+
+            <button id="recordBtn" class="exam-btn record-btn">
+                🎙️ Javob berish
+            </button>
+
+            <button id="nextBtn" class="exam-btn next-btn hidden">
+                ➡️ Keyingi savol
+            </button>
+
+        </div>
+
+        <div id="examStatus" class="exam-status">
+            Tayyorgarlik...
+        </div>
+
+    </section>
+
+    <!-- RESULT -->
+    <section id="resultSection" class="hidden">
+
+        <div class="question-box">
+
+            <h2>🎉 Speaking imtihoni tugadi</h2>
+
+            <p id="resultMessage">
+                Javoblaringiz AI tomonidan tahlil qilinadi.
+            </p>
+
+        </div>
+
+    </section>
+
+</div>
+```
+
+</div>
+
+<script>
+
+const questions = {
+
+    A1: [
+        "What is your name?",
+        "Where do you live?",
+        "Tell me about your family.",
+        "What do you do every day?",
+        "What is your favorite food?"
+    ],
+
+    A2: [
+        "Tell me about your hometown.",
+        "What do you usually do at weekends?",
+        "Describe your best friend.",
+        "What did you do yesterday?",
+        "What are your plans for next weekend?"
+    ],
+
+    B1: [
+        "Tell me about a memorable experience in your life.",
+        "What are the advantages of learning English?",
+        "Describe a place you would like to visit.",
+        "How has technology changed your daily life?",
+        "What is an important goal you have for the future?"
+    ],
+
+    B2: [
+        "What are the main advantages and disadvantages of social media?",
+        "Should students use artificial intelligence for studying?",
+        "Describe a difficult decision you have made.",
+        "How can people become successful in their careers?",
+        "What changes would you make to the education system?"
+    ],
+
+    C1: [
+        "To what extent does technology improve the quality of human life?",
+        "How should education respond to the development of artificial intelligence?",
+        "Discuss the relationship between economic development and environmental protection.",
+        "Do you think social media has strengthened or weakened human relationships?",
+        "What qualities are essential for effective leadership?"
+    ]
+
+};
+
+let selectedLevel = null;
+let currentQuestion = 0;
+let timerSeconds = 60;
+let timerInterval = null;
+let mediaRecorder = null;
+let audioChunks = [];
+let recordings = [];
+
+const levelButtons =
+    document.querySelectorAll(".level-btn");
+
+const startExamBtn =
+    document.getElementById("startExamBtn");
+
+const levelSection =
+    document.getElementById("levelSection");
+
+const examSection =
+    document.getElementById("examSection");
+
+const resultSection =
+    document.getElementById("resultSection");
+
+const questionNumber =
+    document.getElementById("questionNumber");
+
+const questionText =
+    document.getElementById("questionText");
+
+const timer =
+    document.getElementById("timer");
+
+const recordBtn =
+    document.getElementById("recordBtn");
+
+const nextBtn =
+    document.getElementById("nextBtn");
+
+const examStatus =
+    document.getElementById("examStatus");
+
+levelButtons.forEach(button => {
+
+    button.addEventListener("click", () => {
+
+        levelButtons.forEach(btn =>
+            btn.classList.remove("active")
+        );
+
+        button.classList.add("active");
+
+        selectedLevel =
+            button.dataset.level;
+
+    });
+
+});
+
+startExamBtn.addEventListener("click", () => {
+
+    if (!selectedLevel) {
+
+        alert("Avval CEFR darajani tanlang.");
+
+        return;
+
+    }
+
+    currentQuestion = 0;
+
+    recordings = [];
+
+    levelSection.classList.add("hidden");
+
+    examSection.classList.remove("hidden");
+
+    showQuestion();
+
+});
+
+function showQuestion() {
+
+    const list =
+        questions[selectedLevel];
+
+    questionNumber.textContent =
+        `Savol ${currentQuestion + 1} / ${list.length}`;
+
+    questionText.textContent =
+        list[currentQuestion];
+
+    resetTimer();
+
+    nextBtn.classList.add("hidden");
+
+    recordBtn.classList.remove("hidden");
+
+    examStatus.textContent =
+        "Savolga javob berish uchun tugmani bosing.";
+
+}
+
+function resetTimer() {
+
+    clearInterval(timerInterval);
+
+    timerSeconds = 60;
+
+    updateTimer();
+
+    timerInterval = setInterval(() => {
+
+        timerSeconds--;
+
+        updateTimer();
+
+        if (timerSeconds <= 0) {
+
+            clearInterval(timerInterval);
+
+            stopRecording();
+
+        }
+
+    }, 1000);
+
+}
+
+function updateTimer() {
+
+    const minutes =
+        String(Math.floor(timerSeconds / 60))
+            .padStart(2, "0");
+
+    const seconds =
+        String(timerSeconds % 60)
+            .padStart(2, "0");
+
+    timer.textContent =
+        `${minutes}:${seconds}`;
+
+}
+
+recordBtn.addEventListener("click", async () => {
+
+    if (mediaRecorder &&
+        mediaRecorder.state === "recording") {
+
+        stopRecording();
+
+        return;
+
+    }
+
+    try {
+
+        const stream =
+            await navigator.mediaDevices.getUserMedia({
+                audio: true
+            });
+
+        audioChunks = [];
+
+        mediaRecorder =
+            new MediaRecorder(stream);
+
+        mediaRecorder.ondataavailable = event => {
+
+            if (event.data.size > 0) {
+
+                audioChunks.push(event.data);
+
+            }
+
+        };
+
+        mediaRecorder.onstop = () => {
+
+            const blob =
+                new Blob(audioChunks, {
+                    type: "audio/webm"
+                });
+
+            recordings.push({
+                level: selectedLevel,
+                question: questions[selectedLevel][currentQuestion],
+                audio: blob
+            });
+
+            stream.getTracks().forEach(track =>
+                track.stop()
+            );
+
+            recordBtn.classList.add("hidden");
+
+            nextBtn.classList.remove("hidden");
+
+            examStatus.textContent =
+                "✅ Javob yozib olindi.";
+
+        };
+
+        mediaRecorder.start();
+
+        recordBtn.textContent =
+            "⏹️ Javobni tugatish";
+
+        examStatus.textContent =
+            "🔴 Yozib olinmoqda... Gapiring.";
+
+    } catch (error) {
+
+        console.error(error);
+
+        alert(
+            "Mikrofonga ruxsat berilmadi."
+        );
+
+    }
+
+});
+
+function stopRecording() {
+
+    if (mediaRecorder &&
+        mediaRecorder.state === "recording") {
+
+        mediaRecorder.stop();
+
+        mediaRecorder = null;
+
+    }
+
+}
+
+nextBtn.addEventListener("click", () => {
+
+    currentQuestion++;
+
+    if (
+        currentQuestion >=
+        questions[selectedLevel].length
+    ) {
+
+        finishExam();
+
+        return;
+
+    }
+
+    showQuestion();
+
+});
+
+function finishExam() {
+
+    clearInterval(timerInterval);
+
+    examSection.classList.add("hidden");
+
+    resultSection.classList.remove("hidden");
+
+    document.getElementById("resultMessage").textContent =
+        `${recordings.length} ta javob yozib olindi. Keyingi bosqichda bu javoblarni Gemini AI orqali Grammar, Vocabulary, Fluency va Pronunciation bo‘yicha baholashni qo‘shamiz.`;
+
+}
+
+</script>
+
+</body>
+</html>
