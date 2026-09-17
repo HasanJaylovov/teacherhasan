@@ -489,7 +489,90 @@ async function createMulticardInvoice({
 
     return data.data;
 }
+async function createMulticardInvoice({ invoiceId, amount }) {
 
+    if (!MULTICARD_TOKEN) {
+        throw new Error(
+            "MULTICARD_TOKEN .env faylida mavjud emas."
+        );
+    }
+
+    if (!MULTICARD_STORE_ID) {
+        throw new Error(
+            "MULTICARD_STORE_ID .env faylida mavjud emas."
+        );
+    }
+
+    const response = await fetch(
+        `${MULTICARD_API_URL}/payment/invoice`,
+        {
+            method: "POST",
+
+            headers: {
+                "Authorization":
+                    `Bearer ${MULTICARD_TOKEN}`,
+
+                "Content-Type":
+                    "application/json"
+            },
+
+            body: JSON.stringify({
+                store_id:
+                    MULTICARD_STORE_ID,
+
+                amount:
+                    Number(amount),
+
+                invoice_id:
+                    invoiceId,
+
+                lang: "uz",
+
+                return_url:
+                    MULTICARD_RETURN_URL,
+
+                callback_url:
+                    MULTICARD_CALLBACK_URL
+            })
+        }
+    );
+
+    let data;
+
+    try {
+        data = await response.json();
+    } catch {
+        throw new Error(
+            `Multicard server JSON javob qaytarmadi. HTTP status: ${response.status}`
+        );
+    }
+
+    console.log(
+        "MULTICARD RESPONSE:",
+        data
+    );
+
+    if (
+        !response.ok ||
+        !data.success
+    ) {
+        throw new Error(
+            data?.error?.message ||
+            data?.message ||
+            "Multicard invoice yaratilmadi."
+        );
+    }
+
+    if (
+        !data.data?.checkout_url
+    ) {
+        throw new Error(
+            "Multicard checkout_url qaytarmadi."
+        );
+    }
+
+    return data.data;
+}
 // ==============================================// HOME
 // ==============================================
 app.get("/", (req, res) => {
