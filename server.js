@@ -45,6 +45,26 @@ const PLAN_2_MONTHS =
 
 const PLAN_3_MONTHS =
     Number(process.env.PLAN_3_MONTHS || 99000);
+const MULTICARD_TOKEN =
+    process.env.MULTICARD_TOKEN || "";
+
+const MULTICARD_STORE_ID =
+    Number(process.env.MULTICARD_STORE_ID || 0);
+
+const MULTICARD_SECRET =
+    process.env.MULTICARD_SECRET || "";
+
+const MULTICARD_API_URL =
+    process.env.MULTICARD_API_URL ||
+    "https://dev-mesh.multicard.uz";
+
+const MULTICARD_CALLBACK_URL =
+    process.env.MULTICARD_CALLBACK_URL ||
+    "https://teacherhasan.uz/api/payment/webhook";
+
+const MULTICARD_RETURN_URL =
+    process.env.MULTICARD_RETURN_URL ||
+    "https://teacherhasan.uz/";
 
 const PRIVACY_POLICY_VERSION = "1.0";
 const OFFER_VERSION = "1.0";
@@ -344,7 +364,131 @@ function getAuthenticatedUser(req) {
             String(userId)
     ) || null;
 }
+async function createMulticardInvoice({ invoiceId, amount }) {
+  if (!MULTICARD_TOKEN) {
+    throw new Error("MULTICARD_TOKEN .env faylida mavjud emas.");
+  }
 
+  if (!MULTICARD_STORE_ID) {
+    throw new Error("MULTICARD_STORE_ID .env faylida mavjud emas.");
+  }
+
+  const response = await fetch(`${MULTICARD_API_URL}/payment/invoice`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${MULTICARD_TOKEN}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      store_id: MULTICARD_STORE_ID,
+      amount: Number(amount),
+      invoice_id: invoiceId,
+      lang: "uz",
+      return_url: MULTICARD_RETURN_URL,
+      callback_url: MULTICARD_CALLBACK_URL
+    })
+  });
+
+  let data;
+
+  try {
+    data = await response.json();
+  } catch {
+    throw new Error(
+      `Multicard server JSON javob qaytarmadi. HTTP status: ${response.status}`
+    );
+  }
+
+  console.log("MULTICARD RESPONSE:", data);
+
+  if (!response.ok || !data.success) {
+    throw new Error(
+      data?.error?.message ||
+      data?.message ||
+      "Multicard invoice yaratilmadi."
+    );
+  }
+
+  if (!data.data?.checkout_url) {
+    throw new Error("Multicard checkout_url qaytarmadi.");
+  }
+
+  return data.data;
+}
+async function createMulticardInvoice({
+    invoiceId,
+    amount
+}) {
+    if (!MULTICARD_TOKEN) {
+        throw new Error(
+            "MULTICARD_TOKEN .env faylida mavjud emas."
+        );
+    }
+
+    if (!MULTICARD_STORE_ID) {
+        throw new Error(
+            "MULTICARD_STORE_ID .env faylida mavjud emas."
+        );
+    }
+
+    const response = await fetch(
+        `${MULTICARD_API_URL}/payment/invoice`,
+        {
+            method: "POST",
+
+            headers: {
+                "Authorization":
+                    `Bearer ${MULTICARD_TOKEN}`,
+
+                "Content-Type":
+                    "application/json"
+            },
+
+            body: JSON.stringify({
+                store_id:
+                    MULTICARD_STORE_ID,
+
+                amount:
+                    Number(amount),
+
+                invoice_id:
+                    invoiceId,
+
+                lang: "uz",
+
+                return_url:
+                    MULTICARD_RETURN_URL,
+
+                callback_url:
+                    MULTICARD_CALLBACK_URL
+            })
+        }
+    );
+
+    const data =
+        await response.json();
+
+    console.log(
+        "MULTICARD RESPONSE:",
+        data
+    );
+
+    if (!response.ok || !data.success) {
+        throw new Error(
+            data?.error?.message ||
+            data?.message ||
+            "Multicard invoice yaratilmadi."
+        );
+    }
+
+    if (!data.data?.checkout_url) {
+        throw new Error(
+            "Multicard checkout_url qaytarmadi."
+        );
+    }
+
+    return data.data;
+}
 
 // ==============================================// HOME
 // ==============================================
@@ -1762,169 +1906,202 @@ app.post(
 );
 
 
-// ==============================================// MULTICARD PAYMENT PLACEHOLDER
 // ==============================================
+// MULTICARD PAYMENT CREATE
+// ==============================================
+
 app.post(
     "/api/payment/create",
-    (req, res) => {
+    async (req, res) => {
 
-        const user =
-            getAuthenticatedUser(
-                req
+        try {
+
+            // 1. Foydalanuvchini tekshirish
+            const user =
+                getAuthenticatedUser(req);
+
+            if (!user) {
+                return res.status(401)
+                    .json({
+                        success: false,
+                        error:
+                            "Avval tizimga kiring."
+                    });
+            }
+
+            // 2. Oferta va privacy qabul qilinganmi?
+            const legalAccepted =
+                req.body?.legalAccepted === true ||
+                req.body?.legalAccepted === "true" ||
+                req.body?.legalAccepted === "on";
+
+            if (!legalAccepted) {
+                return res.status(400)
+                    .json({
+                        success: false,
+                        error:
+                            "To‘lovni boshlash uchun Ommaviy oferta va Maxfiylik siyosatini qabul qilishingiz kerak."
+                    });
+            }
+
+            // 3. Tarif
+            const months =
+                Number(
+                    req.body?.months || 1
+                );
+
+            let amount;
+            let plan;
+
+            if (months === 1) {
+
+                amount =
+                    PLAN_1_MONTH;
+
+                plan =
+                    "1 oy";
+
+            } else if (months === 2) {
+
+                amount =
+                    PLAN_2_MONTHS;
+
+                plan =
+                    "2 oy";
+
+            } else if (months === 3) {
+
+                amount =
+                    PLAN_3_MONTHS;
+
+                plan =
+                    "3 oy";
+
+            } else {
+
+                return res.status(400)
+                    .json({
+                        success: false,
+                        error:
+                            "Noto‘g‘ri tarif."
+                    });
+            }
+
+            // 4. Bizning invoice ID
+            const invoiceId =
+                `TH-${Date.now()}-${crypto
+                    .randomBytes(4)
+                    .toString("hex")}`;
+
+            // 5. Multicard invoice yaratish
+            const multicard =
+                await createMulticardInvoice({
+                    invoiceId,
+                    amount
+                });
+
+            // 6. Database
+            const db =
+                readDatabase();
+
+            const paymentId =
+                crypto.randomUUID();
+
+            db.payments.push({
+
+                id:
+                    paymentId,
+
+                invoiceId,
+
+                multicardUuid:
+                    multicard.uuid,
+
+                userId:
+                    user.id,
+
+                userName:
+                    user.fullName,
+
+                plan,
+
+                months,
+
+                amount,
+
+                paymentMethod:
+                    "multicard",
+
+                status:
+                    "pending",
+
+                legalConsent: {
+                    accepted: true,
+
+                    acceptedAt:
+                        new Date()
+                            .toISOString(),
+
+                    privacyPolicyVersion:
+                        PRIVACY_POLICY_VERSION,
+
+                    offerVersion:
+                        OFFER_VERSION
+                },
+
+                createdAt:
+                    new Date()
+                        .toISOString()
+            });
+
+            writeDatabase(db);
+
+            // 7. Frontendga Multicard checkout URL
+            return res.json({
+
+                success: true,
+
+                invoiceId,
+
+                paymentId,
+
+                multicardUuid:
+                    multicard.uuid,
+
+                amount,
+
+                plan,
+
+                status:
+                    "pending",
+
+                checkoutUrl:
+                    multicard.checkout_url
+            });
+
+        } catch (error) {
+
+            console.error(
+                "MULTICARD CREATE ERROR:",
+                error
             );
 
-        if (!user) {
-
-            return res.status(401)
-                .json({
-
-                    success:
-                        false,
-
-                    error:
-                        "Avval tizimga kiring."
-                });
-        }
-
-        const legalAccepted =
-            req.body?.legalAccepted === true ||
-            req.body?.legalAccepted === "true" ||
-            req.body?.legalAccepted === "on";
-
-        if (!legalAccepted) {
-            return res.status(400)
+            return res.status(500)
                 .json({
                     success: false,
                     error:
-                        "To‘lovni boshlash uchun Ommaviy oferta va Maxfiylik siyosatini qabul qilishingiz kerak."
+                        error.message ||
+                        "To‘lov yaratishda xatolik."
                 });
         }
-
-        const months =
-            Number(
-                req.body?.months || 1
-            );
-
-        let amount;
-        let plan;
-
-        if (months === 1) {
-
-            amount =
-                PLAN_1_MONTH;
-
-            plan =
-                "1 oy";
-
-        } else if (
-            months === 2
-        ) {
-
-            amount =
-                PLAN_2_MONTHS;
-
-            plan =
-                "2 oy";
-
-        } else if (
-            months === 3
-        ) {
-
-            amount =
-                PLAN_3_MONTHS;
-
-            plan =
-                "3 oy";
-
-        } else {
-
-            return res.status(400)
-                .json({
-
-                    success:
-                        false,
-
-                    error:
-                        "Noto‘g‘ri tarif."
-                });
-        }
-
-        const invoiceId =
-            `TH-${Date.now()}-${crypto
-                .randomBytes(4)
-                .toString("hex")}`;
-
-        const db =
-            readDatabase();
-
-        db.payments.push({
-
-            id:
-                crypto.randomUUID(),
-
-            invoiceId,
-
-            userId:
-                user.id,
-
-            userName:
-                user.fullName,
-
-            plan,
-
-            months,
-
-            amount,
-
-            paymentMethod:
-                "multicard",
-
-            status:
-                "pending",
-
-            legalConsent: {
-                accepted: true,
-                acceptedAt: new Date().toISOString(),
-                privacyPolicyVersion: PRIVACY_POLICY_VERSION,
-                offerVersion: OFFER_VERSION
-            },
-
-            createdAt:
-                new Date()
-                    .toISOString()
-        });
-
-        writeDatabase(db);
-
-        /*
-         * MULTICARD SHARTNOMASI TAYYOR BO'LGACH,
-         * shu joyda Multicard API orqali haqiqiy
-         * invoice/payment URL yaratiladi.
-         */
-
-        return res.json({
-
-            success:
-                true,
-
-            invoiceId,
-
-            amount,
-
-            plan,
-
-            status:
-                "pending",
-
-            message:
-                "Multicard merchant API hali ulanmagan."
-        });
     }
 );
 
 
-// ==============================================// MULTICARD WEBHOOK
 // ==============================================
+// MULTICARD WEBHOOK
+// ==============================================
+
 app.post(
     "/api/payment/webhook",
     (req, res) => {
@@ -1934,11 +2111,42 @@ app.post(
             const body =
                 req.body || {};
 
+            console.log(
+                "MULTICARD WEBHOOK:",
+                body
+            );
+
+            // 1. Multicard sign tekshirish
+            if (
+                !verifyMulticardSignature(
+                    body
+                )
+            ) {
+
+                console.error(
+                    "MULTICARD SIGN INVALID"
+                );
+
+                return res.status(403)
+                    .json({
+                        success: false,
+                        error:
+                            "Invalid signature"
+                    });
+            }
+
+            // 2. Ma'lumotlarni olish
             const invoiceId =
-                body.invoiceId ||
-                body.invoice_id ||
-                body.orderId ||
-                body.order_id;
+                String(
+                    body.invoice_id ||
+                    ""
+                );
+
+            const uuid =
+                String(
+                    body.uuid ||
+                    ""
+                );
 
             const status =
                 String(
@@ -1946,18 +2154,22 @@ app.post(
                     ""
                 ).toLowerCase();
 
-            if (!invoiceId) {
+            const amount =
+                Number(
+                    body.amount || 0
+                );
 
+            // 3. Invoice tekshirish
+            if (!invoiceId || !uuid) {
                 return res.status(400)
                     .json({
-                        success:
-                            false,
-
+                        success: false,
                         error:
-                            "invoiceId topilmadi."
+                            "invoice_id yoki uuid yo‘q."
                     });
             }
 
+            // 4. Database
             const db =
                 readDatabase();
 
@@ -1966,39 +2178,76 @@ app.post(
                     .find(
                         item =>
                             item.invoiceId ===
-                            invoiceId
+                                invoiceId &&
+                            item.multicardUuid ===
+                                uuid
                     );
 
             if (!payment) {
 
+                console.error(
+                    "Payment topilmadi:",
+                    invoiceId,
+                    uuid
+                );
+
                 return res.status(404)
                     .json({
-                        success:
-                            false,
-
+                        success: false,
                         error:
                             "Payment topilmadi."
                     });
             }
 
-            /*
-             * DIQQAT:
-             * Haqiqiy Multicard webhook imzosi
-             * tekshirilgandan keyin success
-             * qilinishi kerak.
-             */
-
+            // 5. Amount tekshirish
             if (
-                [
-                    "success",
-                    "paid",
-                    "completed"
-                ].includes(status)
+                amount !==
+                Number(payment.amount)
+            ) {
+
+                console.error(
+                    "AMOUNT MISMATCH:",
+                    amount,
+                    payment.amount
+                );
+
+                return res.status(400)
+                    .json({
+                        success: false,
+                        error:
+                            "Payment amount noto‘g‘ri."
+                    });
+            }
+
+            // 6. Agar allaqachon success bo‘lsa
+            // qayta premium qo‘shmaymiz
+            if (
+                payment.status ===
+                "success"
+            ) {
+
+                return res.status(200)
+                    .json({
+                        success: true
+                    });
+            }
+
+            // 7. SUCCESS
+            if (
+                status === "success"
             ) {
 
                 payment.status =
                     "success";
 
+                payment.paidAt =
+                    new Date()
+                        .toISOString();
+
+                payment.multicardStatus =
+                    status;
+
+                // User
                 const user =
                     (db.users || [])
                         .find(
@@ -2011,60 +2260,93 @@ app.post(
                                 )
                         );
 
-                if (user) {
+                if (!user) {
 
-                    const months =
-                        Number(
-                            payment.months ||
-                            1
-                        );
+                    console.error(
+                        "User topilmadi:",
+                        payment.userId
+                    );
 
-                    const now =
-                        new Date();
-
-                    const oldExpiry =
-                        user.expiresAt
-                            ? new Date(
-                                user.expiresAt
-                            )
-                            : now;
-
-                    const start =
-                        oldExpiry > now
-                            ? oldExpiry
-                            : now;
-
-                    const expires =
-                        new Date(
-                            start.getTime() +
-                            months *
-                            30 *
-                            24 *
-                            60 *
-                            60 *
-                            1000
-                        );
-
-                    user.subscriptionStatus =
-                        "premium";
-
-                    user.plan =
-                        payment.plan;
-
-                    user.expiresAt =
-                        expires.toISOString();
-
-                    user.blocked =
-                        false;
+                    return res.status(404)
+                        .json({
+                            success: false,
+                            error:
+                                "User topilmadi."
+                        });
                 }
+
+                const months =
+                    Number(
+                        payment.months ||
+                        1
+                    );
+
+                const now =
+                    new Date();
+
+                const oldExpiry =
+                    user.expiresAt
+                        ? new Date(
+                            user.expiresAt
+                        )
+                        : now;
+
+                const start =
+                    oldExpiry > now
+                        ? oldExpiry
+                        : now;
+
+                const expires =
+                    new Date(
+                        start.getTime() +
+                        months *
+                        30 *
+                        24 *
+                        60 *
+                        60 *
+                        1000
+                    );
+
+                user.subscriptionStatus =
+                    "premium";
+
+                user.plan =
+                    payment.plan;
+
+                user.expiresAt =
+                    expires.toISOString();
+
+                user.blocked =
+                    false;
+
+                writeDatabase(db);
+
+                console.log(
+                    "✅ MULTICARD PAYMENT SUCCESS:",
+                    invoiceId,
+                    user.fullName
+                );
+
+            } else {
+
+                // success bo'lmagan statuslar
+                payment.multicardStatus =
+                    status;
+
+                writeDatabase(db);
+
+                console.log(
+                    "Multicard status:",
+                    status,
+                    invoiceId
+                );
             }
 
-            writeDatabase(db);
-
-            res.json({
-                success:
-                    true
-            });
+            // Multicardga 200 qaytaramiz
+            return res.status(200)
+                .json({
+                    success: true
+                });
 
         } catch (error) {
 
@@ -2073,18 +2355,15 @@ app.post(
                 error
             );
 
-            res.status(500)
+            return res.status(500)
                 .json({
-                    success:
-                        false,
-
+                    success: false,
                     error:
                         "Webhook xatosi."
                 });
         }
     }
 );
-
 
 // ==============================================// 404
 // ==============================================
