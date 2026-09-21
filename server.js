@@ -45,8 +45,11 @@ const PLAN_2_MONTHS =
 
 const PLAN_3_MONTHS =
     Number(process.env.PLAN_3_MONTHS || 99000);
-const MULTICARD_TOKEN =
-    process.env.MULTICARD_TOKEN || "";
+const MULTICARD_APPLICATION_ID =
+    process.env.MULTICARD_APPLICATION_ID || "";
+
+const MULTICARD_APPLICATION_SECRET =
+    process.env.MULTICARD_APPLICATION_SECRET || "";
 
 const MULTICARD_STORE_ID =
     Number(process.env.MULTICARD_STORE_ID || 0);
@@ -65,6 +68,7 @@ const MULTICARD_CALLBACK_URL =
 const MULTICARD_RETURN_URL =
     process.env.MULTICARD_RETURN_URL ||
     "https://teacherhasan.uz/";
+
 
 const PRIVACY_POLICY_VERSION = "1.0";
 const OFFER_VERSION = "1.0";
@@ -364,58 +368,161 @@ function getAuthenticatedUser(req) {
             String(userId)
     ) || null;
 }
-async function createMulticardInvoice({ invoiceId, amount }) {
-  if (!MULTICARD_TOKEN) {
-    throw new Error("MULTICARD_TOKEN .env faylida mavjud emas.");
-  }
+let multicardTokenCache = {
+    token: "",
+    expiresAt: 0
+};
 
-  if (!MULTICARD_STORE_ID) {
-    throw new Error("MULTICARD_STORE_ID .env faylida mavjud emas.");
-  }
+async function getMulticardToken(forceRefresh = false) {
+    const now = Date.now();
 
-  const response = await fetch(`${MULTICARD_API_URL}/payment/invoice`, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${MULTICARD_TOKEN}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      store_id: MULTICARD_STORE_ID,
-      amount: Number(amount),
-      invoice_id: invoiceId,
-      lang: "uz",
-      return_url: MULTICARD_RETURN_URL,
-      callback_url: MULTICARD_CALLBACK_URL
-    })
-  });
+    // Token hali amal qilayotgan bo‘lsa, cache'dan foydalanamiz.
+    // 5 daqiqalik xavfsizlik zaxirasi qoldiramiz.
+    if (
+        !forceRefresh &&
+        multicardTokenCache.token &&
+        multicardTokenCache.expiresAt > now + 5 * 60 * 1000
+    ) {
+        return multicardTokenCache.token;
+    }
 
-  let data;
+    if (!MULTICARD_APPLICATION_ID) {
+        throw new Error(
+            "MULTICARD_APPLICATION_ID .env faylida mavjud emas."
+        );
+    }
 
-  try {
-    data = await response.json();
-  } catch {
-    throw new Error(
-      `Multicard server JSON javob qaytarmadi. HTTP status: ${response.status}`
+    if (!MULTICARD_APPLICATION_SECRET) {
+        throw new Error(
+            "MULTICARD_APPLICATION_SECRET .env faylida mavjud emas."
+        );
+    }
+
+    const response = await fetch(
+        `${MULTICARD_API_URL}/auth`,
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                application_id: MULTICARD_APPLICATION_ID,
+                secret: MULTICARD_APPLICATION_SECRET
+            })
+        }
     );
-  }
 
-  console.log("MULTICARD RESPONSE:", data);
+    let data;
 
-  if (!response.ok || !data.success) {
-    throw new Error(
-      data?.error?.message ||
-      data?.message ||
-      "Multicard invoice yaratilmadi."
+    try {
+        data = await response.json();
+    } catch {
+        throw new Error(
+            `Multicard /auth JSON javob qaytarmadi. HTTP status: ${response.status}`
+        );
+    }
+
+    console.log(
+        "MULTICARD AUTH:",
+        {
+            success: response.ok,
+            expiry: data?.expiry
+        }
     );
-  }
 
-  if (!data.data?.checkout_url) {
-    throw new Error("Multicard checkout_url qaytarmadi.");
-  }
+    if (!response.ok || !data?.token) {
+        throw new Error(
+            data?.message ||
+            data?.error?.message ||
+            "Multicard token olishda xatolik."
+        );
+    }
 
-  return data.data;
+    const expiryTime = data.expiry
+        ? new Date(data.expiry).getTime()
+        : Date.now() + 23 * 60 * 60 * 1000;
+
+    multicardTokenCache = {
+        token: data.token,
+        expiresAt: expiryTime
+    };
+
+    return data.token;
+}
+async function createMulticardInvoice({
+    invoiceId,
+    amount
+}) {
+    if (!MULTICARD_STORE_ID) {
+        throw new Error(
+            "MULTICARD_STORE_ID .env faylida mavjud emas."
+        );
+    }
+
+    async function sendInvoiceRequest(token) {
+    return fetch(
+        `${MULTICARD_API_URL}/payment/invoice`,
+        {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${token}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                store_id: MULTICARD_STORE_ID,
+                amount: Math.round(Number(amount) * 100),
+                invoice_id: invoiceId,
+                lang: "uz",
+                return_url: MULTICARD_RETURN_URL,
+                callback_url: MULTICARD_CALLBACK_URL
+            })
+        }
+    );
 }
 
+    // 1. Cache'dagi mavjud tokenni olish
+    let token = await getMulticardToken();
+
+    let response = await sendInvoiceRequest(token);
+
+    // 2. Token expire bo‘lgan bo‘lsa:
+    // yangi token olib, requestni faqat bir marta qayta yuboramiz.
+    if (response.status === 401) {
+        console.log(
+            "Multicard token eskirgan. Yangi token olinmoqda..."
+        );
+
+        token = await getMulticardToken(true);
+
+        response = await sendInvoiceRequest(token);
+    }
+
+    let data;
+
+    try {
+        data = await response.json();
+    } catch {
+        throw new Error(
+            `Multicard server JSON javob qaytarmadi. HTTP status: ${response.status}`
+        );
+    }
+
+    if (!response.ok || !data.success) {
+        throw new Error(
+            data?.error?.message ||
+            data?.message ||
+            "Multicard invoice yaratilmadi."
+        );
+    }
+
+    if (!data.data?.checkout_url) {
+        throw new Error(
+            "Multicard checkout_url qaytarmadi."
+        );
+    }
+
+    return data.data;
+}
 
 // ==============================================// HOME
 // ==============================================
@@ -2026,6 +2133,72 @@ app.post(
 
 
 // ==============================================
+// MULTICARD SIGNATURE VERIFICATION
+// ==============================================
+
+function verifyMulticardSignature(body) {
+
+    if (!MULTICARD_SECRET) {
+        console.error(
+            "MULTICARD_SECRET .env faylida mavjud emas."
+        );
+        return false;
+    }
+
+    const uuid =
+        String(body?.uuid || "");
+
+    const invoiceId =
+        String(body?.invoice_id || "");
+
+    const amount =
+        String(body?.amount ?? "");
+
+    const receivedSign =
+        String(body?.sign || "")
+            .trim()
+            .toLowerCase();
+
+    if (
+        !uuid ||
+        !invoiceId ||
+        !amount ||
+        !receivedSign
+    ) {
+        return false;
+    }
+
+    const raw =
+        `${uuid}${invoiceId}${amount}${MULTICARD_SECRET}`;
+
+    const expectedSign =
+        crypto
+            .createHash("sha1")
+            .update(raw, "utf8")
+            .digest("hex")
+            .toLowerCase();
+
+    if (
+        expectedSign.length !==
+        receivedSign.length
+    ) {
+        return false;
+    }
+
+    return crypto.timingSafeEqual(
+        Buffer.from(
+            expectedSign,
+            "utf8"
+        ),
+        Buffer.from(
+            receivedSign,
+            "utf8"
+        )
+    );
+}
+
+
+// ==============================================
 // MULTICARD WEBHOOK
 // ==============================================
 
@@ -2126,25 +2299,28 @@ app.post(
                     });
             }
 
-            // 5. Amount tekshirish
-            if (
-                amount !==
-                Number(payment.amount)
-            ) {
+                        // 5. Amount tekshirish
+            const expectedAmount =
+                Math.round(Number(payment.amount) * 100);
 
+            if (amount !== expectedAmount) {
                 console.error(
-                    "AMOUNT MISMATCH:",
-                    amount,
-                    payment.amount
+                    "Multicard amount mismatch:",
+                    {
+                        received: amount,
+                        expected: expectedAmount,
+                        paymentAmount: payment.amount
+                    }
                 );
 
                 return res.status(400)
                     .json({
                         success: false,
-                        error:
-                            "Payment amount noto‘g‘ri."
+                        error: "Amount mismatch."
                     });
             }
+
+            
 
             // 6. Agar allaqachon success bo‘lsa
             // qayta premium qo‘shmaymiz
