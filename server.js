@@ -2160,8 +2160,8 @@ function verifyMulticardSignature(body) {
         return false;
     }
 
-    const uuid =
-        String(body?.uuid || "");
+    const storeId =
+        String(body?.store_id ?? "");
 
     const invoiceId =
         String(body?.invoice_id || "");
@@ -2175,7 +2175,7 @@ function verifyMulticardSignature(body) {
             .toLowerCase();
 
     if (
-        !uuid ||
+        !storeId ||
         !invoiceId ||
         !amount ||
         !receivedSign
@@ -2183,12 +2183,14 @@ function verifyMulticardSignature(body) {
         return false;
     }
 
+    // Multicard success callback:
+    // md5(store_id + invoice_id + amount + secret)
     const raw =
-        `${uuid}${invoiceId}${amount}${MULTICARD_SECRET}`;
+        `${storeId}${invoiceId}${amount}${MULTICARD_SECRET}`;
 
     const expectedSign =
         crypto
-            .createHash("sha1")
+            .createHash("md5")
             .update(raw, "utf8")
             .digest("hex")
             .toLowerCase();
@@ -2201,14 +2203,8 @@ function verifyMulticardSignature(body) {
     }
 
     return crypto.timingSafeEqual(
-        Buffer.from(
-            expectedSign,
-            "utf8"
-        ),
-        Buffer.from(
-            receivedSign,
-            "utf8"
-        )
+        Buffer.from(expectedSign, "utf8"),
+        Buffer.from(receivedSign, "utf8")
     );
 }
 
