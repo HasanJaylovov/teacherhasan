@@ -45,10 +45,15 @@ document.addEventListener("DOMContentLoaded", () => {
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || "To‘lovni boshlashda xato.");
 
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+        return;
+      }
+
       result.innerHTML = "<b>Buyurtma yaratildi.</b><br>Invoice: " +
         (data.invoiceId || "—") + "<br>" +
         "Summa: " + Number(data.amount || 0).toLocaleString("uz-UZ") +
-        " so‘m<br><small>To‘lov provayderi API hali ulanmagan bo‘lsa, bu sahifada faqat buyurtma yaratiladi.</small>";
+        " so‘m<br><small>Multicard to‘lov havolasi qaytmadi.</small>";
     } catch (error) {
       showError(error.message);
     } finally {
