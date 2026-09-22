@@ -5,6 +5,9 @@ import fs from "fs";
 import crypto from "crypto";
 import { fileURLToPath } from "url";
 import { GoogleGenAI } from "@google/genai";
+import pg from "pg";
+
+const { Pool } = pg;
 
 dotenv.config();
 
@@ -13,6 +16,33 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// ==============================================
+// POSTGRESQL CONNECTION
+// ==============================================
+
+const pool = process.env.DATABASE_URL
+    ? new Pool({
+          connectionString: process.env.DATABASE_URL,
+          ssl: {
+              rejectUnauthorized: false
+          }
+      })
+    : null;
+
+if (pool) {
+    pool.query("SELECT NOW()")
+        .then(() => {
+            console.log("✅ PostgreSQL connection OK");
+        })
+        .catch((error) => {
+            console.error(
+                "❌ PostgreSQL connection error:",
+                error.message
+            );
+        });
+}
+
 
 // ==============================================// CONFIG
 // ==============================================
