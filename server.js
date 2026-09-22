@@ -507,6 +507,21 @@ async function createMulticardInvoice({
         );
     }
 
+    console.log("MULTICARD INVOICE RESPONSE:", {
+        status: response.status,
+        ok: response.ok,
+        success: data?.success,
+        data: data?.data
+            ? {
+                uuid: data.data.uuid,
+                invoice_id: data.data.invoice_id,
+                checkout_url: data.data.checkout_url
+            }
+            : null,
+        error: data?.error,
+        message: data?.message
+    });
+
     if (!response.ok || !data.success) {
         throw new Error(
             data?.error?.message ||
