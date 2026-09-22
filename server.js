@@ -625,8 +625,10 @@ app.get("/api/health", (req, res) => {
 // ==============================================// REGISTER
 // ==============================================
 app.post(
+
     "/api/auth/register",
-    (req, res) => {
+
+    async (req, res) => {
 
         try {
 
@@ -666,7 +668,6 @@ app.post(
             }
 
             if (!fullName) {
-
                 return res.status(400)
                     .json({
                         error:
@@ -675,7 +676,6 @@ app.post(
             }
 
             if (!email && !phone) {
-
                 return res.status(400)
                     .json({
                         error:
@@ -683,10 +683,7 @@ app.post(
                     });
             }
 
-            if (
-                password.length < 6
-            ) {
-
+            if (password.length < 6) {
                 return res.status(400)
                     .json({
                         error:
@@ -694,43 +691,7 @@ app.post(
                     });
             }
 
-            const db =
-                readDatabase();
-
-            const exists =
-                (db.users || [])
-                    .find(user => {
-
-                        if (
-                            email &&
-                            user.email ===
-                            email
-                        ) {
-                            return true;
-                        }
-
-                        if (
-                            phone &&
-                            user.phone ===
-                            phone
-                        ) {
-                            return true;
-                        }
-
-                        return false;
-                    });
-
-            if (exists) {
-
-                return res.status(409)
-                    .json({
-                        error:
-                            "Bu email yoki telefon bilan akkaunt allaqachon mavjud."
-                    });
-            }
-
-            const createdAt =
-                new Date();
+            const createdAt = new Date();
 
             const trialUntil =
                 new Date(
@@ -742,57 +703,145 @@ app.post(
                     1000
                 );
 
-            const user = {
+            const userId =
+                crypto.randomUUID();
 
-                id:
-                    crypto
-                        .randomUUID(),
-
-                fullName,
-
-                email:
-                    email || "",
-
-                phone:
-                    phone || "",
-
-                passwordHash:
-                    hashPassword(
-                        password
-                    ),
-
-                blocked:
-                    false,
-
-                subscriptionStatus:
-                    "trial",
-
-                plan:
-                    null,
-
-                createdAt:
+            const legalConsent = {
+                accepted: true,
+                acceptedAt:
                     createdAt.toISOString(),
-
-                trialUntil:
-                    trialUntil.toISOString(),
-
-                expiresAt:
-                    null,
-
-                speakingCount:
-                    0,
-
-                legalConsent: {
-                    accepted: true,
-                    acceptedAt: createdAt.toISOString(),
-                    privacyPolicyVersion: PRIVACY_POLICY_VERSION,
-                    offerVersion: OFFER_VERSION
-                }
+                privacyPolicyVersion:
+                    PRIVACY_POLICY_VERSION,
+                offerVersion:
+                    OFFER_VERSION
             };
 
-            db.users.push(user);
+            let result;
 
-            writeDatabase(db);
+            try {
+
+                result = await pool.query(
+                    `
+                    INSERT INTO users (
+                        id,
+                        full_name,
+                        email,
+                        phone,
+                        password_hash,
+                        blocked,
+                        subscription_status,
+                        plan,
+                        created_at,
+                        trial_until,
+                        expires_at,
+                        speaking_count,
+                        legal_consent
+                    )
+                    VALUES (
+                        $1,
+                        $2,
+                        $3,
+                        $4,
+                        $5,
+                        FALSE,
+                        'trial',
+                        NULL,
+                        $6,
+                        $7,
+                        NULL,
+                        0,
+                        $8::jsonb
+                    )
+                    RETURNING
+                        id,
+                        full_name,
+                        email,
+                        phone,
+                        blocked,
+                        subscription_status,
+                        plan,
+                        created_at,
+                        trial_until,
+                        expires_at,
+                        speaking_count,
+                        legal_consent
+                    `,
+                    [
+                        userId,
+                        fullName,
+                        email || "",
+                        phone || "",
+                        hashPassword(password),
+                        createdAt,
+                        trialUntil,
+                        JSON.stringify(legalConsent)
+                    ]
+                );
+
+            } catch (error) {
+
+                if (error.code === "23505") {
+                    return res.status(409)
+                        .json({
+                            error:
+                                "Bu email yoki telefon bilan akkaunt allaqachon mavjud."
+                        });
+                }
+
+                throw error;
+            }
+
+            const row =
+                result.rows[0];
+
+            const user = {
+                id:
+                    row.id,
+
+                fullName:
+                    row.full_name,
+
+                email:
+                    row.email || "",
+
+                phone:
+                    row.phone || "",
+
+                passwordHash:
+                    hashPassword(password),
+
+                blocked:
+                    row.blocked,
+
+                subscriptionStatus:
+                    row.subscription_status,
+
+                plan:
+                    row.plan,
+
+                createdAt:
+                    row.created_at?.toISOString?.() ||
+                    row.created_at,
+
+                trialUntil:
+                    row.trial_until?.toISOString?.() ||
+                    row.trial_until,
+
+                expiresAt:
+                    row.expires_at
+                        ? (
+                            row.expires_at?.toISOString?.() ||
+                            row.expires_at
+                        )
+                        : null,
+
+                speakingCount:
+                    row.speaking_count || 0,
+
+                legalConsent:
+                    row.legal_consent ||
+                    legalConsent
+            };
 
             const token =
                 generateToken();
@@ -808,25 +857,18 @@ app.post(
             );
 
             return res.json({
-
                 success: true,
-
                 token,
-
                 user: {
                     id:
                         user.id,
-
                     fullName:
                         user.fullName,
-
                     email:
                         user.email,
-
                     phone:
                         user.phone
                 },
-
                 access:
                     userAccess(user)
             });
@@ -848,11 +890,11 @@ app.post(
 );
 
 
-// ==============================================// LOGIN
-// ==============================================
 app.post(
+
     "/api/auth/login",
-    (req, res) => {
+
+    async (req, res) => {
 
         try {
 
@@ -868,11 +910,7 @@ app.post(
                     ""
                 );
 
-            if (
-                !identifier ||
-                !password
-            ) {
-
+            if (!identifier || !password) {
                 return res.status(400)
                     .json({
                         error:
@@ -890,26 +928,43 @@ app.post(
                     identifier
                 );
 
-            const db =
-                readDatabase();
-
-            const user =
-                (db.users || [])
-                    .find(item =>
+            const result =
+                await pool.query(
+                    `
+                    SELECT
+                        id,
+                        full_name,
+                        email,
+                        phone,
+                        password_hash,
+                        blocked,
+                        subscription_status,
+                        plan,
+                        created_at,
+                        trial_until,
+                        expires_at,
+                        speaking_count,
+                        legal_consent
+                    FROM users
+                    WHERE
                         (
-                            item.email &&
-                            item.email ===
-                            normalizedEmail
-                        ) ||
-                        (
-                            item.phone &&
-                            item.phone ===
-                            normalizedPhone
+                            $1 <> ''
+                            AND LOWER(email) = LOWER($1)
                         )
-                    );
+                        OR
+                        (
+                            $2 <> ''
+                            AND phone = $2
+                        )
+                    LIMIT 1
+                    `,
+                    [
+                        normalizedEmail || "",
+                        normalizedPhone || ""
+                    ]
+                );
 
-            if (!user) {
-
+            if (result.rows.length === 0) {
                 return res.status(401)
                     .json({
                         error:
@@ -917,13 +972,13 @@ app.post(
                     });
             }
 
-            if (
-                user.passwordHash !==
-                hashPassword(
-                    password
-                )
-            ) {
+            const row =
+                result.rows[0];
 
+            if (
+                row.password_hash !==
+                hashPassword(password)
+            ) {
                 return res.status(401)
                     .json({
                         error:
@@ -931,14 +986,61 @@ app.post(
                     });
             }
 
-            if (user.blocked) {
-
+            if (row.blocked) {
                 return res.status(403)
                     .json({
                         error:
                             "Akkauntingiz bloklangan."
                     });
             }
+
+            const user = {
+                id:
+                    row.id,
+
+                fullName:
+                    row.full_name,
+
+                email:
+                    row.email || "",
+
+                phone:
+                    row.phone || "",
+
+                passwordHash:
+                    row.password_hash,
+
+                blocked:
+                    row.blocked,
+
+                subscriptionStatus:
+                    row.subscription_status,
+
+                plan:
+                    row.plan,
+
+                createdAt:
+                    row.created_at?.toISOString?.() ||
+                    row.created_at,
+
+                trialUntil:
+                    row.trial_until?.toISOString?.() ||
+                    row.trial_until,
+
+                expiresAt:
+                    row.expires_at
+                        ? (
+                            row.expires_at?.toISOString?.() ||
+                            row.expires_at
+                        )
+                        : null,
+
+                speakingCount:
+                    row.speaking_count || 0,
+
+                legalConsent:
+                    row.legal_consent || {}
+            };
 
             const token =
                 generateToken();
@@ -948,29 +1050,19 @@ app.post(
                 user.id
             );
 
-            writeDatabase(db);
-
             return res.json({
-
                 success: true,
-
                 token,
-
                 user: {
-
                     id:
                         user.id,
-
                     fullName:
                         user.fullName,
-
                     email:
                         user.email,
-
                     phone:
                         user.phone
                 },
-
                 access:
                     userAccess(user)
             });
@@ -992,8 +1084,6 @@ app.post(
 );
 
 
-// ==============================================// LOGOUT
-// ==============================================
 app.post(
     "/api/auth/logout",
     (req, res) => {
