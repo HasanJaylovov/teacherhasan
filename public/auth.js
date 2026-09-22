@@ -132,9 +132,9 @@ document.addEventListener("DOMContentLoaded", () => {
                         : "Premium foydalanish faol";
                     byId("pProgress").style.width = "100%";
                 } else if (access.mode === "trial") {
-                    status.textContent = "🎁 3 KUNLIK TRIAL";
+                    status.textContent = "🎁 TRIAL";
                     byId("pMode").textContent = "Bepul sinov";
-                    byId("pPlan").textContent = "3 kunlik bepul foydalanish faol";
+                    byId("pPlan").textContent = "1 kunlik bepul foydalanish faol";
                     byId("pProgress").style.width = "70%";
                 } else if (access.mode === "blocked") {
                     status.textContent = "⛔ BLOKLANGAN";
