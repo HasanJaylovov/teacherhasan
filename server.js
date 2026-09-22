@@ -1,7 +1,6 @@
 import express from "express";
 import dotenv from "dotenv";
 import path from "path";
-import fs from "fs";
 import crypto from "crypto";
 import { fileURLToPath } from "url";
 import { GoogleGenAI } from "@google/genai";
@@ -165,78 +164,7 @@ app.use(
 
 // ==============================================// DATABASE - JSON
 // ==============================================
-const DATA_DIR =
-    path.join(__dirname, "data");
 
-const DATA_FILE =
-    path.join(DATA_DIR, "database.json");
-
-function createDatabase() {
-
-    if (!fs.existsSync(DATA_DIR)) {
-        fs.mkdirSync(DATA_DIR, {
-            recursive: true
-        });
-    }
-
-    if (!fs.existsSync(DATA_FILE)) {
-
-        fs.writeFileSync(
-            DATA_FILE,
-            JSON.stringify(
-                {
-                    users: [],
-                    payments: [],
-                    speakingResults: []
-                },
-                null,
-                2
-            )
-        );
-    }
-}
-
-function readDatabase() {
-
-    createDatabase();
-
-    try {
-
-        return JSON.parse(
-            fs.readFileSync(
-                DATA_FILE,
-                "utf8"
-            )
-        );
-
-    } catch (error) {
-
-        console.error(
-            "Database read error:",
-            error
-        );
-
-        return {
-            users: [],
-            payments: [],
-            speakingResults: []
-        };
-    }
-}
-
-function writeDatabase(data) {
-
-    createDatabase();
-
-    fs.writeFileSync(
-        DATA_FILE,
-        JSON.stringify(
-            data,
-            null,
-            2
-        )
-    );
-}
 
 
 // ==============================================// PASSWORD HASH
@@ -366,7 +294,7 @@ function userAccess(user) {
     };
 }
 
-function getAuthenticatedUser(req) {
+async function getAuthenticatedUser(req) {
 
     const token =
         req.headers.authorization
@@ -387,16 +315,52 @@ function getAuthenticatedUser(req) {
         return null;
     }
 
-    const db =
-        readDatabase();
+    if (!pool) {
+        return null;
+    }
 
-    return (
-        db.users || []
-    ).find(
-        user =>
-            String(user.id) ===
-            String(userId)
-    ) || null;
+    const result = await pool.query(
+        `
+        SELECT
+            id,
+            full_name,
+            email,
+            phone,
+            blocked,
+            subscription_status,
+            plan,
+            created_at,
+            trial_until,
+            expires_at,
+            speaking_count,
+            legal_consent
+        FROM users
+        WHERE id = $1
+        LIMIT 1
+        `,
+        [userId]
+    );
+
+    const row = result.rows[0];
+
+    if (!row) {
+        return null;
+    }
+
+    return {
+        id: row.id,
+        fullName: row.full_name,
+        email: row.email,
+        phone: row.phone,
+        blocked: row.blocked,
+        subscriptionStatus: row.subscription_status,
+        plan: row.plan,
+        createdAt: row.created_at,
+        trialUntil: row.trial_until,
+        expiresAt: row.expires_at,
+        speakingCount: row.speaking_count,
+        legalConsent: row.legal_consent || {}
+    };
 }
 let multicardTokenCache = {
     token: "",
@@ -1113,10 +1077,10 @@ app.post(
 // ==============================================
 app.get(
     "/api/me",
-    (req, res) => {
+    async (req, res) => {
 
         const user =
-            getAuthenticatedUser(
+            await getAuthenticatedUser(
                 req
             );
 
@@ -1130,13 +1094,7 @@ app.get(
 
         const access =
             userAccess(user);
-
-        const db =
-            readDatabase();
-
-        writeDatabase(db);
-
-        return res.json({
+return res.json({
 
             authenticated:
                 true,
@@ -1633,269 +1591,649 @@ app.post(
 
 // ==============================================// ADMIN DASHBOARD
 // ==============================================
+// ==============================================
+// ADMIN DASHBOARD
+// ==============================================
+
 app.get(
     "/api/admin/dashboard",
     requireAdmin,
-    (req, res) => {
+    async (req, res) => {
+        try {
+            const [
+                usersResult,
+                paymentsResult,
+                speakingResultsResult
+            ] = await Promise.all([
+                pool.query(`
+                    SELECT
+                        id,
+                        full_name,
+                        email,
+                        phone,
+                        blocked,
+                        subscription_status,
+                        plan,
+                        created_at,
+                        trial_until,
+                        expires_at,
+                        speaking_count,
+                        legal_consent
+                    FROM users
+                    ORDER BY created_at ASC
+                `),
+                pool.query(`
+                    SELECT
+                        id,
+                        invoice_id,
+                        multicard_uuid,
+                        user_id,
+                        user_name,
+                        plan,
+                        months,
+                        amount,
+                        payment_method,
+                        status,
+                        legal_consent,
+                        multicard_status,
+                        created_at,
+                        paid_at
+                    FROM payments
+                    ORDER BY created_at ASC
+                `),
+                pool.query(`
+                    SELECT
+                        id,
+                        user_id,
+                        result,
+                        created_at
+                    FROM speaking_results
+                    ORDER BY created_at ASC
+                `)
+            ]);
 
-        const db =
-            readDatabase();
+            const users = usersResult.rows.map(row => ({
+                id: row.id,
+                fullName: row.full_name,
+                email: row.email,
+                phone: row.phone,
+                blocked: row.blocked,
+                subscriptionStatus: row.subscription_status,
+                plan: row.plan,
+                createdAt: row.created_at,
+                trialUntil: row.trial_until,
+                expiresAt: row.expires_at,
+                speakingCount: row.speaking_count,
+                legalConsent: row.legal_consent || {}
+            }));
 
-        const users =
-            db.users || [];
+            const payments = paymentsResult.rows.map(row => ({
+                id: row.id,
+                invoiceId: row.invoice_id,
+                multicardUuid: row.multicard_uuid,
+                userId: row.user_id,
+                userName: row.user_name,
+                plan: row.plan,
+                months: row.months,
+                amount: row.amount,
+                paymentMethod: row.payment_method,
+                status: row.status,
+                legalConsent: row.legal_consent || {},
+                multicardStatus: row.multicard_status,
+                createdAt: row.created_at,
+                paidAt: row.paid_at
+            }));
 
-        const payments =
-            db.payments || [];
+            const speakingResults =
+                speakingResultsResult.rows.map(row => ({
+                    id: row.id,
+                    userId: row.user_id,
+                    result: row.result,
+                    createdAt: row.created_at
+                }));
 
-        const speakingResults =
-            db.speakingResults || [];
+            let premium = 0;
+            let trial = 0;
+            let blocked = 0;
 
-        const now =
-            Date.now();
+            users.forEach(user => {
+                if (user.blocked) {
+                    blocked++;
+                    return;
+                }
 
-        let premium =
-            0;
+                const access = userAccess(user);
 
-        let trial =
-            0;
+                if (access.mode === "premium") {
+                    premium++;
+                }
 
-        let blocked =
-            0;
+                if (access.mode === "trial") {
+                    trial++;
+                }
+            });
 
-        users.forEach(user => {
+            const successfulPayments =
+                payments.filter(
+                    payment => payment.status === "success"
+                );
 
-            if (user.blocked) {
+            const revenue =
+                successfulPayments.reduce(
+                    (total, payment) =>
+                        total + Number(payment.amount || 0),
+                    0
+                );
 
-                blocked++;
-
-                return;
-            }
-
-            const access =
-                userAccess(user);
-
-            if (
-                access.mode ===
-                "premium"
-            ) {
-                premium++;
-            }
-
-            if (
-                access.mode ===
-                "trial"
-            ) {
-                trial++;
-            }
-        });
-
-        const successfulPayments =
-            payments.filter(
-                payment =>
-                    payment.status ===
-                    "success"
+            return res.json({
+                success: true,
+                stats: {
+                    users: users.length,
+                    premium,
+                    trial,
+                    blocked,
+                    payments: successfulPayments.length,
+                    revenue,
+                    speakingResults: speakingResults.length,
+                    serverTime: new Date().toISOString()
+                },
+                recentUsers:
+                    users
+                        .slice(-10)
+                        .reverse(),
+                recentPayments:
+                    payments
+                        .slice(-10)
+                        .reverse()
+            });
+        } catch (error) {
+            console.error(
+                "❌ Admin dashboard error:",
+                error
             );
 
-        const revenue =
-            successfulPayments.reduce(
-                (
-                    total,
-                    payment
-                ) =>
-                    total +
-                    Number(
-                        payment.amount ||
-                        0
-                    ),
-                0
-            );
-
-        res.json({
-
-            success:
-                true,
-
-            stats: {
-
-                users:
-                    users.length,
-
-                premium,
-
-                trial,
-
-                blocked,
-
-                payments:
-                    successfulPayments.length,
-
-                revenue,
-
-                speakingResults:
-                    speakingResults.length,
-
-                serverTime:
-                    new Date(
-                        now
-                    ).toISOString()
-            },
-
-            recentUsers:
-                users
-                    .slice(-10)
-                    .reverse(),
-
-            recentPayments:
-                payments
-                    .slice(-10)
-                    .reverse()
-        });
+            return res.status(500).json({
+                success: false,
+                error:
+                    "Dashboard ma'lumotlarini olishda xatolik."
+            });
+        }
     }
 );
 
 
-// ==============================================// ADMIN USERS
 // ==============================================
+// ADMIN USERS
+// ==============================================
+
 app.get(
+
     "/api/admin/users",
+
     requireAdmin,
-    (req, res) => {
 
-        const db =
-            readDatabase();
+    async (req, res) => {
 
-        res.json({
+        try {
 
-            success:
-                true,
+            const result =
+                await pool.query(`
+                    SELECT
+                        id,
+                        full_name,
+                        email,
+                        phone,
+                        blocked,
+                        subscription_status,
+                        plan,
+                        created_at,
+                        trial_until,
+                        expires_at,
+                        speaking_count,
+                        legal_consent
+                    FROM users
+                    ORDER BY created_at ASC
+                `);
 
-            users:
-                db.users || []
-        });
+            const users =
+                result.rows.map(row => ({
+
+                    id: row.id,
+                    fullName: row.full_name,
+                    email: row.email,
+                    phone: row.phone,
+                    blocked: row.blocked,
+                    subscriptionStatus:
+                        row.subscription_status,
+                    plan: row.plan,
+                    createdAt: row.created_at,
+                    trialUntil: row.trial_until,
+                    expiresAt: row.expires_at,
+                    speakingCount:
+                        row.speaking_count,
+                    legalConsent:
+                        row.legal_consent || {}
+
+                }));
+
+            return res.json({
+                success: true,
+                users
+            });
+
+        } catch (error) {
+
+            console.error(
+                "❌ Admin users error:",
+                error
+            );
+
+            return res.status(500).json({
+                success: false,
+                error:
+                    "Foydalanuvchilarni olishda xatolik."
+            });
+
+        }
+
     }
+
 );
 
 
 // ==============================================// ADMIN UPDATE USER
 // ==============================================
 app.patch(
+
     "/api/admin/users/:id",
+
     requireAdmin,
-    (req, res) => {
 
-        const db =
-            readDatabase();
+    async (req, res) => {
 
-        const user =
-            (db.users || [])
-                .find(
-                    item =>
-                        String(
-                            item.id
-                        ) ===
-                        String(
-                            req.params.id
-                        )
+        try {
+
+            const updates = [];
+            const values = [];
+
+            if (
+                Object.prototype.hasOwnProperty.call(
+                    req.body,
+                    "blocked"
+                )
+            ) {
+                values.push(
+                    Boolean(req.body.blocked)
                 );
 
-        if (!user) {
+                updates.push(
+                    `blocked = $${values.length}`
+                );
+            }
 
-            return res.status(404)
-                .json({
+            if (
+                Object.prototype.hasOwnProperty.call(
+                    req.body,
+                    "subscriptionStatus"
+                )
+            ) {
+                values.push(
+                    req.body.subscriptionStatus
+                );
 
-                    success:
-                        false,
+                updates.push(
+                    `subscription_status = $${values.length}`
+                );
+            }
+
+            if (
+                Object.prototype.hasOwnProperty.call(
+                    req.body,
+                    "plan"
+                )
+            ) {
+                values.push(
+                    req.body.plan
+                );
+
+                updates.push(
+                    `plan = $${values.length}`
+                );
+            }
+
+            if (
+                Object.prototype.hasOwnProperty.call(
+                    req.body,
+                    "expiresAt"
+                )
+            ) {
+                values.push(
+                    req.body.expiresAt || null
+                );
+
+                updates.push(
+                    `expires_at = $${values.length}`
+                );
+            }
+
+            if (
+                Object.prototype.hasOwnProperty.call(
+                    req.body,
+                    "trialUntil"
+                )
+            ) {
+                values.push(
+                    req.body.trialUntil || null
+                );
+
+                updates.push(
+                    `trial_until = $${values.length}`
+                );
+            }
+
+            if (updates.length === 0) {
+
+                return res.status(400).json({
+
+                    success: false,
+
+                    error:
+                        "Yangilanadigan maydon topilmadi."
+
+                });
+
+            }
+
+            values.push(req.params.id);
+
+            const result =
+                await pool.query(
+                    `
+                    UPDATE users
+                    SET ${updates.join(", ")}
+                    WHERE id = $${values.length}
+                    RETURNING
+                        id,
+                        full_name,
+                        email,
+                        phone,
+                        blocked,
+                        subscription_status,
+                        plan,
+                        created_at,
+                        trial_until,
+                        expires_at,
+                        speaking_count,
+                        legal_consent
+                    `,
+                    values
+                );
+
+            const row =
+                result.rows[0];
+
+            if (!row) {
+
+                return res.status(404).json({
+
+                    success: false,
 
                     error:
                         "Foydalanuvchi topilmadi."
+
                 });
+
+            }
+
+            const user = {
+
+                id:
+                    row.id,
+
+                fullName:
+                    row.full_name,
+
+                email:
+                    row.email,
+
+                phone:
+                    row.phone,
+
+                blocked:
+                    row.blocked,
+
+                subscriptionStatus:
+                    row.subscription_status,
+
+                plan:
+                    row.plan,
+
+                createdAt:
+                    row.created_at,
+
+                trialUntil:
+                    row.trial_until,
+
+                expiresAt:
+                    row.expires_at,
+
+                speakingCount:
+                    row.speaking_count,
+
+                legalConsent:
+                    row.legal_consent || {}
+
+            };
+
+            return res.json({
+
+                success: true,
+
+                user
+
+            });
+
+        } catch (error) {
+
+            console.error(
+                "❌ Admin update user error:",
+                error
+            );
+
+            return res.status(500).json({
+
+                success: false,
+
+                error:
+                    "Foydalanuvchini yangilashda xatolik."
+
+            });
+
         }
 
-        const fields = [
-            "blocked",
-            "subscriptionStatus",
-            "plan",
-            "expiresAt",
-            "trialUntil"
-        ];
-
-        fields.forEach(
-            field => {
-
-                if (
-                    Object.prototype
-                        .hasOwnProperty
-                        .call(
-                            req.body,
-                            field
-                        )
-                ) {
-
-                    user[field] =
-                        req.body[field];
-                }
-            }
-        );
-
-        writeDatabase(db);
-
-        res.json({
-
-            success:
-                true,
-
-            user
-        });
     }
+
 );
 
 
-// ==============================================// ADMIN PAYMENTS
-// ==============================================
 app.get(
+
     "/api/admin/payments",
+
     requireAdmin,
-    (req, res) => {
 
-        const db =
-            readDatabase();
+    async (req, res) => {
 
-        res.json({
+        try {
 
-            success:
-                true,
+            const result =
+                await pool.query(`
+                    SELECT
+                        id,
+                        invoice_id,
+                        multicard_uuid,
+                        user_id,
+                        user_name,
+                        plan,
+                        months,
+                        amount,
+                        payment_method,
+                        status,
+                        legal_consent,
+                        multicard_status,
+                        created_at,
+                        paid_at
+                    FROM payments
+                    ORDER BY created_at ASC
+                `);
 
-            payments:
-                db.payments || []
-        });
+            const payments =
+                result.rows.map(row => ({
+
+                    id:
+                        row.id,
+
+                    invoiceId:
+                        row.invoice_id,
+
+                    multicardUuid:
+                        row.multicard_uuid,
+
+                    userId:
+                        row.user_id,
+
+                    userName:
+                        row.user_name,
+
+                    plan:
+                        row.plan,
+
+                    months:
+                        row.months,
+
+                    amount:
+                        row.amount,
+
+                    paymentMethod:
+                        row.payment_method,
+
+                    status:
+                        row.status,
+
+                    legalConsent:
+                        row.legal_consent || {},
+
+                    multicardStatus:
+                        row.multicard_status,
+
+                    createdAt:
+                        row.created_at,
+
+                    paidAt:
+                        row.paid_at
+
+                }));
+
+            return res.json({
+
+                success: true,
+
+                payments
+
+            });
+
+        } catch (error) {
+
+            console.error(
+                "❌ Admin payments error:",
+                error
+            );
+
+            return res.status(500).json({
+
+                success: false,
+
+                error:
+                    "To'lovlarni olishda xatolik."
+
+            });
+
+        }
+
     }
+
 );
 
 
-// ==============================================// ADMIN SPEAKING RESULTS
-// ==============================================
 app.get(
+
     "/api/admin/speaking-results",
+
     requireAdmin,
-    (req, res) => {
 
-        const db =
-            readDatabase();
+    async (req, res) => {
 
-        res.json({
+        try {
 
-            success:
-                true,
+            const result =
+                await pool.query(`
+                    SELECT
+                        id,
+                        user_id,
+                        result,
+                        created_at
+                    FROM speaking_results
+                    ORDER BY created_at ASC
+                `);
 
-            results:
-                db.speakingResults || []
-        });
+            const results =
+                result.rows.map(row => ({
+
+                    id:
+                        row.id,
+
+                    userId:
+                        row.user_id,
+
+                    result:
+                        row.result || {},
+
+                    createdAt:
+                        row.created_at
+
+                }));
+
+            return res.json({
+
+                success: true,
+
+                results
+
+            });
+
+        } catch (error) {
+
+            console.error(
+                "❌ Admin speaking results error:",
+                error
+            );
+
+            return res.status(500).json({
+
+                success: false,
+
+                error:
+                    "Speaking natijalarini olishda xatolik."
+
+            });
+
+        }
+
     }
+
 );
 
 
-// ==============================================// ADMIN SETTINGS
-// ==============================================
 app.get(
     "/api/admin/settings",
     requireAdmin,
@@ -1934,298 +2272,392 @@ app.get(
 // ==============================================// ADMIN USER PREMIUM MANUAL ACTIVATION
 // ==============================================
 app.post(
+
     "/api/admin/users/:id/premium",
+
     requireAdmin,
-    (req, res) => {
 
-        const db =
-            readDatabase();
-
-        const user =
-            (db.users || [])
-                .find(
-                    item =>
-                        String(
-                            item.id
-                        ) ===
-                        String(
-                            req.params.id
-                        )
-                );
-
-        if (!user) {
-
-            return res.status(404)
-                .json({
-
-                    success:
-                        false,
-
-                    error:
-                        "Foydalanuvchi topilmadi."
-                });
-        }
-
-        const months =
-            Number(
-                req.body?.months || 1
-            );
-
-        const safeMonths =
-            [1, 2, 3].includes(
-                months
-            )
-                ? months
-                : 1;
-
-        const amount =
-            safeMonths === 1
-                ? PLAN_1_MONTH
-                : safeMonths === 2
-                    ? PLAN_2_MONTHS
-                    : PLAN_3_MONTHS;
-
-        const plan =
-            `${safeMonths} oy`;
-
-        const now =
-            new Date();
-
-        const currentExpiry =
-            user.expiresAt
-                ? new Date(
-                    user.expiresAt
-                )
-                : now;
-
-        const start =
-            currentExpiry > now
-                ? currentExpiry
-                : now;
-
-        const expires =
-            new Date(
-                start.getTime() +
-                safeMonths *
-                30 *
-                24 *
-                60 *
-                60 *
-                1000
-            );
-
-        user.subscriptionStatus =
-            "premium";
-
-        user.plan =
-            plan;
-
-        user.expiresAt =
-            expires.toISOString();
-
-        user.blocked =
-            false;
-
-        // This is an administrator-granted benefit, not a customer payment.
-        // Keep an audit record with amount 0 so it never inflates revenue.
-        db.payments.push({
-
-            id:
-                crypto.randomUUID(),
-
-            userId:
-                user.id,
-
-            userName:
-                user.fullName,
-
-            plan,
-
-            amount,
-
-            paymentMethod:
-                "admin",
-
-            status:
-                "success",
-            months: safeMonths,
-
-            amount: 0,
-
-            paymentMethod:
-                "admin_grant",
-
-            status:
-                "admin_grant",
-
-            createdAt:
-                now.toISOString()
-        });
-
-        writeDatabase(db);
-
-        res.json({
-
-            success:
-                true,
-
-            user
-        });
-    }
-);
-
-
-// ==============================================
-// MULTICARD PAYMENT CREATE
-// ==============================================
-
-app.post(
-    "/api/payment/create",
     async (req, res) => {
+
+        const client =
+            await pool.connect();
 
         try {
 
-            // 1. Foydalanuvchini tekshirish
-            const user =
-                getAuthenticatedUser(req);
-
-            if (!user) {
-                return res.status(401)
-                    .json({
-                        success: false,
-                        error:
-                            "Avval tizimga kiring."
-                    });
-            }
-
-            // 2. Oferta va privacy qabul qilinganmi?
-            const legalAccepted =
-                req.body?.legalAccepted === true ||
-                req.body?.legalAccepted === "true" ||
-                req.body?.legalAccepted === "on";
-
-            if (!legalAccepted) {
-                return res.status(400)
-                    .json({
-                        success: false,
-                        error:
-                            "To‘lovni boshlash uchun Ommaviy oferta va Maxfiylik siyosatini qabul qilishingiz kerak."
-                    });
-            }
-
-            // 3. Tarif
             const months =
-                Number(
-                    req.body?.months || 1
+                Number(req.body?.months || 1);
+
+            const safeMonths =
+                [1, 2, 3].includes(months)
+                    ? months
+                    : 1;
+
+            const amount =
+                safeMonths === 1
+                    ? PLAN_1_MONTH
+                    : safeMonths === 2
+                        ? PLAN_2_MONTHS
+                        : PLAN_3_MONTHS;
+
+            const plan =
+                `${safeMonths} oy`;
+
+            await client.query(
+                "BEGIN"
+            );
+
+            const userResult =
+                await client.query(
+                    `
+                    SELECT
+                        id,
+                        full_name,
+                        email,
+                        phone,
+                        blocked,
+                        subscription_status,
+                        plan,
+                        created_at,
+                        trial_until,
+                        expires_at,
+                        speaking_count,
+                        legal_consent
+                    FROM users
+                    WHERE id = $1
+                    FOR UPDATE
+                    `,
+                    [req.params.id]
                 );
 
-            let amount;
-            let plan;
+            const row =
+                userResult.rows[0];
 
-            if (months === 1) {
+            if (!row) {
 
-                amount =
-                    PLAN_1_MONTH;
+                await client.query(
+                    "ROLLBACK"
+                );
 
-                plan =
-                    "1 oy";
+                return res.status(404).json({
 
-            } else if (months === 2) {
+                    success: false,
 
-                amount =
-                    PLAN_2_MONTHS;
+                    error:
+                        "Foydalanuvchi topilmadi."
 
-                plan =
-                    "2 oy";
-
-            } else if (months === 3) {
-
-                amount =
-                    PLAN_3_MONTHS;
-
-                plan =
-                    "3 oy";
-
-            } else {
-
-                return res.status(400)
-                    .json({
-                        success: false,
-                        error:
-                            "Noto‘g‘ri tarif."
-                    });
-            }
-
-            // 4. Bizning invoice ID
-            const invoiceId =
-                `TH-${Date.now()}-${crypto
-                    .randomBytes(4)
-                    .toString("hex")}`;
-
-            // 5. Multicard invoice yaratish
-            const multicard =
-                await createMulticardInvoice({
-                    invoiceId,
-                    amount
                 });
 
-            // 6. Database
-            const db =
-                readDatabase();
+            }
+
+            const now =
+                new Date();
+
+            const currentExpiry =
+                row.expires_at
+                    ? new Date(row.expires_at)
+                    : now;
+
+            const startDate =
+                currentExpiry > now
+                    ? currentExpiry
+                    : now;
+
+            const expires =
+                new Date(
+                    startDate.getTime() +
+                    safeMonths *
+                    30 *
+                    24 *
+                    60 *
+                    60 *
+                    1000
+                );
+
+            const updatedUserResult =
+                await client.query(
+                    `
+                    UPDATE users
+                    SET
+                        subscription_status = 'premium',
+                        plan = $1,
+                        expires_at = $2,
+                        blocked = FALSE
+                    WHERE id = $3
+                    RETURNING
+                        id,
+                        full_name,
+                        email,
+                        phone,
+                        blocked,
+                        subscription_status,
+                        plan,
+                        created_at,
+                        trial_until,
+                        expires_at,
+                        speaking_count,
+                        legal_consent
+                    `,
+                    [
+                        plan,
+                        expires,
+                        req.params.id
+                    ]
+                );
+
+            const updatedRow =
+                updatedUserResult.rows[0];
 
             const paymentId =
                 crypto.randomUUID();
 
-            db.payments.push({
+            await client.query(
+                `
+                INSERT INTO payments (
+                    id,
+                    user_id,
+                    user_name,
+                    plan,
+                    months,
+                    amount,
+                    payment_method,
+                    status,
+                    legal_consent,
+                    created_at
+                )
+                VALUES (
+                    $1,
+                    $2,
+                    $3,
+                    $4,
+                    $5,
+                    0,
+                    'admin_grant',
+                    'admin_grant',
+                    '{}'::jsonb,
+                    $6
+                )
+                `,
+                [
+                    paymentId,
+                    updatedRow.id,
+                    updatedRow.full_name,
+                    plan,
+                    safeMonths,
+                    now
+                ]
+            );
+
+            await client.query(
+                "COMMIT"
+            );
+
+            const user = {
 
                 id:
-                    paymentId,
+                    updatedRow.id,
 
-                invoiceId,
+                fullName:
+                    updatedRow.full_name,
 
-                multicardUuid:
-                    multicard.uuid,
+                email:
+                    updatedRow.email,
 
-                userId:
-                    user.id,
+                phone:
+                    updatedRow.phone,
 
-                userName:
-                    user.fullName,
+                blocked:
+                    updatedRow.blocked,
 
-                plan,
+                subscriptionStatus:
+                    updatedRow.subscription_status,
 
-                months,
-
-                amount,
-
-                paymentMethod:
-                    "multicard",
-
-                status:
-                    "pending",
-
-                legalConsent: {
-                    accepted: true,
-
-                    acceptedAt:
-                        new Date()
-                            .toISOString(),
-
-                    privacyPolicyVersion:
-                        PRIVACY_POLICY_VERSION,
-
-                    offerVersion:
-                        OFFER_VERSION
-                },
+                plan:
+                    updatedRow.plan,
 
                 createdAt:
-                    new Date()
-                        .toISOString()
+                    updatedRow.created_at,
+
+                trialUntil:
+                    updatedRow.trial_until,
+
+                expiresAt:
+                    updatedRow.expires_at,
+
+                speakingCount:
+                    updatedRow.speaking_count,
+
+                legalConsent:
+                    updatedRow.legal_consent || {}
+
+            };
+
+            return res.json({
+
+                success: true,
+
+                user
+
             });
 
-            writeDatabase(db);
+        } catch (error) {
 
-            // 7. Frontendga Multicard checkout URL
+            try {
+
+                await client.query(
+                    "ROLLBACK"
+                );
+
+            } catch (rollbackError) {
+
+                console.error(
+                    "❌ Admin premium rollback error:",
+                    rollbackError
+                );
+
+            }
+
+            console.error(
+                "❌ Admin premium error:",
+                error
+            );
+
+            return res.status(500).json({
+
+                success: false,
+
+                error:
+                    "Premium berishda xatolik."
+
+            });
+
+        } finally {
+
+            client.release();
+
+        }
+
+    }
+
+);
+
+
+app.post(
+
+    "/api/payment/create",
+
+    async (req, res) => {
+
+        try {
+
+            const user =
+                await getAuthenticatedUser(req);
+
+            if (!user) {
+
+                return res.status(401).json({
+
+                    success: false,
+
+                    error:
+                        "Avval tizimga kiring."
+
+                });
+
+            }
+
+            const months =
+                Number(req.body?.months || 1);
+
+            const safeMonths =
+                [1, 2, 3].includes(months)
+                    ? months
+                    : 1;
+
+            const amount =
+                safeMonths === 1
+                    ? PLAN_1_MONTH
+                    : safeMonths === 2
+                        ? PLAN_2_MONTHS
+                        : PLAN_3_MONTHS;
+
+            const plan =
+                `${safeMonths} oy`;
+
+            const invoiceId =
+                `TH-${Date.now()}-${crypto.randomBytes(4).toString("hex")}`;
+
+            const multicard =
+                await createMulticardInvoice({
+
+                    invoiceId,
+
+                    amount
+
+                });
+
+            const paymentId =
+                crypto.randomUUID();
+
+            const legalConsent = {
+
+                accepted: true,
+
+                acceptedAt:
+                    new Date().toISOString(),
+
+                privacyPolicyVersion:
+                    PRIVACY_POLICY_VERSION,
+
+                offerVersion:
+                    OFFER_VERSION
+
+            };
+
+            await pool.query(
+                `
+                INSERT INTO payments (
+                    id,
+                    invoice_id,
+                    multicard_uuid,
+                    user_id,
+                    user_name,
+                    plan,
+                    months,
+                    amount,
+                    payment_method,
+                    status,
+                    legal_consent,
+                    created_at
+                )
+                VALUES (
+                    $1,
+                    $2,
+                    $3,
+                    $4,
+                    $5,
+                    $6,
+                    $7,
+                    $8,
+                    'multicard',
+                    'pending',
+                    $9,
+                    $10
+                )
+                `,
+                [
+                    paymentId,
+                    invoiceId,
+                    multicard.uuid,
+                    user.id,
+                    user.fullName,
+                    plan,
+                    safeMonths,
+                    amount,
+                    legalConsent,
+                    new Date()
+                ]
+            );
+
             return res.json({
 
                 success: true,
@@ -2241,101 +2673,47 @@ app.post(
 
                 plan,
 
+                months:
+                    safeMonths,
+
                 status:
                     "pending",
 
                 checkoutUrl:
                     multicard.checkout_url
+
             });
 
         } catch (error) {
 
             console.error(
-                "MULTICARD CREATE ERROR:",
+                "❌ Payment create error:",
                 error
             );
 
-            return res.status(500)
-                .json({
-                    success: false,
-                    error:
-                        error.message ||
-                        "To‘lov yaratishda xatolik."
-                });
+            return res.status(500).json({
+
+                success: false,
+
+                error:
+                    "To'lov yaratishda xatolik."
+
+            });
+
         }
+
     }
+
 );
 
 
-// ==============================================
-// MULTICARD SIGNATURE VERIFICATION
-// ==============================================
-
-function verifyMulticardSignature(body) {
-
-    if (!MULTICARD_SECRET) {
-        console.error(
-            "MULTICARD_SECRET .env faylida mavjud emas."
-        );
-        return false;
-    }
-
-    const storeId =
-        String(body?.store_id ?? "");
-
-    const invoiceId =
-        String(body?.invoice_id || "");
-
-    const amount =
-        String(body?.amount ?? "");
-
-    const receivedSign =
-        String(body?.sign || "")
-            .trim()
-            .toLowerCase();
-
-    if (
-        !storeId ||
-        !invoiceId ||
-        !amount ||
-        !receivedSign
-    ) {
-        return false;
-    }
-
-    // Multicard success callback:
-    // md5(store_id + invoice_id + amount + secret)
-    const raw =
-        `${storeId}${invoiceId}${amount}${MULTICARD_SECRET}`;
-
-    const expectedSign =
-        crypto
-            .createHash("md5")
-            .update(raw, "utf8")
-            .digest("hex")
-            .toLowerCase();
-
-    if (
-        expectedSign.length !==
-        receivedSign.length
-    ) {
-        return false;
-    }
-
-    return crypto.timingSafeEqual(
-        Buffer.from(expectedSign, "utf8"),
-        Buffer.from(receivedSign, "utf8")
-    );
-}
-
-
-// ==============================================
-// MULTICARD WEBHOOK
-// ==============================================
-
 app.post(
+
     "/api/payment/webhook",
-    (req, res) => {
+
+    async (req, res) => {
+
+        let client = null;
 
         try {
 
@@ -2347,7 +2725,8 @@ app.post(
                 body
             );
 
-            // 1. Multicard sign tekshirish
+            // 1. Multicard signature tekshirish
+
             if (
                 !verifyMulticardSignature(
                     body
@@ -2360,13 +2739,18 @@ app.post(
 
                 return res.status(403)
                     .json({
+
                         success: false,
+
                         error:
                             "Invalid signature"
+
                     });
+
             }
 
             // 2. Ma'lumotlarni olish
+
             const invoiceId =
                 String(
                     body.invoice_id ||
@@ -2391,30 +2775,70 @@ app.post(
                 );
 
             // 3. Invoice tekshirish
+
             if (!invoiceId || !uuid) {
+
                 return res.status(400)
                     .json({
+
                         success: false,
+
                         error:
                             "invoice_id yoki uuid yo‘q."
+
                     });
+
             }
 
-            // 4. Database
-            const db =
-                readDatabase();
+            // 4. PostgreSQL transaction
+
+            client =
+                await pool.connect();
+
+            await client.query(
+                "BEGIN"
+            );
+
+            // Payment row'ni lock qilamiz.
+            // Duplicate webhook race conditionini
+            // oldini oladi.
+
+            const paymentResult =
+                await client.query(
+                    `
+                    SELECT
+                        id,
+                        invoice_id,
+                        multicard_uuid,
+                        user_id,
+                        user_name,
+                        plan,
+                        months,
+                        amount,
+                        status,
+                        multicard_status,
+                        created_at,
+                        paid_at
+                    FROM payments
+                    WHERE invoice_id = $1
+                      AND multicard_uuid = $2
+                    LIMIT 1
+                    FOR UPDATE
+                    `,
+                    [
+                        invoiceId,
+                        uuid
+                    ]
+                );
 
             const payment =
-                (db.payments || [])
-                    .find(
-                        item =>
-                            item.invoiceId ===
-                                invoiceId &&
-                            item.multicardUuid ===
-                                uuid
-                    );
+                paymentResult.rows[0];
 
             if (!payment) {
+
+                await client.query(
+                    "ROLLBACK"
+                );
 
                 console.error(
                     "Payment topilmadi:",
@@ -2424,154 +2848,242 @@ app.post(
 
                 return res.status(404)
                     .json({
+
                         success: false,
+
                         error:
                             "Payment topilmadi."
+
                     });
+
             }
 
-                        // 5. Amount tekshirish
-            const expectedAmount =
-                Math.round(Number(payment.amount) * 100);
+            // 5. Amount tekshirish
 
-            if (amount !== expectedAmount) {
+            const expectedAmount =
+                Math.round(
+                    Number(payment.amount) * 100
+                );
+
+            if (
+                amount !==
+                expectedAmount
+            ) {
+
+                await client.query(
+                    "ROLLBACK"
+                );
+
                 console.error(
                     "Multicard amount mismatch:",
                     {
-                        received: amount,
-                        expected: expectedAmount,
-                        paymentAmount: payment.amount
+                        received:
+                            amount,
+
+                        expected:
+                            expectedAmount,
+
+                        paymentAmount:
+                            payment.amount
                     }
                 );
 
                 return res.status(400)
                     .json({
+
                         success: false,
-                        error: "Amount mismatch."
+
+                        error:
+                            "Amount mismatch."
+
                     });
+
             }
 
-            
+            // 6. Allaqachon success bo'lsa,
+            // premiumni qayta uzaytirmaymiz.
 
-            // 6. Agar allaqachon success bo‘lsa
-            // qayta premium qo‘shmaymiz
             if (
                 payment.status ===
                 "success"
             ) {
 
-                return res.status(200)
-                    .json({
-                        success: true
-                    });
-            }
-
-            // 7. SUCCESS
-            // Bu endpoint Multicard success callback uchun.
-            // Signature + invoice + UUID + amount tekshiruvlari
-            // yuqorida allaqachon bajarilgan.
-            {
-
-                payment.status =
-                    "success";
-
-                payment.paidAt =
-                    new Date()
-                        .toISOString();
-
-                payment.multicardStatus =
-                    "success";
-
-                // User
-                const user =
-                    (db.users || [])
-                        .find(
-                            item =>
-                                String(
-                                    item.id
-                                ) ===
-                                String(
-                                    payment.userId
-                                )
-                        );
-
-                if (!user) {
-
-                    console.error(
-                        "User topilmadi:",
-                        payment.userId
-                    );
-
-                    return res.status(404)
-                        .json({
-                            success: false,
-                            error:
-                                "User topilmadi."
-                        });
-                }
-
-                const months =
-                    Number(
-                        payment.months ||
-                        1
-                    );
-
-                const now =
-                    new Date();
-
-                const oldExpiry =
-                    user.expiresAt
-                        ? new Date(
-                            user.expiresAt
-                        )
-                        : now;
-
-                const start =
-                    oldExpiry > now
-                        ? oldExpiry
-                        : now;
-
-                const expires =
-                    new Date(
-                        start.getTime() +
-                        months *
-                        30 *
-                        24 *
-                        60 *
-                        60 *
-                        1000
-                    );
-
-                user.subscriptionStatus =
-                    "premium";
-
-                user.plan =
-                    payment.plan;
-
-                user.expiresAt =
-                    expires.toISOString();
-
-                user.blocked =
-                    false;
-
-                writeDatabase(db);
-
-                console.log(
-                    "✅ MULTICARD PAYMENT SUCCESS:",
-                    invoiceId,
-                    user.fullName
+                await client.query(
+                    "COMMIT"
                 );
 
+                return res.status(200)
+                    .json({
+
+                        success: true
+
+                    });
 
             }
 
-            // Multicardga 200 qaytaramiz
+            // 7. Userni transaction ichida lock qilamiz
+
+            const userResult =
+                await client.query(
+                    `
+                    SELECT
+                        id,
+                        full_name,
+                        email,
+                        phone,
+                        blocked,
+                        subscription_status,
+                        plan,
+                        created_at,
+                        trial_until,
+                        expires_at,
+                        speaking_count,
+                        legal_consent
+                    FROM users
+                    WHERE id = $1
+                    LIMIT 1
+                    FOR UPDATE
+                    `,
+                    [
+                        payment.user_id
+                    ]
+                );
+
+            const user =
+                userResult.rows[0];
+
+            if (!user) {
+
+                await client.query(
+                    "ROLLBACK"
+                );
+
+                console.error(
+                    "User topilmadi:",
+                    payment.user_id
+                );
+
+                return res.status(404)
+                    .json({
+
+                        success: false,
+
+                        error:
+                            "User topilmadi."
+
+                    });
+
+            }
+
+            // 8. Premium muddatini hisoblash
+
+            const months =
+                [1, 2, 3].includes(
+                    Number(payment.months)
+                )
+                    ? Number(payment.months)
+                    : 1;
+
+            const now =
+                new Date();
+
+            const oldExpiry =
+                user.expires_at
+                    ? new Date(
+                        user.expires_at
+                    )
+                    : now;
+
+            const startDate =
+                oldExpiry > now
+                    ? oldExpiry
+                    : now;
+
+            const expires =
+                new Date(
+                    startDate.getTime() +
+                    months *
+                    30 *
+                    24 *
+                    60 *
+                    60 *
+                    1000
+                );
+
+            // 9. Userni premium qilish
+
+            await client.query(
+                `
+                UPDATE users
+                SET
+                    subscription_status = 'premium',
+                    plan = $1,
+                    expires_at = $2,
+                    blocked = FALSE
+                WHERE id = $3
+                `,
+                [
+                    payment.plan,
+                    expires,
+                    payment.user_id
+                ]
+            );
+
+            // 10. Paymentni success qilish
+
+            await client.query(
+                `
+                UPDATE payments
+                SET
+                    status = 'success',
+                    multicard_status = 'success',
+                    paid_at = NOW()
+                WHERE id = $1
+                `,
+                [
+                    payment.id
+                ]
+            );
+
+            // 11. User + payment bir transactionda commit
+
+            await client.query(
+                "COMMIT"
+            );
+
+            console.log(
+                "✅ MULTICARD PAYMENT SUCCESS:",
+                invoiceId,
+                user.full_name
+            );
+
             return res.status(200)
                 .json({
+
                     success: true
+
                 });
 
         } catch (error) {
+
+            if (client) {
+
+                try {
+
+                    await client.query(
+                        "ROLLBACK"
+                    );
+
+                } catch (rollbackError) {
+
+                    console.error(
+                        "Webhook rollback error:",
+                        rollbackError
+                    );
+
+                }
+
+            }
 
             console.error(
                 "WEBHOOK ERROR:",
@@ -2580,16 +3092,29 @@ app.post(
 
             return res.status(500)
                 .json({
+
                     success: false,
+
                     error:
                         "Webhook xatosi."
+
                 });
+
+        } finally {
+
+            if (client) {
+
+                client.release();
+
+            }
+
         }
+
     }
+
 );
 
-// ==============================================// 404
-// ==============================================
+
 app.use(
     (req, res) => {
 
