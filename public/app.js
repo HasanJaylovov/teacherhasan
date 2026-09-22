@@ -13,7 +13,12 @@ let sourceNode = null;
 let processorNode = null;
 
 let isRunning = false;
+
 let nextAudioTime = 0;
+
+let guestMode = false;
+
+let guestHeartbeatTimer = null;
 
 // ==========================================
 // DOM
@@ -47,6 +52,188 @@ document.addEventListener("DOMContentLoaded", () => {
     // ==========================================
     // STATUS
     // ==========================================
+
+    async function startGuestSession() {
+        const response =
+            await fetch(
+                "/api/guest/start",
+                {
+                    method: "POST",
+                    credentials: "same-origin"
+                }
+            );
+
+        const data =
+            await response
+                .json()
+                .catch(() => ({}));
+
+        if (!response.ok) {
+            const error =
+                new Error(
+                    data.error ||
+                    "Guest sessiyasini boshlashda xato."
+                );
+
+            error.code =
+                data.code || null;
+
+            throw error;
+        }
+
+        guestMode =
+            data.mode === "guest" ||
+            (
+                data.active === true &&
+                data.authenticated !== true
+            );
+
+        console.log(
+            "👤 Access mode:",
+            data.mode || (
+                guestMode
+                    ? "guest"
+                    : "authenticated"
+            )
+        );
+
+        if (guestMode) {
+            console.log(
+                "⏱️ Guest remaining:",
+                data.remainingSeconds,
+                "seconds"
+            );
+        }
+
+        return data;
+    }
+
+    function startGuestHeartbeat() {
+        if (!guestMode) return;
+
+        if (guestHeartbeatTimer) {
+            clearInterval(
+                guestHeartbeatTimer
+            );
+        }
+
+        guestHeartbeatTimer =
+            setInterval(
+                async () => {
+                    if (!guestMode) {
+                        return;
+                    }
+
+                    try {
+                        const response =
+                            await fetch(
+                                "/api/guest/heartbeat",
+                                {
+                                    method: "POST",
+                                    credentials:
+                                        "same-origin"
+                                }
+                            );
+
+                        const data =
+                            await response
+                                .json()
+                                .catch(
+                                    () => ({})
+                                );
+
+                        if (
+                            !response.ok ||
+                            data.exhausted
+                        ) {
+                            console.warn(
+                                "⏱️ Guest vaqti tugadi."
+                            );
+
+                            guestMode =
+                                false;
+
+                            stopGuestHeartbeat();
+
+                            if (
+                                typeof stopTeacher ===
+                                "function"
+                            ) {
+                                stopTeacher();
+                            }
+
+                            setStatus(
+                                "⏱️ Guest vaqti tugadi. Iltimos, Login yoki Register qiling."
+                            );
+
+                            return;
+                        }
+
+                        console.log(
+                            "💓 Guest heartbeat:",
+                            data.remainingSeconds,
+                            "seconds qoldi"
+                        );
+                    } catch (error) {
+                        console.warn(
+                            "⚠️ Guest heartbeat xatosi:",
+                            error
+                        );
+                    }
+                },
+                5000
+            );
+    }
+
+    function stopGuestHeartbeat() {
+        if (guestHeartbeatTimer) {
+            clearInterval(
+                guestHeartbeatTimer
+            );
+
+            guestHeartbeatTimer =
+                null;
+        }
+    }
+
+    async function stopGuestSession() {
+        if (!guestMode) {
+            stopGuestHeartbeat();
+            return;
+        }
+
+        guestMode = false;
+
+        stopGuestHeartbeat();
+
+        try {
+            const response =
+                await fetch(
+                    "/api/guest/stop",
+                    {
+                        method: "POST",
+                        credentials:
+                            "same-origin"
+                    }
+                );
+
+            const data =
+                await response
+                    .json()
+                    .catch(() => ({}));
+
+            console.log(
+                "⏹️ Guest session stopped:",
+                data.remainingSeconds,
+                "seconds qoldi"
+            );
+        } catch (error) {
+            console.warn(
+                "⚠️ Guest stop xatosi:",
+                error
+            );
+        }
+    }
 
     function setStatus(text) {
         status.textContent = text;
@@ -271,6 +458,20 @@ document.addEventListener("DOMContentLoaded", () => {
         stopBtn.disabled = false;
 
         setStatus("🔄 Teacher Hasan ulanmoqda...");
+
+        // ACCESS / GUEST PREFLIGHT
+        const accessData =
+            await startGuestSession();
+
+        console.log(
+            "🔐 Teacher access:",
+            accessData.mode ||
+            (
+                guestMode
+                    ? "guest"
+                    : "authenticated"
+            )
+        );
 
         // AUDIO CONTEXT
         audioContext = new AudioContext({
@@ -565,6 +766,10 @@ O'zingizni Teacher Hasan deb tanishtiring.
 
         isRunning = true;
 
+        if (guestMode) {
+            startGuestHeartbeat();
+        }
+
         setStatus(
             "🟢 Teacher Hasan tinglamoqda..."
         );
@@ -580,6 +785,10 @@ O'zingizni Teacher Hasan deb tanishtiring.
             error
         );
 
+        if (guestMode) {
+            await stopGuestSession();
+        }
+
         setStatus(
             "❌ Xato: " + error.message
         );
@@ -594,6 +803,10 @@ O'zingizni Teacher Hasan deb tanishtiring.
         console.log(
             "🔴 Teacher Hasan STOP"
         );
+
+        if (guestMode) {
+            void stopGuestSession();
+        }
 
         isRunning = false;
 
@@ -704,6 +917,23 @@ O'zingizni Teacher Hasan deb tanishtiring.
     stopBtn.addEventListener(
         "click",
         stopTeacher
+    );
+
+    // ==========================================
+    // GUEST SESSION - PAGE EXIT
+    // ==========================================
+
+    window.addEventListener(
+        "pagehide",
+        () => {
+            if (!guestMode) {
+                return;
+            }
+
+            navigator.sendBeacon(
+                "/api/guest/stop"
+            );
+        }
     );
 
     // ==========================================

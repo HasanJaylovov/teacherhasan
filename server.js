@@ -64,7 +64,7 @@ const GUEST_MINUTES =
     Number(process.env.GUEST_MINUTES || 10);
 
 const TRIAL_DAYS =
-    Number(process.env.TRIAL_DAYS || 3);
+    Number(process.env.TRIAL_DAYS || 1);
 
 const PLAN_1_MONTH =
     Number(process.env.PLAN_1_MONTH || 35000);
@@ -214,6 +214,161 @@ function normalizePhone(phone) {
     )
         .replace(/\s+/g, "")
         .trim();
+}
+
+
+function parseCookies(req) {
+    const header = req.headers.cookie || "";
+
+    return Object.fromEntries(
+        header
+            .split(";")
+            .map((part) => part.trim())
+            .filter(Boolean)
+            .map((part) => {
+                const index = part.indexOf("=");
+
+                if (index === -1) {
+                    return [part, ""];
+                }
+
+                return [
+                    part.slice(0, index),
+                    decodeURIComponent(part.slice(index + 1))
+                ];
+            })
+    );
+}
+
+function setGuestDeviceCookie(res, deviceId) {
+    const secure =
+        process.env.NODE_ENV === "production"
+            ? "; Secure"
+            : "";
+
+    res.setHeader(
+        "Set-Cookie",
+        `th_device_id=${encodeURIComponent(deviceId)}; Max-Age=31536000; Path=/; HttpOnly; SameSite=Lax${secure}`
+    );
+}
+
+function getGuestDeviceId(req, res) {
+    const cookies = parseCookies(req);
+    const existing = cookies.th_device_id;
+
+    if (
+        existing &&
+        /^[0-9a-fA-F-]{36}$/.test(existing)
+    ) {
+        return existing;
+    }
+
+    const deviceId = crypto.randomUUID();
+
+    setGuestDeviceCookie(
+        res,
+        deviceId
+    );
+
+    return deviceId;
+}
+
+function guestLimitSeconds() {
+    return Math.max(
+        0,
+        GUEST_MINUTES * 60
+    );
+}
+
+async function getGuestUsage(
+    req,
+    res,
+    client = pool
+) {
+    if (!client) {
+        throw new Error(
+            "PostgreSQL mavjud emas."
+        );
+    }
+
+    const deviceId =
+        getGuestDeviceId(
+            req,
+            res
+        );
+
+    const result =
+        await client.query(
+            `
+            SELECT
+                device_id,
+                used_seconds,
+                active_started_at
+            FROM guest_devices
+            WHERE device_id = $1
+            LIMIT 1
+            `,
+            [deviceId]
+        );
+
+    if (!result.rows[0]) {
+        await client.query(
+            `
+            INSERT INTO guest_devices (
+                device_id,
+                used_seconds,
+                active_started_at
+            )
+            VALUES ($1, 0, NULL)
+            ON CONFLICT (device_id)
+            DO NOTHING
+            `,
+            [deviceId]
+        );
+
+        return {
+            deviceId,
+            usedSeconds: 0,
+            activeStartedAt: null
+        };
+    }
+
+    const row = result.rows[0];
+
+    let usedSeconds =
+        Number(
+            row.used_seconds || 0
+        );
+
+    if (row.active_started_at) {
+        const activeStarted =
+            new Date(
+                row.active_started_at
+            ).getTime();
+
+        const elapsed =
+            Math.max(
+                0,
+                Math.floor(
+                    (
+                        Date.now() -
+                        activeStarted
+                    ) / 1000
+                )
+            );
+
+        usedSeconds += elapsed;
+    }
+
+    return {
+        deviceId,
+        usedSeconds: Math.min(
+            guestLimitSeconds(),
+            usedSeconds
+        ),
+        activeStartedAt:
+            row.active_started_at
+    };
 }
 
 function userAccess(user) {
@@ -1123,98 +1278,701 @@ return res.json({
 );
 
 
-// ==============================================// GUEST SESSION
 // ==============================================
+// GUEST SESSION
+// ==============================================
+
 app.post(
     "/api/guest/start",
-    (req, res) => {
+    async (req, res) => {
+        const authenticatedUser =
+            await getAuthenticatedUser(req);
 
-        const token =
-            generateToken();
+        if (authenticatedUser) {
+            const access =
+                userAccess(
+                    authenticatedUser
+                );
 
-        const startedAt =
-            Date.now();
+            if (access.mode === "blocked") {
+                return res.status(403).json({
+                    success: false,
+                    authenticated: true,
+                    mode: "blocked",
+                    code: "blocked",
+                    error:
+                        "Hisobingiz bloklangan."
+                });
+            }
 
-        const expiresAt =
-            startedAt +
-            GUEST_MINUTES *
-            60 *
-            1000;
+            if (!access.active) {
+                return res.status(403).json({
+                    success: false,
+                    authenticated: true,
+                    mode: "expired",
+                    code: "expired",
+                    error:
+                        "Trial yoki Premium muddati tugagan. Davom etish uchun Premium obuna qiling."
+                });
+            }
 
-        res.json({
+            return res.json({
+                success: true,
+                authenticated: true,
+                mode: access.mode,
+                active: true,
+                plan:
+                    access.plan || null,
+                until:
+                    access.until || null,
+                remainingSeconds: null
+            });
+        }
 
-            success: true,
+        if (!pool) {
+            return res.status(500).json({
+                success: false,
+                error: "PostgreSQL mavjud emas."
+            });
+        }
 
-            guestToken:
-                token,
+        const client = await pool.connect();
 
-            startedAt:
-                new Date(
-                    startedAt
-                ).toISOString(),
+        try {
+            await client.query("BEGIN");
 
-            expiresAt:
-                new Date(
-                    expiresAt
-                ).toISOString(),
+            const deviceId =
+                getGuestDeviceId(
+                    req,
+                    res
+                );
 
-            minutes:
-                GUEST_MINUTES
-        });
+            const result =
+                await client.query(
+                    `
+                    SELECT
+                        device_id,
+                        used_seconds,
+                        active_started_at
+                    FROM guest_devices
+                    WHERE device_id = $1
+                    FOR UPDATE
+                    `,
+                    [deviceId]
+                );
+
+            let row = result.rows[0];
+
+            if (!row) {
+                await client.query(
+                    `
+                    INSERT INTO guest_devices (
+                        device_id,
+                        used_seconds,
+                        active_started_at
+                    )
+                    VALUES ($1, 0, NOW())
+                    `,
+                    [deviceId]
+                );
+
+                await client.query(
+                    "COMMIT"
+                );
+
+                return res.json({
+                    success: true,
+                    active: true,
+                    usedSeconds: 0,
+                    remainingSeconds:
+                        guestLimitSeconds(),
+                    limitSeconds:
+                        guestLimitSeconds()
+                });
+            }
+
+            let usedSeconds =
+                Number(
+                    row.used_seconds || 0
+                );
+
+            if (row.active_started_at) {
+                const activeStarted =
+                    new Date(
+                        row.active_started_at
+                    ).getTime();
+
+                const elapsed =
+                    Math.max(
+                        0,
+                        Math.floor(
+                            (
+                                Date.now() -
+                                activeStarted
+                            ) / 1000
+                        )
+                    );
+
+                usedSeconds += elapsed;
+            }
+
+            usedSeconds = Math.min(
+                guestLimitSeconds(),
+                usedSeconds
+            );
+
+            if (
+                usedSeconds >=
+                guestLimitSeconds()
+            ) {
+                await client.query(
+                    `
+                    UPDATE guest_devices
+                    SET
+                        used_seconds = $1,
+                        active_started_at = NULL,
+                        updated_at = NOW()
+                    WHERE device_id = $2
+                    `,
+                    [
+                        usedSeconds,
+                        deviceId
+                    ]
+                );
+
+                await client.query(
+                    "COMMIT"
+                );
+
+                return res.status(403)
+                    .json({
+                        success: false,
+                        active: false,
+                        exhausted: true,
+                        usedSeconds,
+                        remainingSeconds: 0,
+                        limitSeconds:
+                            guestLimitSeconds(),
+                        error:
+                            "Guest vaqti tugagan. Iltimos, Login yoki Register qiling."
+                    });
+            }
+
+            await client.query(
+                `
+                UPDATE guest_devices
+                SET
+                    used_seconds = $1,
+                    active_started_at = NOW(),
+                    updated_at = NOW()
+                WHERE device_id = $2
+                `,
+                [
+                    usedSeconds,
+                    deviceId
+                ]
+            );
+
+            await client.query(
+                "COMMIT"
+            );
+
+            return res.json({
+                success: true,
+                active: true,
+                usedSeconds,
+                remainingSeconds:
+                    Math.max(
+                        0,
+                        guestLimitSeconds() -
+                        usedSeconds
+                    ),
+                limitSeconds:
+                    guestLimitSeconds()
+            });
+        } catch (error) {
+            await client.query(
+                "ROLLBACK"
+            );
+
+            console.error(
+                "❌ Guest start xatosi:",
+                error?.message
+            );
+
+            return res.status(500)
+                .json({
+                    success: false,
+                    error:
+                        "Guest sessiyasini boshlashda xato."
+                });
+        } finally {
+            client.release();
+        }
     }
 );
 
+app.post(
+    "/api/guest/heartbeat",
+    async (req, res) => {
+        const authenticatedUser =
+            await getAuthenticatedUser(req);
+
+        if (authenticatedUser) {
+            return res.status(403).json({
+                success: false,
+                authenticated: true,
+                code: "authenticated",
+                error:
+                    "Authenticated foydalanuvchi guest sessiyasidan foydalana olmaydi."
+            });
+        }
+
+        if (!pool) {
+            return res.status(500).json({
+                success: false,
+                error: "PostgreSQL mavjud emas."
+            });
+        }
+
+        const client = await pool.connect();
+
+        try {
+            await client.query("BEGIN");
+
+            const deviceId =
+                getGuestDeviceId(
+                    req,
+                    res
+                );
+
+            const result =
+                await client.query(
+                    `
+                    SELECT
+                        used_seconds,
+                        active_started_at
+                    FROM guest_devices
+                    WHERE device_id = $1
+                    FOR UPDATE
+                    `,
+                    [deviceId]
+                );
+
+            const row =
+                result.rows[0];
+
+            if (!row) {
+                await client.query(
+                    "ROLLBACK"
+                );
+
+                return res.status(404)
+                    .json({
+                        success: false,
+                        error:
+                            "Guest qurilmasi topilmadi."
+                    });
+            }
+
+            let usedSeconds =
+                Number(
+                    row.used_seconds || 0
+                );
+
+            if (row.active_started_at) {
+                const activeStarted =
+                    new Date(
+                        row.active_started_at
+                    ).getTime();
+
+                const elapsed =
+                    Math.max(
+                        0,
+                        Math.floor(
+                            (
+                                Date.now() -
+                                activeStarted
+                            ) / 1000
+                        )
+                    );
+
+                usedSeconds += elapsed;
+            }
+
+            usedSeconds = Math.min(
+                guestLimitSeconds(),
+                usedSeconds
+            );
+
+            const exhausted =
+                usedSeconds >=
+                guestLimitSeconds();
+
+            await client.query(
+                `
+                UPDATE guest_devices
+                SET
+                    used_seconds = $1,
+                    active_started_at = $2,
+                    updated_at = NOW()
+                WHERE device_id = $3
+                `,
+                [
+                    usedSeconds,
+                    exhausted
+                        ? null
+                        : new Date(),
+                    deviceId
+                ]
+            );
+
+            await client.query(
+                "COMMIT"
+            );
+
+            return res.json({
+                success: true,
+                active: !exhausted,
+                exhausted,
+                usedSeconds,
+                remainingSeconds:
+                    Math.max(
+                        0,
+                        guestLimitSeconds() -
+                        usedSeconds
+                    ),
+                limitSeconds:
+                    guestLimitSeconds()
+            });
+        } catch (error) {
+            await client.query(
+                "ROLLBACK"
+            );
+
+            console.error(
+                "❌ Guest heartbeat xatosi:",
+                error?.message
+            );
+
+            return res.status(500)
+                .json({
+                    success: false,
+                    error:
+                        "Guest vaqtini yangilashda xato."
+                });
+        } finally {
+            client.release();
+        }
+    }
+);
+
+app.post(
+    "/api/guest/stop",
+    async (req, res) => {
+        const authenticatedUser =
+            await getAuthenticatedUser(req);
+
+        if (authenticatedUser) {
+            return res.status(403).json({
+                success: false,
+                authenticated: true,
+                code: "authenticated",
+                error:
+                    "Authenticated foydalanuvchi guest sessiyasidan foydalana olmaydi."
+            });
+        }
+
+        if (!pool) {
+            return res.status(500).json({
+                success: false,
+                error: "PostgreSQL mavjud emas."
+            });
+        }
+
+        const client = await pool.connect();
+
+        try {
+            await client.query("BEGIN");
+
+            const deviceId =
+                getGuestDeviceId(
+                    req,
+                    res
+                );
+
+            const result =
+                await client.query(
+                    `
+                    SELECT
+                        used_seconds,
+                        active_started_at
+                    FROM guest_devices
+                    WHERE device_id = $1
+                    FOR UPDATE
+                    `,
+                    [deviceId]
+                );
+
+            const row =
+                result.rows[0];
+
+            if (!row) {
+                await client.query(
+                    "ROLLBACK"
+                );
+
+                return res.json({
+                    success: true,
+                    active: false,
+                    usedSeconds: 0,
+                    remainingSeconds:
+                        guestLimitSeconds()
+                });
+            }
+
+            let usedSeconds =
+                Number(
+                    row.used_seconds || 0
+                );
+
+            if (row.active_started_at) {
+                const activeStarted =
+                    new Date(
+                        row.active_started_at
+                    ).getTime();
+
+                const elapsed =
+                    Math.max(
+                        0,
+                        Math.floor(
+                            (
+                                Date.now() -
+                                activeStarted
+                            ) / 1000
+                        )
+                    );
+
+                usedSeconds += elapsed;
+            }
+
+            usedSeconds = Math.min(
+                guestLimitSeconds(),
+                usedSeconds
+            );
+
+            await client.query(
+                `
+                UPDATE guest_devices
+                SET
+                    used_seconds = $1,
+                    active_started_at = NULL,
+                    updated_at = NOW()
+                WHERE device_id = $2
+                `,
+                [
+                    usedSeconds,
+                    deviceId
+                ]
+            );
+
+            await client.query(
+                "COMMIT"
+            );
+
+            return res.json({
+                success: true,
+                active: false,
+                exhausted:
+                    usedSeconds >=
+                    guestLimitSeconds(),
+                usedSeconds,
+                remainingSeconds:
+                    Math.max(
+                        0,
+                        guestLimitSeconds() -
+                        usedSeconds
+                    ),
+                limitSeconds:
+                    guestLimitSeconds()
+            });
+        } catch (error) {
+            await client.query(
+                "ROLLBACK"
+            );
+
+            console.error(
+                "❌ Guest stop xatosi:",
+                error?.message
+            );
+
+            return res.status(500)
+                .json({
+                    success: false,
+                    error:
+                        "Guest sessiyasini to‘xtatishda xato."
+                });
+        } finally {
+            client.release();
+        }
+    }
+);
 
 app.get(
     "/api/guest/status",
-    (req, res) => {
-
-        const expiresAt =
-            Number(
-                req.query.expiresAt
-            );
-
-        if (
-            !expiresAt ||
-            Number.isNaN(
-                expiresAt
-            )
-        ) {
-
-            return res.status(400)
-                .json({
-                    error:
-                        "Guest sessiyasi topilmadi."
-                });
+    async (req, res) => {
+        if (!pool) {
+            return res.status(500).json({
+                active: false,
+                error: "PostgreSQL mavjud emas."
+            });
         }
 
-        const remaining =
-            Math.max(
-                0,
-                expiresAt -
-                Date.now()
+        try {
+            const usage =
+                await getGuestUsage(
+                    req,
+                    res
+                );
+
+            const usedSeconds =
+                Math.min(
+                    guestLimitSeconds(),
+                    usage.usedSeconds
+                );
+
+            const remainingSeconds =
+                Math.max(
+                    0,
+                    guestLimitSeconds() -
+                    usedSeconds
+                );
+
+            return res.json({
+                active:
+                    remainingSeconds > 0,
+                exhausted:
+                    remainingSeconds <= 0,
+                usedSeconds,
+                remainingSeconds,
+                limitSeconds:
+                    guestLimitSeconds()
+            });
+        } catch (error) {
+            console.error(
+                "❌ Guest status xatosi:",
+                error?.message
             );
 
-        res.json({
-
-            active:
-                remaining > 0,
-
-            remainingMs:
-                remaining,
-
-            remainingSeconds:
-                Math.floor(
-                    remaining /
-                    1000
-                )
-        });
+            return res.status(500)
+                .json({
+                    active: false,
+                    error:
+                        "Guest holatini olishda xato."
+                });
+        }
     }
 );
 
-
 // ==============================================// GEMINI LIVE TOKEN
 // ==============================================
+
+async function getLiveAccess(
+    req,
+    res
+) {
+    const user =
+        await getAuthenticatedUser(req);
+
+    if (user) {
+        const access =
+            userAccess(user);
+
+        if (access.mode === "blocked") {
+            return {
+                allowed: false,
+                code: "blocked",
+                status: 403,
+                error:
+                    "Hisobingiz bloklangan."
+            };
+        }
+
+        if (!access.active) {
+            return {
+                allowed: false,
+                code: "expired",
+                status: 403,
+                error:
+                    "Trial yoki Premium muddati tugagan. Davom etish uchun Premium obuna qiling."
+            };
+        }
+
+        return {
+            allowed: true,
+            mode: access.mode,
+            plan: access.plan || null,
+            until: access.until || null
+        };
+    }
+
+    if (!pool) {
+        return {
+            allowed: false,
+            code: "database_unavailable",
+            status: 500,
+            error:
+                "PostgreSQL mavjud emas."
+        };
+    }
+
+    const usage =
+        await getGuestUsage(
+            req,
+            res
+        );
+
+    const limitSeconds =
+        guestLimitSeconds();
+
+    const remainingSeconds =
+        Math.max(
+            0,
+            limitSeconds -
+            usage.usedSeconds
+        );
+
+    if (!usage.activeStartedAt) {
+        return {
+            allowed: false,
+            code: "guest_not_started",
+            status: 403,
+            error:
+                "Guest sessiyasi boshlanmagan."
+        };
+    }
+
+    if (
+        remainingSeconds <= 0
+    ) {
+        return {
+            allowed: false,
+            code: "guest_exhausted",
+            status: 403,
+            error:
+                "Guest vaqti tugagan. Iltimos, Login yoki Register qiling."
+        };
+    }
+
+    return {
+        allowed: true,
+        mode: "guest",
+        plan: null,
+        until: null,
+        remainingSeconds
+    };
+}
+
 app.get(
     "/api/live-token",
     async (req, res) => {
@@ -1231,6 +1989,32 @@ app.get(
         );
 
         try {
+
+            const access =
+                await getLiveAccess(
+                    req,
+                    res
+                );
+
+            if (!access.allowed) {
+                console.log(
+                    "🚫 LIVE ACCESS DENIED:",
+                    access.code
+                );
+
+                return res.status(
+                    access.status || 403
+                ).json({
+                    success: false,
+                    code: access.code,
+                    error: access.error
+                });
+            }
+
+            console.log(
+                "✅ LIVE ACCESS:",
+                access.mode
+            );
 
             if (!GEMINI_API_KEY) {
 
@@ -1332,7 +2116,17 @@ app.get(
                     token.name,
 
                 model:
-                    LIVE_MODEL
+                    LIVE_MODEL,
+                access: {
+                    mode:
+                        access.mode,
+                    plan:
+                        access.plan || null,
+                    until:
+                        access.until || null,
+                    remainingSeconds:
+                        access.remainingSeconds ?? null
+                }
             });
 
         } catch (error) {

@@ -56,3 +56,14 @@ CREATE TABLE IF NOT EXISTS speaking_results (
 
 CREATE INDEX IF NOT EXISTS speaking_results_user_id_idx
 ON speaking_results(user_id);
+
+CREATE TABLE IF NOT EXISTS guest_devices (
+    device_id TEXT PRIMARY KEY,
+    used_seconds INTEGER NOT NULL DEFAULT 0,
+    active_started_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS guest_devices_updated_at_idx
+ON guest_devices(updated_at);
