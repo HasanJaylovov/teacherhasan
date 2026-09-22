@@ -2443,17 +2443,6 @@ app.post(
                 );
 
 
-                // success bo'lmagan statuslar
-                payment.multicardStatus =
-                    "success";
-
-                writeDatabase(db);
-
-                console.log(
-                    "Multicard status:",
-                    status,
-                    invoiceId
-                );
             }
 
             // Multicardga 200 qaytaramiz
