@@ -1,2 +1,338 @@
-<!doctype html><html lang="uz"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Profil — Teacher Hasan</title><link rel="stylesheet" href="/auth.css"></head><body><div class="bg"><i class="orb o1"></i><i class="orb o2"></i></div><header class="top"><a class="brand" href="/"><span class="logo">👨‍🏫</span><span><b>Teacher Hasan</b><small>AI English Teacher</small></span></a><div class="online"><i class="dot"></i>AI ONLINE</div></header><main id="profile" class="wrap"><div class="profile"><aside class="side"><div class="bigavatar">👨‍🏫</div><h3 id="pName">Yuklanmoqda...</h3><div id="pEmail" class="role">Teacher Hasan o‘quvchisi</div><nav class="nav"><a class="active" href="/profile.html">👤 Profil</a><a href="/">🎤 Teacher Hasan</a><a href="/">📊 Speaking Exam</a><button id="logout">🚪 Chiqish</button></nav></aside><section class="main"><div class="mainhead"><div><h1>Xush kelibsiz! 👋</h1><div class="muted">Teacher Hasan shaxsiy profilingiz</div></div><div id="pStatus" class="status">YUKLANMOQDA</div></div><div class="trialcard"><div class="trialtop"><div><b id="pMode">Bepul sinov</b><br><span id="pPlan" class="muted">Holat tekshirilmoqda...</span></div><span id="pUntil" class="muted">...</span></div><div class="progress"><i id="pProgress"></i></div></div><div class="stats"><div class="stat">🎤<b>0</b><span>Speaking imtihonlari</span></div><div class="stat">🧠<b>A1–C1</b><span>CEFR darajalari</span></div><div class="stat">⭐<b>0%</b><span>O‘rtacha natija</span></div></div><div class="actions"><a class="action" href="/"><b>🎤 Speaking Exam →</b><span>AI bilan speaking mashqini boshlang</span></a><a class="action" href="/"><b>🤖 Live AI →</b><span>Teacher Hasan bilan ovozli suhbat</span></a></div><div class="plans">💳 <b>Premium:</b> 1 oy — 35 000 so‘m · 2 oy — 55 000 so‘m · 3 oy — 99 000 so‘m · <a href="/payment.html">Premium sotib olish →</a></div>
-<div style="margin-top:18px;font-size:13px"><a href="/offer.html">Ommaviy oferta</a> · <a href="/privacy.html">Maxfiylik siyosati</a></div></section></div></main><script src="/auth.js"></script></body></html>
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Profil — Teacher Hasan</title>
+<link rel="stylesheet" href="/auth.css">
+
+<style>
+.premium-card{
+    display:none;
+    position:relative;
+    overflow:hidden;
+    margin-top:20px;
+    padding:26px;
+    border:1px solid rgba(255,255,255,.16);
+    border-radius:24px;
+    background:
+        linear-gradient(135deg,rgba(124,92,255,.22),rgba(0,190,255,.12)),
+        rgba(15,20,35,.82);
+    box-shadow:0 20px 60px rgba(0,0,0,.25);
+}
+
+.premium-card::before{
+    content:"";
+    position:absolute;
+    width:220px;
+    height:220px;
+    right:-90px;
+    top:-110px;
+    border-radius:50%;
+    background:rgba(124,92,255,.22);
+    filter:blur(20px);
+}
+
+.premium-head{
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:18px;
+    margin-bottom:22px;
+}
+
+.premium-title{
+    display:flex;
+    align-items:center;
+    gap:12px;
+}
+
+.premium-icon{
+    width:52px;
+    height:52px;
+    display:grid;
+    place-items:center;
+    border-radius:16px;
+    font-size:27px;
+    background:rgba(255,255,255,.10);
+}
+
+.premium-title h2{
+    margin:0;
+    font-size:22px;
+}
+
+.premium-title p{
+    margin:5px 0 0;
+    color:rgba(255,255,255,.68);
+    font-size:13px;
+}
+
+.premium-badge{
+    padding:7px 11px;
+    border-radius:999px;
+    font-size:11px;
+    font-weight:800;
+    letter-spacing:.5px;
+    background:rgba(255,190,70,.14);
+    color:#ffd36a;
+}
+
+.premium-plans{
+    position:relative;
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:12px;
+}
+
+.premium-plan{
+    display:block;
+    padding:18px 15px;
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:18px;
+    background:rgba(255,255,255,.045);
+    color:inherit;
+    text-decoration:none;
+    transition:.2s ease;
+}
+
+.premium-plan:hover{
+    transform:translateY(-3px);
+    border-color:rgba(124,92,255,.65);
+    background:rgba(124,92,255,.10);
+}
+
+.premium-plan strong{
+    display:block;
+    font-size:16px;
+    margin-bottom:7px;
+}
+
+.premium-plan .price{
+    display:block;
+    font-size:20px;
+    font-weight:900;
+}
+
+.premium-plan small{
+    display:block;
+    margin-top:5px;
+    color:rgba(255,255,255,.58);
+}
+
+.premium-cta{
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:100%;
+    margin-top:16px;
+    padding:15px 20px;
+    border:0;
+    border-radius:16px;
+    background:linear-gradient(135deg,#7c5cff,#4c8dff);
+    color:#fff;
+    text-decoration:none;
+    font-weight:900;
+    font-size:15px;
+    box-shadow:0 12px 30px rgba(76,141,255,.25);
+    transition:.2s ease;
+}
+
+.premium-cta:hover{
+    transform:translateY(-2px);
+    filter:brightness(1.08);
+}
+
+.premium-note{
+    position:relative;
+    margin:12px 0 0;
+    text-align:center;
+    color:rgba(255,255,255,.52);
+    font-size:12px;
+}
+
+@media(max-width:700px){
+    .premium-card{
+        padding:20px;
+        border-radius:20px;
+    }
+
+    .premium-head{
+        align-items:flex-start;
+    }
+
+    .premium-plans{
+        grid-template-columns:1fr;
+    }
+
+    .premium-plan{
+        padding:16px;
+    }
+}
+</style>
+</head>
+
+<body>
+<div class="bg">
+<i class="orb o1"></i>
+<i class="orb o2"></i>
+</div>
+
+<header class="top">
+<a class="brand" href="/">
+<span class="logo">👨‍🏫</span>
+<span>
+<b>Teacher Hasan</b>
+<small>AI English Teacher</small>
+</span>
+</a>
+
+<div class="online">
+<i class="dot"></i>AI ONLINE
+</div>
+</header>
+
+<main id="profile" class="wrap">
+<div class="profile">
+
+<aside class="side">
+<div class="bigavatar">👨‍🏫</div>
+<h3 id="pName">Yuklanmoqda...</h3>
+<div id="pEmail" class="role">Teacher Hasan o‘quvchisi</div>
+
+<nav class="nav">
+<a class="active" href="/profile.html">👤 Profil</a>
+<a href="/">🎤 Teacher Hasan</a>
+<a href="/">📊 Speaking Exam</a>
+<button id="logout">🚪 Chiqish</button>
+</nav>
+</aside>
+
+<section class="main">
+
+<div class="mainhead">
+<div>
+<h1>Xush kelibsiz! 👋</h1>
+<div class="muted">Teacher Hasan shaxsiy profilingiz</div>
+</div>
+
+<div id="pStatus" class="status">YUKLANMOQDA</div>
+</div>
+
+<div class="trialcard">
+<div class="trialtop">
+<div>
+<b id="pMode">Bepul sinov</b><br>
+<span id="pPlan" class="muted">Holat tekshirilmoqda...</span>
+</div>
+
+<span id="pUntil" class="muted">...</span>
+</div>
+
+<div class="progress">
+<i id="pProgress"></i>
+</div>
+</div>
+
+<!-- PREMIUM PAYMENT CARD -->
+<div id="premiumCard" class="premium-card">
+
+<div class="premium-head">
+<div class="premium-title">
+<div class="premium-icon">💎</div>
+
+<div>
+<h2>Premium'ni faollashtiring</h2>
+<p>Trial muddati tugagan. O‘zingizga mos tarifni tanlang.</p>
+</div>
+</div>
+
+<div class="premium-badge">PREMIUM</div>
+</div>
+
+<div class="premium-plans">
+
+<a class="premium-plan" href="/payment.html?months=1">
+<strong>1 oy</strong>
+<span class="price">35 000 so‘m</span>
+<small>1 oylik Premium</small>
+</a>
+
+<a class="premium-plan" href="/payment.html?months=2">
+<strong>2 oy</strong>
+<span class="price">55 000 so‘m</span>
+<small>2 oylik Premium</small>
+</a>
+
+<a class="premium-plan" href="/payment.html?months=3">
+<strong>3 oy</strong>
+<span class="price">99 000 so‘m</span>
+<small>3 oylik Premium</small>
+</a>
+
+</div>
+
+<a id="premiumPayBtn" class="premium-cta" href="/payment.html?months=1">
+💳 To‘lov qilish
+</a>
+
+<p class="premium-note">
+Premium avtomatik yangilanmaydi. Har bir yangi muddat uchun to‘lovni o‘zingiz tasdiqlaysiz.
+</p>
+
+</div>
+
+<div class="stats">
+<div class="stat">
+🎤
+<b>0</b>
+<span>Speaking imtihonlari</span>
+</div>
+
+<div class="stat">
+🧠
+<b>A1–C1</b>
+<span>CEFR darajalari</span>
+</div>
+
+<div class="stat">
+⭐
+<b>0%</b>
+<span>O‘rtacha natija</span>
+</div>
+</div>
+
+<div class="actions">
+<a class="action" href="/">
+<b>🎤 Speaking Exam →</b>
+<span>AI bilan speaking mashqini boshlang</span>
+</a>
+
+<a class="action" href="/">
+<b>🤖 Live AI →</b>
+<span>Teacher Hasan bilan ovozli suhbat</span>
+</a>
+</div>
+
+<div class="plans">
+💳 <b>Premium:</b>
+1 oy — 35 000 so‘m ·
+2 oy — 55 000 so‘m ·
+3 oy — 99 000 so‘m ·
+<a href="/payment.html">Premium sotib olish →</a>
+</div>
+
+<div style="margin-top:18px;font-size:13px">
+<a href="/offer.html">Ommaviy oferta</a> ·
+<a href="/privacy.html">Maxfiylik siyosati</a>
+</div>
+
+</section>
+</div>
+</main>
+
+<script src="/auth.js"></script>
+</body>
+</html>

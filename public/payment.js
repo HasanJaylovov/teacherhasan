@@ -1,64 +1,139 @@
 const TOKEN_KEY = "th_auth_token";
-const prices = {1:35000,2:55000,3:99000};
+
+const prices = {
+    1: 35000,
+    2: 55000,
+    3: 99000
+};
 
 function showError(message) {
-  const el = document.getElementById("error");
-  if (el) { el.textContent = message; el.style.display = "block"; }
+    const el = document.getElementById("error");
+
+    if (el) {
+        el.textContent = message;
+        el.style.display = message ? "block" : "none";
+    }
+}
+
+function getSelectedMonths() {
+    const params = new URLSearchParams(window.location.search);
+    const value = Number(params.get("months"));
+
+    return [1, 2, 3].includes(value)
+        ? value
+        : 1;
+}
+
+function updatePlanPreview(months) {
+    const price = prices[months];
+
+    const planPreview =
+        document.getElementById("planPreview");
+
+    if (!planPreview) {
+        return;
+    }
+
+    planPreview.innerHTML =
+        `<b>${months} oy Premium</b>` +
+        `<span>${price.toLocaleString("uz-UZ")} so‘m</span>`;
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  const btn = document.getElementById("payBtn");
-  const consent = document.getElementById("legalConsent");
-  const months = document.getElementById("months");
-  const result = document.getElementById("result");
+    const btn = document.getElementById("payBtn");
+    const consent = document.getElementById("legalConsent");
+    const months = document.getElementById("months");
+    const result = document.getElementById("result");
 
-  if (!localStorage.getItem(TOKEN_KEY)) {
-    location.href = "/login.html";
-    return;
-  }
-
-  btn.addEventListener("click", async () => {
-    showError("");
-    result.textContent = "";
-
-    if (!consent.checked) {
-      showError("Davom etish uchun Ommaviy oferta va Maxfiylik siyosatini qabul qiling.");
-      return;
-    }
-
-    btn.disabled = true;
-    btn.textContent = "Yuklanmoqda...";
-
-    try {
-      const response = await fetch("/api/payment/create", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer " + localStorage.getItem(TOKEN_KEY)
-        },
-        body: JSON.stringify({
-          months: Number(months.value),
-          legalAccepted: true
-        })
-      });
-
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || "To‘lovni boshlashda xato.");
-
-      if (data.checkoutUrl) {
-        window.location.href = data.checkoutUrl;
+    if (!localStorage.getItem(TOKEN_KEY)) {
+        location.href = "/login.html";
         return;
-      }
-
-      result.innerHTML = "<b>Buyurtma yaratildi.</b><br>Invoice: " +
-        (data.invoiceId || "—") + "<br>" +
-        "Summa: " + Number(data.amount || 0).toLocaleString("uz-UZ") +
-        " so‘m<br><small>Multicard to‘lov havolasi qaytmadi.</small>";
-    } catch (error) {
-      showError(error.message);
-    } finally {
-      btn.disabled = false;
-      btn.textContent = "To‘lovni boshlash →";
     }
-  });
+
+    const selectedMonths = getSelectedMonths();
+
+    months.value = String(selectedMonths);
+    updatePlanPreview(selectedMonths);
+
+    months.addEventListener("change", () => {
+        updatePlanPreview(Number(months.value));
+    });
+
+    btn.addEventListener("click", async () => {
+        showError("");
+        result.textContent = "";
+
+        if (!consent.checked) {
+            showError(
+                "Davom etish uchun Ommaviy oferta va Maxfiylik siyosatini qabul qiling."
+            );
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = "Yuklanmoqda...";
+
+        try {
+            const response = await fetch(
+                "/api/payment/create",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type":
+                            "application/json",
+                        "Authorization":
+                            "Bearer " +
+                            localStorage.getItem(
+                                TOKEN_KEY
+                            )
+                    },
+                    body: JSON.stringify({
+                        months: Number(
+                            months.value
+                        ),
+                        legalAccepted: true
+                    })
+                }
+            );
+
+            const data =
+                await response
+                    .json()
+                    .catch(() => ({}));
+
+            if (!response.ok) {
+                throw new Error(
+                    data.error ||
+                    "To‘lovni boshlashda xato."
+                );
+            }
+
+            if (data.checkoutUrl) {
+                window.location.href =
+                    data.checkoutUrl;
+                return;
+            }
+
+            result.innerHTML =
+                "<b>Buyurtma yaratildi.</b>" +
+                "<br>Invoice: " +
+                (data.invoiceId || "—") +
+                "<br>Summa: " +
+                Number(
+                    data.amount || 0
+                ).toLocaleString("uz-UZ") +
+                " so‘m" +
+                "<br><small>" +
+                "Multicard to‘lov havolasi qaytmadi." +
+                "</small>";
+
+        } catch (error) {
+            showError(error.message);
+
+        } finally {
+            btn.disabled = false;
+            btn.textContent =
+                "To‘lovni boshlash →";
+        }
+    });
 });

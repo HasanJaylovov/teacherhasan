@@ -118,39 +118,58 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
 
                 const user = data.user;
-                const access = data.access;
-                const status = byId("pStatus");
+        const access = data.access;
+        const status = byId("pStatus");
+        const premiumCard = byId("premiumCard");
 
-                byId("pName").textContent = user.fullName;
-                byId("pEmail").textContent = user.email || user.phone || "Teacher Hasan o‘quvchisi";
+        byId("pName").textContent = user.fullName;
+        byId("pEmail").textContent =
+            user.email ||
+            user.phone ||
+            "Teacher Hasan o‘quvchisi";
 
-                if (access.mode === "premium") {
-                    status.textContent = "⭐ PREMIUM";
-                    byId("pMode").textContent = "Premium obuna";
-                    byId("pPlan").textContent = access.plan
-                        ? `Faol tarif: ${access.plan}`
-                        : "Premium foydalanish faol";
-                    byId("pProgress").style.width = "100%";
-                } else if (access.mode === "trial") {
-                    status.textContent = "🎁 TRIAL";
-                    byId("pMode").textContent = "Bepul sinov";
-                    byId("pPlan").textContent = "1 kunlik bepul foydalanish faol";
-                    byId("pProgress").style.width = "70%";
-                } else if (access.mode === "blocked") {
-                    status.textContent = "⛔ BLOKLANGAN";
-                    byId("pMode").textContent = "Akkaunt bloklangan";
-                    byId("pPlan").textContent = "Admin bilan bog‘laning";
-                    byId("pProgress").style.width = "0%";
-                } else {
-                    status.textContent = "⌛ MUDDAT TUGAGAN";
-                    byId("pMode").textContent = "Premium/trial tugagan";
-                    byId("pPlan").textContent = "Premium tarifni faollashtiring";
-                    byId("pProgress").style.width = "0%";
-                }
+        if (premiumCard) {
+            premiumCard.style.display = "none";
+        }
 
-                byId("pUntil").textContent = access.until
-                    ? new Date(access.until).toLocaleString("uz-UZ")
-                    : "—";
+        if (access.mode === "premium") {
+            status.textContent = "⭐ PREMIUM";
+            byId("pMode").textContent = "Premium obuna";
+            byId("pPlan").textContent = access.plan
+                ? `Faol tarif: ${access.plan}`
+                : "Premium foydalanish faol";
+            byId("pProgress").style.width = "100%";
+
+        } else if (access.mode === "trial") {
+            status.textContent = "🎁 TRIAL";
+            byId("pMode").textContent = "Bepul sinov";
+            byId("pPlan").textContent =
+                "1 kunlik bepul foydalanish faol";
+            byId("pProgress").style.width = "70%";
+
+        } else if (access.mode === "blocked") {
+            status.textContent = "⛔ BLOKLANGAN";
+            byId("pMode").textContent = "Akkaunt bloklangan";
+            byId("pPlan").textContent =
+                "Admin bilan bog‘laning";
+            byId("pProgress").style.width = "0%";
+
+        } else {
+            status.textContent = "⌛ MUDDAT TUGAGAN";
+            byId("pMode").textContent =
+                "Premium/trial tugagan";
+            byId("pPlan").textContent =
+                "Premium tarifni faollashtiring";
+            byId("pProgress").style.width = "0%";
+
+            if (premiumCard) {
+                premiumCard.style.display = "block";
+            }
+        }
+
+        byId("pUntil").textContent = access.until
+            ? new Date(access.until).toLocaleString("uz-UZ")
+            : "—";
             } catch (error) {
                 clearAuthToken();
                 location.href = "/login.html";
