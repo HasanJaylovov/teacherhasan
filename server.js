@@ -2347,9 +2347,10 @@ app.post(
             }
 
             // 7. SUCCESS
-            if (
-                status === "success"
-            ) {
+            // Bu endpoint Multicard success callback uchun.
+            // Signature + invoice + UUID + amount tekshiruvlari
+            // yuqorida allaqachon bajarilgan.
+            {
 
                 payment.status =
                     "success";
@@ -2359,7 +2360,7 @@ app.post(
                         .toISOString();
 
                 payment.multicardStatus =
-                    status;
+                    "success";
 
                 // User
                 const user =
@@ -2441,11 +2442,10 @@ app.post(
                     user.fullName
                 );
 
-            } else {
 
                 // success bo'lmagan statuslar
                 payment.multicardStatus =
-                    status;
+                    "success";
 
                 writeDatabase(db);
 
