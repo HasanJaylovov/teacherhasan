@@ -163,8 +163,12 @@ document.addEventListener("DOMContentLoaded", () => {
                             }
 
                             setStatus(
-                                "⏱️ Guest vaqti tugadi. Iltimos, Login yoki Register qiling."
+                                "⏱️ Guest vaqti tugadi. Login sahifasiga yo‘naltirilmoqda..."
                             );
+
+                            setTimeout(() => {
+                                location.replace("/login.html");
+                            }, 800);
 
                             return;
                         }
@@ -792,6 +796,12 @@ O'zingizni Teacher Hasan deb tanishtiring.
         setStatus(
             "❌ Xato: " + error.message
         );
+
+        if (error.code === "guest_exhausted") {
+            setTimeout(() => {
+                location.replace("/login.html");
+            }, 800);
+        }
 
         startBtn.disabled = false;
         stopBtn.disabled = true;
