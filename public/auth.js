@@ -70,7 +70,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 // The old version received the token but discarded it,
                 // so /profile.html immediately considered the user logged out.
                 setAuthToken(data.token);
-                location.href = "/profile.html";
+                location.href = "/";
             } catch (error) {
                 showError(error.message);
             }
@@ -96,7 +96,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
 
                 setAuthToken(data.token);
-                location.href = "/profile.html";
+                location.href = "/";
             } catch (error) {
                 showError(error.message);
             }

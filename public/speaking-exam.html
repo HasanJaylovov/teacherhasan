@@ -517,17 +517,100 @@ nextBtn.addEventListener("click", () => {
 
 });
 
-function finishExam() {
+async function finishExam() {
 
     clearInterval(timerInterval);
 
-    examSection.classList.add("hidden");
+    const resultMessage =
+        document.getElementById("resultMessage");
 
-    resultSection.classList.remove("hidden");
+    resultMessage.textContent =
+        "⏳ Javoblar serverga yuborilmoqda...";
 
-    document.getElementById("resultMessage").textContent =
-        `${recordings.length} ta javob yozib olindi. Keyingi bosqichda bu javoblarni Gemini AI orqali Grammar, Vocabulary, Fluency va Pronunciation bo‘yicha baholashni qo‘shamiz.`;
+    try {
 
+        const token =
+            localStorage.getItem("th_auth_token");
+
+        if (!token) {
+            throw new Error(
+                "Speaking Exam uchun Login qiling."
+            );
+        }
+
+        for (let i = 0; i < recordings.length; i++) {
+
+            const recording = recordings[i];
+
+            const formData = new FormData();
+
+            formData.append(
+                "audio",
+                recording.audio,
+                `speaking-${i + 1}.webm`
+            );
+
+            formData.append(
+                "level",
+                recording.level
+            );
+
+            formData.append(
+                "question",
+                recording.question
+            );
+
+            const response = await fetch(
+                "/api/speaking/upload",
+                {
+                    method: "POST",
+                    headers: {
+                        Authorization:
+                            `Bearer ${token}`
+                    },
+                    body: formData
+                }
+            );
+
+            const data =
+                await response
+                    .json()
+                    .catch(() => ({}));
+
+            if (!response.ok) {
+                throw new Error(
+                    data.error ||
+                    `Audio ${i + 1} yuborilmadi.`
+                );
+            }
+
+            console.log(
+                "✅ Speaking audio uploaded:",
+                i + 1,
+                data
+            );
+        }
+
+        examSection.classList.add("hidden");
+
+        resultSection.classList.remove("hidden");
+
+        resultMessage.textContent =
+            `${recordings.length} ta javob muvaffaqiyatli serverga yuborildi.`;
+
+    } catch (error) {
+
+        console.error(
+            "❌ Speaking Exam upload error:",
+            error
+        );
+
+        resultMessage.textContent =
+            `❌ Xato: ${
+                error?.message ||
+                "Audio yuborishda xatolik."
+            }`;
+    }
 }
 
 </script>

@@ -67,3 +67,71 @@ CREATE TABLE IF NOT EXISTS guest_devices (
 
 CREATE INDEX IF NOT EXISTS guest_devices_updated_at_idx
 ON guest_devices(updated_at);
+
+-- ==============================================
+-- LEARNER MEMORY
+-- ==============================================
+
+CREATE TABLE IF NOT EXISTS learner_profiles (
+    user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    cefr_level TEXT,
+    learning_goal TEXT,
+    preferred_language TEXT NOT NULL DEFAULT 'uz',
+    current_topic TEXT,
+    last_lesson_summary TEXT,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS learning_sessions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    topic TEXT,
+    level TEXT,
+    summary TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS learning_sessions_user_id_idx
+ON learning_sessions(user_id);
+
+CREATE TABLE IF NOT EXISTS learner_progress (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    topic TEXT NOT NULL,
+    skill TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'started',
+    score NUMERIC,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(user_id, topic, skill)
+);
+
+CREATE INDEX IF NOT EXISTS learner_progress_user_id_idx
+ON learner_progress(user_id);
+
+CREATE TABLE IF NOT EXISTS learner_mistakes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    skill TEXT NOT NULL,
+    category TEXT,
+    mistake TEXT NOT NULL,
+    correction TEXT,
+    occurrence_count INTEGER NOT NULL DEFAULT 1,
+    last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS learner_mistakes_user_id_idx
+ON learner_mistakes(user_id);
+
+CREATE TABLE IF NOT EXISTS learner_vocabulary (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    word TEXT NOT NULL,
+    meaning TEXT,
+    level TEXT,
+    mastery INTEGER NOT NULL DEFAULT 0,
+    last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(user_id, word)
+);
+
+CREATE INDEX IF NOT EXISTS learner_vocabulary_user_id_idx
+ON learner_vocabulary(user_id);

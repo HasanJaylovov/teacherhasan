@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Teacher Hasan — AI English Teacher</title>
+    <title>Teacher Hasan — AI Language Teacher</title>
 
     <style>
         * {
@@ -54,6 +54,162 @@
                 #070a14;
 
             overflow-x: hidden;
+        }
+
+        /* ================================
+           TOPBAR RIGHT CONTROLS
+        ================================= */
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 24px;
+        }
+
+        .topbar-brand {
+            min-width: 0;
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .language-switcher {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px;
+            border: 1px solid rgba(255,255,255,.10);
+            border-radius: 12px;
+            background: rgba(255,255,255,.045);
+        }
+
+        .language-button {
+            border: 0;
+            border-radius: 9px;
+            padding: 7px 9px;
+            background: transparent;
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: .2s ease;
+        }
+
+        .language-button:hover,
+        .language-button.active {
+            background: rgba(102,126,234,.20);
+            color: #fff;
+        }
+
+        .topbar-account {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+        .topbar-account-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 38px;
+            padding: 8px 12px;
+            border: 1px solid rgba(255,255,255,.11);
+            border-radius: 11px;
+            background: rgba(255,255,255,.045);
+            color: #fff;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 700;
+            white-space: nowrap;
+            transition: .2s ease;
+        }
+
+        .topbar-user-info {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            min-height: 38px;
+            padding: 7px 11px;
+            border: 1px solid rgba(255,255,255,.10);
+            border-radius: 11px;
+            background: rgba(255,255,255,.045);
+            white-space: nowrap;
+        }
+
+        .topbar-user-name {
+            color: #fff;
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        .topbar-user-status {
+            padding: 4px 7px;
+            border-radius: 8px;
+            background: rgba(102,126,234,.16);
+            color: #b9c4ff;
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+        .topbar-account-link.profile {
+            border-color: rgba(102,126,234,.35);
+        }
+
+        .topbar-account-link:hover {
+            transform: translateY(-1px);
+            background: rgba(255,255,255,.09);
+        }
+
+        .topbar-account-link.primary {
+            border-color: rgba(102,126,234,.45);
+            background: linear-gradient(
+                135deg,
+                rgba(102,126,234,.28),
+                rgba(118,75,162,.28)
+            );
+        }
+
+        @media (max-width: 900px) {
+            .topbar {
+                align-items: flex-start;
+            }
+
+            .topbar-right {
+                flex-direction: column;
+                align-items: flex-end;
+            }
+        }
+
+        @media (max-width: 680px) {
+            .topbar {
+                flex-direction: column;
+            }
+
+            .topbar-right {
+                width: 100%;
+                align-items: stretch;
+            }
+
+            .language-switcher,
+            .topbar-account {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .topbar-account-link {
+                flex: 1;
+            }
+
+            .mode {
+                width: 100%;
+                text-align: center;
+            }
         }
 
         /* ================================
@@ -951,7 +1107,7 @@
                     </strong>
 
                     <span>
-                        AI English Platform
+                        AI Language Platform
                     </span>
 
                 </div>
@@ -972,7 +1128,7 @@
 
         <div class="menu-section">
 
-            <div class="menu-section-title">
+            <div class="menu-section-title" data-i18n="main">
                 Asosiy
             </div>
 
@@ -988,7 +1144,7 @@
 
                 <div class="menu-item-content">
 
-                    <span class="menu-item-title">
+                    <span class="menu-item-title" data-i18n="home">
                         Home
                     </span>
 
@@ -1016,11 +1172,11 @@
 
                 <div class="menu-item-content">
 
-                    <span class="menu-item-title">
+                    <span class="menu-item-title" data-i18n="speakingExam">
                         Speaking Exam
                     </span>
 
-                    <span class="menu-item-description">
+                    <span class="menu-item-description" data-i18n="speakingExamDesc">
                         CEFR Speaking imtihoni
                     </span>
 
@@ -1072,11 +1228,11 @@
 
                 <div class="menu-item-content">
 
-                    <span class="menu-item-title">
+                    <span class="menu-item-title" data-i18n="englishPractice">
                         English Practice
                     </span>
 
-                    <span class="menu-item-description">
+                    <span class="menu-item-description" data-i18n="englishPracticeDesc">
                         Vocabulary va testlar
                     </span>
 
@@ -1100,11 +1256,11 @@
 
                 <div class="menu-item-content">
 
-                    <span class="menu-item-title">
+                    <span class="menu-item-title" data-i18n="cefrAssessment">
                         CEFR Assessment
                     </span>
 
-                    <span class="menu-item-description">
+                    <span class="menu-item-description" data-i18n="cefrAssessmentDesc">
                         Reading • Listening • Writing
                     </span>
 
@@ -1124,7 +1280,7 @@
 
         <div class="menu-section">
 
-            <div class="menu-section-title">
+            <div class="menu-section-title" data-i18n="account">
                 Hisob
             </div>
 
@@ -1141,11 +1297,11 @@
 
                 <div class="menu-item-content">
 
-                    <span class="menu-item-title">
+                    <span class="menu-item-title" data-i18n="profile">
                         Profile
                     </span>
 
-                    <span class="menu-item-description">
+                    <span class="menu-item-description" data-i18n="profileDesc">
                         Shaxsiy profilingiz
                     </span>
 
@@ -1266,20 +1422,91 @@
 
             <header class="topbar">
 
-                <div>
+                <div class="topbar-brand">
 
                     <div class="topbar-title">
                         👨‍🏫 Teacher Hasan AI
                     </div>
 
                     <div class="topbar-subtitle">
-                        Sizning shaxsiy AI English Teacher'ingiz
+                        Sizning shaxsiy AI Language Teacher'ingiz
                     </div>
 
                 </div>
 
-                <div class="mode">
-                    ✨ Teacher Hasan live AI
+                <div class="topbar-right">
+
+                    <div class="language-switcher">
+                        <button
+                            type="button"
+                            class="language-button active"
+                            data-ui-lang="uz"
+                        >
+                            🇺🇿 UZ
+                        </button>
+
+                        <button
+                            type="button"
+                            class="language-button"
+                            data-ui-lang="ru"
+                        >
+                            🇷🇺 RU
+                        </button>
+
+                        <button
+                            type="button"
+                            class="language-button"
+                            data-ui-lang="en"
+                        >
+                            🇬🇧 EN
+                        </button>
+                    </div>
+
+                    <div class="topbar-account">
+
+                        <div
+                            id="topbarUserInfo"
+                            class="topbar-user-info"
+                            style="display:none"
+                        >
+                            <span
+                                id="topbarUserName"
+                                class="topbar-user-name"
+                            ></span>
+
+                            <span
+                                id="topbarUserStatus"
+                                class="topbar-user-status"
+                            ></span>
+                        </div>
+
+                        <a
+                            href="/login.html"
+                            id="topbarLogin"
+                            class="topbar-account-link"
+                        >
+                            🔐 Kirish
+                        </a>
+
+                        <a
+                            href="/register.html"
+                            id="topbarRegister"
+                            class="topbar-account-link primary"
+                        >
+                            📝 Ro‘yxatdan o‘tish
+                        </a>
+
+                        <a
+                            href="/profile.html"
+                            id="topbarProfile"
+                            class="topbar-account-link profile"
+                            style="display:none"
+                        >
+                            👤 Profil
+                        </a>
+
+                    </div>
+
                 </div>
 
             </header>
@@ -1303,7 +1530,7 @@
                     </h1>
 
                     <p class="subtitle">
-                        Ingliz tilini ovozli suhbat orqali
+                        Tillarni ovozli suhbat orqali
                         tabiiy va interaktiv tarzda o‘rganing.
                     </p>
 
@@ -1322,7 +1549,7 @@
 
                     <p>
                         Men Teacher Hasanman.
-                        Ingliz tilini birga o‘rganamiz.
+                        Tillarni birga o‘rganamiz.
                         Speaking mashq qilish uchun
                         <b>Start</b> tugmasini bosing
                         va gapirishni boshlang.
@@ -1338,7 +1565,7 @@
                 <div id="transcript">
                     👨‍🏫 Teacher Hasan:
                     Salom! Men Teacher Hasanman.
-                    Ingliz tilini birga mashq qilamiz.
+                    Tillarni birga mashq qilamiz.
                 </div>
 
 
@@ -1390,7 +1617,7 @@
 
 
             <footer class="footer">
-                Teacher Hasan AI English Teacher
+                Teacher Hasan AI Language Teacher
                 • Powered by Hasan Jaylovov
             </footer>
 
@@ -1581,11 +1808,56 @@
                         "logoutBtn"
                     );
 
+                const topbarLogin =
+                    document.getElementById(
+                        "topbarLogin"
+                    );
+
+                const topbarRegister =
+                    document.getElementById(
+                        "topbarRegister"
+                    );
+
+                const topbarProfile =
+                    document.getElementById(
+                        "topbarProfile"
+                    );
+
+                const topbarPremiumBadge =
+                    document.getElementById(
+                        "topbarPremiumBadge"
+                    );
+
 
                 if (data.authenticated) {
 
                     const access =
                         data.access || {};
+
+                    const isPremium =
+                        access.mode === "premium";
+
+                    if (topbarLogin) {
+                        topbarLogin.style.display =
+                            "none";
+                    }
+
+                    if (topbarRegister) {
+                        topbarRegister.style.display =
+                            "none";
+                    }
+
+                    if (topbarProfile) {
+                        topbarProfile.style.display =
+                            "inline-flex";
+                    }
+
+                    if (topbarPremiumBadge) {
+                        topbarPremiumBadge.style.display =
+                            isPremium
+                                ? "inline"
+                                : "none";
+                    }
 
 
                     accountInfo.textContent =
@@ -1705,6 +1977,182 @@
          GEMINI LIVE
          BU SCRIPTNI APP.JS BOSHQAReDI
     ====================================== -->
+
+    <script src="/i18n.js"></script>
+
+<script>
+(() => {
+    "use strict";
+
+    function applyAllTranslations() {
+        const i18n = window.TeacherHasanI18n;
+
+        if (!i18n) {
+            return;
+        }
+
+        document
+            .querySelectorAll("[data-i18n]")
+            .forEach((element) => {
+                const key =
+                    element.dataset.i18n;
+
+                const value =
+                    i18n.t(key);
+
+                if (value && value !== key) {
+                    element.textContent = value;
+                }
+            });
+    }
+
+    window.addEventListener(
+        "teacherHasanLanguageChanged",
+        applyAllTranslations
+    );
+
+    document.addEventListener(
+        "DOMContentLoaded",
+        applyAllTranslations
+    );
+})();
+</script>
+
+
+<script>
+(() => {
+    "use strict";
+
+    function applyHeaderTranslations() {
+        const i18n = window.TeacherHasanI18n;
+
+        if (!i18n) {
+            return;
+        }
+
+        const login =
+            document.getElementById("topbarLogin");
+
+        const register =
+            document.getElementById("topbarRegister");
+
+        const profile =
+            document.getElementById("topbarProfile");
+
+        const title =
+            document.querySelector(".topbar-title");
+
+        const subtitle =
+            document.querySelector(".topbar-subtitle");
+
+        const liveAI =
+            document.querySelector(".topbar-right .mode");
+
+        if (login) {
+            login.textContent =
+                "🔐 " + i18n.t("login");
+        }
+
+        if (register) {
+            register.textContent =
+                "📝 " + i18n.t("register");
+        }
+
+        if (profile) {
+            profile.textContent =
+                "👤 " + i18n.t("profile");
+        }
+
+        if (title) {
+            title.textContent =
+                "👨‍🏫 " + i18n.t("teacherHasan");
+        }
+
+        if (subtitle) {
+            subtitle.textContent =
+                i18n.t("personalTeacher");
+        }
+
+        if (liveAI) {
+            liveAI.textContent =
+                i18n.t("liveAI");
+        }
+
+        document
+            .querySelectorAll("[data-ui-lang]")
+            .forEach((button) => {
+                button.classList.toggle(
+                    "active",
+                    button.dataset.uiLang ===
+                    i18n.getLanguage()
+                );
+            });
+    }
+
+    window.addEventListener(
+        "teacherHasanLanguageChanged",
+        applyHeaderTranslations
+    );
+
+    document.addEventListener(
+        "DOMContentLoaded",
+        applyHeaderTranslations
+    );
+})();
+</script>
+
+
+<script>
+(() => {
+    "use strict";
+
+    function updateLanguageButtons() {
+        const lang =
+            window.TeacherHasanI18n?.getLanguage?.() || "uz";
+
+        document
+            .querySelectorAll("[data-ui-lang]")
+            .forEach((button) => {
+                button.classList.toggle(
+                    "active",
+                    button.dataset.uiLang === lang
+                );
+            });
+    }
+
+    document.addEventListener("click", (event) => {
+        const button =
+            event.target.closest("[data-ui-lang]");
+
+        if (!button) {
+            return;
+        }
+
+        const lang = button.dataset.uiLang;
+
+        if (
+            !lang ||
+            !window.TeacherHasanI18n
+        ) {
+            return;
+        }
+
+        window.TeacherHasanI18n.setLanguage(lang);
+        updateLanguageButtons();
+    });
+
+    window.addEventListener(
+        "teacherHasanLanguageChanged",
+        updateLanguageButtons
+    );
+
+    document.addEventListener(
+        "DOMContentLoaded",
+        updateLanguageButtons
+    );
+})();
+</script>
+
 
     <script
         type="module"

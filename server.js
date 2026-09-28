@@ -5,6 +5,7 @@ import crypto from "crypto";
 import { fileURLToPath } from "url";
 import { GoogleGenAI } from "@google/genai";
 import pg from "pg";
+import multer from "multer";
 
 const { Pool } = pg;
 
@@ -14,6 +15,14 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+        fileSize: 10 * 1024 * 1024
+    }
+});
+
 const PORT = process.env.PORT || 3000;
 
 // ==============================================
@@ -51,8 +60,7 @@ const GEMINI_API_KEY =
 const LIVE_MODEL =
     "gemini-3.1-flash-live-preview";
 
-const CHAT_MODEL =
-    "gemini-2.5-flash";
+const CHAT_MODEL = process.env.CHAT_MODEL || "gemini-2.5-flash";
 
 const ADMIN_USERNAME =
     process.env.ADMIN_USERNAME || "admin";
@@ -117,12 +125,94 @@ const ai = GEMINI_API_KEY
 
 // ==============================================// TEACHER HASAN INSTRUCTION
 // ==============================================
+
+async function generateGeminiWithRetry(options, maxAttempts = 3) {
+    let lastError = null;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+            return await ai.models.generateContent(options);
+        } catch (error) {
+            lastError = error;
+
+            const message = String(error?.message || error || "").toLowerCase();
+            const isQuotaExceeded =
+                message.includes("quota exceeded") ||
+                message.includes("generate_content_free_tier_requests") ||
+                message.includes("resource_exhausted");
+
+            const isRetryable =
+                !isQuotaExceeded &&
+                (
+                    message.includes("503") ||
+                    message.includes("unavailable") ||
+                    message.includes("high demand")
+                );
+
+            if (!isRetryable || attempt === maxAttempts) {
+                throw error;
+            }
+
+            const delay = attempt * 1500;
+
+            console.warn(
+                `⚠️ Gemini vaqtinchalik xato. ${delay}ms dan keyin qayta uriniladi (${attempt}/${maxAttempts})`
+            );
+
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+
+    throw lastError;
+}
+
 const TEACHER_INSTRUCTION = `
 Siz TEACHER HASANsiz.
 
 Siz O'zbekistondagi o'quvchilarga ingliz tilini
 o'rgatuvchi professional, samimiy va sabrli
 AI English o'qituvchisiz.
+
+STARTDAN KEYINGI BIRINCHI SUHBAT:
+
+Foydalanuvchi Start tugmasini bosgandan keyin uning birinchi
+gapini diqqat bilan tinglang.
+
+Agar foydalanuvchi O'ZBEK TILIDA salomlashsa yoki gapirsa,
+javobni O'ZBEK TILIDA bering.
+
+Agar foydalanuvchi RUS TILIDA salomlashsa yoki gapirsa,
+javobni RUS TILIDA bering.
+
+Foydalanuvchi gapirgan O'zbek yoki Rus tilini suhbatning
+asosiy muloqot tili sifatida qabul qiling.
+
+Salomlashgandan keyin foydalanuvchiga quyidagi 7 ta tilni
+o'rgata olishingizni ayting:
+
+English, German, Arabic, Russian, Turkish, Korean, Chinese.
+
+Keyin foydalanuvchidan qaysi tilni o'rganmoqchi ekanini
+so'rang.
+
+Savolni foydalanuvchi gapirgan muloqot tilida bering.
+
+Foydalanuvchi javob bermaguncha yangi dars, yangi savol
+yoki yangi mashqni o'zingiz boshlamang.
+
+Agar foydalanuvchi darhol qaysi tilni o'rganmoqchi ekanini
+aytsa, ortiqcha savol bermasdan shu tilni o'rgatishga o'ting.
+
+MUHIM:
+Muloqot tili va o'rganiladigan tilni alohida saqlang.
+
+Masalan:
+"Salom" → O'zbekcha muloqot → o'rganiladigan tilni so'rash.
+
+"Привет" → Ruscha muloqot → o'rganiladigan tilni rus tilida so'rash.
+
+"Привет, я хочу изучать немецкий" → Ruscha muloqot,
+German tili o'rganiladigan til sifatida tanlanadi.
 
 QOIDALAR:
 
@@ -255,6 +345,7 @@ function setGuestDeviceCookie(res, deviceId) {
 function getGuestDeviceId(req, res) {
     const cookies = parseCookies(req);
     const existing = cookies.th_device_id;
+
 
     if (
         existing &&
@@ -517,6 +608,610 @@ async function getAuthenticatedUser(req) {
         legalConsent: row.legal_consent || {}
     };
 }
+
+// ==============================================
+// LEARNER MEMORY
+// ==============================================
+
+async function ensureLearnerProfile(userId) {
+    if (!pool || !userId) {
+        return null;
+    }
+
+    await pool.query(
+        `
+        INSERT INTO learner_profiles (user_id)
+        VALUES ($1)
+        ON CONFLICT (user_id)
+        DO NOTHING
+        `,
+        [userId]
+    );
+
+    const result = await pool.query(
+        `
+        SELECT
+            user_id,
+            cefr_level,
+            learning_goal,
+            preferred_language,
+            current_topic,
+            last_lesson_summary,
+            updated_at
+        FROM learner_profiles
+        WHERE user_id = $1
+        LIMIT 1
+        `,
+        [userId]
+    );
+
+    return result.rows[0] || null;
+}
+
+async function getLearnerMemory(userId) {
+    if (!pool || !userId) {
+        return null;
+    }
+
+    const profile = await ensureLearnerProfile(userId);
+
+    const sessionsResult = await pool.query(
+        `
+        SELECT
+            topic,
+            level,
+            summary,
+            created_at
+        FROM learning_sessions
+        WHERE user_id = $1
+        ORDER BY created_at DESC
+        LIMIT 5
+        `,
+        [userId]
+    );
+
+    const progressResult = await pool.query(
+        `
+        SELECT
+            topic,
+            skill,
+            status,
+            score,
+            updated_at
+        FROM learner_progress
+        WHERE user_id = $1
+        ORDER BY updated_at DESC
+        LIMIT 20
+        `,
+        [userId]
+    );
+
+    const mistakesResult = await pool.query(
+        `
+        SELECT
+            skill,
+            category,
+            mistake,
+            correction,
+            occurrence_count,
+            last_seen_at
+        FROM learner_mistakes
+        WHERE user_id = $1
+        ORDER BY occurrence_count DESC, last_seen_at DESC
+        LIMIT 15
+        `,
+        [userId]
+    );
+
+    const vocabularyResult = await pool.query(
+        `
+        SELECT
+            word,
+            meaning,
+            level,
+            mastery,
+            last_seen_at
+        FROM learner_vocabulary
+        WHERE user_id = $1
+        ORDER BY last_seen_at DESC
+        LIMIT 30
+        `,
+        [userId]
+    );
+
+    return {
+        profile,
+        sessions: sessionsResult.rows,
+        progress: progressResult.rows,
+        mistakes: mistakesResult.rows,
+        vocabulary: vocabularyResult.rows
+    };
+}
+
+function buildLearnerMemoryInstruction(memory) {
+    if (!memory) {
+        return "";
+    }
+
+    const profile = memory.profile || {};
+
+    return `
+LEARNER MEMORY:
+
+CEFR darajasi:
+${profile.cefr_level || "Hali aniqlanmagan"}
+
+O‘rganish maqsadi:
+${profile.learning_goal || "Hali aniqlanmagan"}
+
+Joriy mavzu:
+${profile.current_topic || "Hali aniqlanmagan"}
+
+Oxirgi dars xulosasi:
+${profile.last_lesson_summary || "Hali mavjud emas"}
+
+Oxirgi darslar:
+${JSON.stringify(memory.sessions || [])}
+
+Progress:
+${JSON.stringify(memory.progress || [])}
+
+Takroriy xatolar:
+${JSON.stringify(memory.mistakes || [])}
+
+Vocabulary:
+${JSON.stringify(memory.vocabulary || [])}
+
+MEMORY QOIDALARI:
+
+1. Foydalanuvchining ismini users.full_name orqali ishlating.
+
+2. CEFR darajasi mavjud bo‘lsa, barcha material va mashqlarni shu darajaga moslang.
+
+3. AGAR "Joriy mavzu" mavjud bo‘lsa va foydalanuvchi "davom etamiz", "davom etaylik", "darsni davom ettiraylik" yoki shunga teng mazmundagi iborani aytsa, YANGI MAVZU TANLAMANG. Aynan joriy mavzu va "Oxirgi dars xulosasi" asosida darsni davom ettiring.
+
+4. "Davom etamiz" holatida avvalgi mavzuni kamida bir marta aniq eslatib o‘ting.
+
+5. "Davom etamiz" holatida nazariyani boshidan takrorlamang. Keyingi mantiqiy bosqichga o‘ting: practice, speaking, questions, correction yoki qisqa test.
+
+6. Oldingi xatolarni kerak bo‘lsa yangi mashqlarda tabiiy ravishda takrorlang.
+
+7. Yangi mavzuga faqat foydalanuvchi yangi mavzu so‘raganda yoki aniq yangi mavzu berganda o‘ting.
+
+8. Yangi mavzuga o‘tilsa, eski mavzuni memory'dan yo‘qotmang.
+
+9. Memory'da ma'lumot bo‘lmasa, uni o‘ylab topmang.
+
+10. CEFR darajasini dalilsiz o‘zgartirmang.
+
+11. Foydalanuvchi yangi ma'lumot bersa, keyinchalik server uni memory'ga saqlashi kerak.
+
+12. MEMORY'dagi "Oxirgi dars xulosasi", "Joriy mavzu" va "Progress" ma'lumotlarini oddiy salomlashuvdan ustun qo‘ying.
+
+13. Javobni foydalanuvchining oldingi darsiga bog‘lang; umumiy "bugun nima o‘rganamiz?" savoliga o‘tib ketmang, agar davom ettirish signali berilgan bo‘lsa.
+`;
+}
+
+
+async function saveLearnerMemory(userId, memory = {}) {
+    if (!pool || !userId) {
+        return;
+    }
+
+    const profile = memory.profile || {};
+
+    await pool.query(
+        `
+        INSERT INTO learner_profiles (
+            user_id,
+            cefr_level,
+            learning_goal,
+            current_topic,
+            last_lesson_summary,
+            updated_at
+        )
+        VALUES ($1, $2, $3, $4, $5, NOW())
+        ON CONFLICT (user_id)
+        DO UPDATE SET
+            cefr_level = COALESCE(EXCLUDED.cefr_level, learner_profiles.cefr_level),
+            learning_goal = COALESCE(EXCLUDED.learning_goal, learner_profiles.learning_goal),
+            current_topic = COALESCE(EXCLUDED.current_topic, learner_profiles.current_topic),
+            last_lesson_summary = COALESCE(EXCLUDED.last_lesson_summary, learner_profiles.last_lesson_summary),
+            updated_at = NOW()
+        `,
+        [
+            userId,
+            profile.cefr_level || null,
+            profile.learning_goal || null,
+            profile.current_topic || null,
+            profile.last_lesson_summary || null
+        ]
+    );
+
+    if (memory.session) {
+        await pool.query(
+            `
+            INSERT INTO learning_sessions (
+                user_id,
+                topic,
+                level,
+                summary
+            )
+            VALUES ($1, $2, $3, $4)
+            `,
+            [
+                userId,
+                memory.session.topic || null,
+                memory.session.level || profile.cefr_level || null,
+                memory.session.summary || null
+            ]
+        );
+    }
+
+    for (const item of memory.progress || []) {
+        if (!item?.topic || !item?.skill) {
+            continue;
+        }
+
+        await pool.query(
+            `
+            INSERT INTO learner_progress (
+                user_id,
+                topic,
+                skill,
+                status,
+                score,
+                updated_at
+            )
+            VALUES ($1, $2, $3, $4, $5, NOW())
+            ON CONFLICT (user_id, topic, skill)
+            DO UPDATE SET
+                status = EXCLUDED.status,
+                score = EXCLUDED.score,
+                updated_at = NOW()
+            `,
+            [
+                userId,
+                item.topic,
+                item.skill,
+                item.status || "started",
+                item.score ?? null
+            ]
+        );
+    }
+
+    for (const item of memory.mistakes || []) {
+        if (!item?.skill || !item?.mistake) {
+            continue;
+        }
+
+        await pool.query(
+            `
+            INSERT INTO learner_mistakes (
+                user_id,
+                skill,
+                category,
+                mistake,
+                correction,
+                occurrence_count,
+                last_seen_at
+            )
+            VALUES ($1, $2, $3, $4, $5, 1, NOW())
+            `,
+            [
+                userId,
+                item.skill,
+                item.category || null,
+                item.mistake,
+                item.correction || null
+            ]
+        );
+    }
+
+    for (const item of memory.vocabulary || []) {
+        if (!item?.word) {
+            continue;
+        }
+
+        await pool.query(
+            `
+            INSERT INTO learner_vocabulary (
+                user_id,
+                word,
+                meaning,
+                level,
+                mastery,
+                last_seen_at
+            )
+            VALUES ($1, $2, $3, $4, $5, NOW())
+            ON CONFLICT (user_id, word)
+            DO UPDATE SET
+                meaning = COALESCE(EXCLUDED.meaning, learner_vocabulary.meaning),
+                level = COALESCE(EXCLUDED.level, learner_vocabulary.level),
+                mastery = EXCLUDED.mastery,
+                last_seen_at = NOW()
+            `,
+            [
+                userId,
+                item.word,
+                item.meaning || null,
+                item.level || profile.cefr_level || null,
+                Number.isFinite(Number(item.mastery))
+                    ? Number(item.mastery)
+                    : 0
+            ]
+        );
+    }
+}
+
+
+async function updateLearnerMemoryFromChat(userId, message, reply, existingMemory = null) {
+    if (!pool || !userId) {
+        return null;
+    }
+
+    const profile = existingMemory?.profile || {};
+
+    const normalizedMessage = String(message || "").trim();
+    const normalizedReply = String(reply || "").trim();
+
+    if (!normalizedMessage || !normalizedReply) {
+        return null;
+    }
+
+    const topic =
+        profile.current_topic ||
+        null;
+
+    const level =
+        profile.cefr_level ||
+        null;
+
+    const summary =
+        topic
+            ? `${topic} bo‘yicha dars davom ettirildi. O‘quvchi yangi mashq bajardi va Teacher Hasan javob berdi.`
+            : null;
+
+    if (!topic && !level) {
+        return null;
+    }
+
+    await pool.query(
+        `
+        INSERT INTO learner_profiles (
+            user_id,
+            cefr_level,
+            current_topic,
+            last_lesson_summary,
+            updated_at
+        )
+        VALUES ($1, $2, $3, $4, NOW())
+        ON CONFLICT (user_id)
+        DO UPDATE SET
+            cefr_level = COALESCE(EXCLUDED.cefr_level, learner_profiles.cefr_level),
+            current_topic = COALESCE(EXCLUDED.current_topic, learner_profiles.current_topic),
+            last_lesson_summary = COALESCE(
+                EXCLUDED.last_lesson_summary,
+                learner_profiles.last_lesson_summary
+            ),
+            updated_at = NOW()
+        `,
+        [
+            userId,
+            level,
+            topic,
+            summary
+        ]
+    );
+
+    if (topic) {
+        await pool.query(
+            `
+            INSERT INTO learning_sessions (
+                user_id,
+                topic,
+                level,
+                summary
+            )
+            VALUES ($1, $2, $3, $4)
+            `,
+            [
+                userId,
+                topic,
+                level,
+                summary
+            ]
+        );
+    }
+
+    console.log("💾 LEARNER MEMORY SAVED:", {
+        userId,
+        topic,
+        level
+    });
+
+    return {
+        topic,
+        level,
+        summary
+    };
+}
+
+
+async function extractLearnerMemory(userId, message, reply, existingMemory = null) {
+    console.log("🧠 MEMORY EXTRACTOR START:", userId);
+
+    if (!pool || !userId || !ai) {
+        return null;
+    }
+
+    const profile = existingMemory?.profile || {};
+
+    const prompt = `
+Siz Teacher Hasan AI platformasi uchun learner memory extractor'siz.
+
+Vazifa:
+Foydalanuvchining hozirgi xabari va Teacher Hasan javobidan FAQAT ishonchli,
+foydalanuvchi aytgan yoki suhbatdan bevosita aniqlangan o‘quv ma'lumotlarini ajrating.
+
+HECH QACHON:
+- foydalanuvchi aytmagan CEFR darajasini o‘ylab topmang;
+- foydalanuvchi aytmagan maqsadni o‘ylab topmang;
+- taxminiy xatoni haqiqiy xato deb yozmang;
+- taxminiy vocabulary qo‘shmang;
+- bo‘sh ma'lumotni uydirmang.
+
+Mavjud learner profile:
+${JSON.stringify(profile)}
+
+Foydalanuvchi xabari:
+${message}
+
+Teacher Hasan javobi:
+${reply}
+
+JSON faqat quyidagi strukturada bo‘lsin:
+{
+  "profile": {
+    "cefr_level": null,
+    "learning_goal": null,
+    "current_topic": null,
+    "last_lesson_summary": null
+  },
+  "session": {
+    "topic": null,
+    "level": null,
+    "summary": null
+  },
+  "progress": [],
+  "mistakes": [],
+  "vocabulary": []
+}
+
+Qoidalar:
+- Mavjud profile ma'lumotini yangi xabarda tasdiqlanmasa, uni takrorlash shart emas.
+- Faqat yangi yoki aniq tasdiqlangan ma'lumotni qaytaring.
+- cefr_level faqat foydalanuvchi darajasini aniq aytsa yoki Teacher Hasan uni aniq baholagan bo‘lsa yozilsin.
+- learning_goal faqat aniq aytilgan maqsad bo‘lsa yozilsin.
+- current_topic suhbatning real o‘quv mavzusi bo‘lsa yozilsin.
+- session.summary qisqa bo‘lsin.
+- progress faqat real bajarilgan mashq yoki skill bo‘yicha ma'lumot bo‘lsa yozilsin.
+- mistakes faqat foydalanuvchining real ingliz tili xatosi aniq ko‘ringanda yozilsin.
+- vocabulary faqat shu suhbatda o‘rganilgan yoki aniq ishlatilgan muhim so‘zlar bo‘lsa yozilsin.
+- Keraksiz ma'lumot uchun null yoki [] qaytaring.
+`;
+
+    try {
+        const result = await generateGeminiWithRetry({
+            model: CHAT_MODEL,
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseJsonSchema: {
+                    type: "object",
+                    properties: {
+                        profile: {
+                            type: "object",
+                            properties: {
+                                cefr_level: { type: ["string", "null"] },
+                                learning_goal: { type: ["string", "null"] },
+                                current_topic: { type: ["string", "null"] },
+                                last_lesson_summary: { type: ["string", "null"] }
+                            },
+                            required: [
+                                "cefr_level",
+                                "learning_goal",
+                                "current_topic",
+                                "last_lesson_summary"
+                            ]
+                        },
+                        session: {
+                            type: "object",
+                            properties: {
+                                topic: { type: ["string", "null"] },
+                                level: { type: ["string", "null"] },
+                                summary: { type: ["string", "null"] }
+                            },
+                            required: ["topic", "level", "summary"]
+                        },
+                        progress: {
+                            type: "array",
+                            items: {
+                                type: "object",
+                                properties: {
+                                    topic: { type: "string" },
+                                    skill: { type: "string" },
+                                    status: { type: "string" },
+                                    score: { type: ["number", "null"] }
+                                },
+                                required: ["topic", "skill", "status", "score"]
+                            }
+                        },
+                        mistakes: {
+                            type: "array",
+                            items: {
+                                type: "object",
+                                properties: {
+                                    skill: { type: "string" },
+                                    category: { type: ["string", "null"] },
+                                    mistake: { type: "string" },
+                                    correction: { type: ["string", "null"] }
+                                },
+                                required: [
+                                    "skill",
+                                    "category",
+                                    "mistake",
+                                    "correction"
+                                ]
+                            }
+                        },
+                        vocabulary: {
+                            type: "array",
+                            items: {
+                                type: "object",
+                                properties: {
+                                    word: { type: "string" },
+                                    meaning: { type: ["string", "null"] },
+                                    level: { type: ["string", "null"] },
+                                    mastery: { type: ["number", "null"] }
+                                },
+                                required: [
+                                    "word",
+                                    "meaning",
+                                    "level",
+                                    "mastery"
+                                ]
+                            }
+                        }
+                    },
+                    required: [
+                        "profile",
+                        "session",
+                        "progress",
+                        "mistakes",
+                        "vocabulary"
+                    ]
+                }
+            }
+        });
+
+        const raw = result.text || "{}";
+        const memory = JSON.parse(raw);
+        console.log("🧠 LEARNER MEMORY RAW:", raw);
+        console.log("🧠 LEARNER MEMORY PARSED:", JSON.stringify(memory));
+
+        await saveLearnerMemory(userId, memory);
+
+        return memory;
+    } catch (error) {
+        console.error(
+            "⚠️ LEARNER MEMORY XATOSI:",
+            error?.message || error
+        );
+        return null;
+    }
+}
+
 let multicardTokenCache = {
     token: "",
     expiresAt: 0
@@ -1006,6 +1701,7 @@ app.post(
                 });
         }
     }
+
 );
 
 
@@ -2163,16 +2859,90 @@ app.get(
 );
 
 
-// ==============================================// NORMAL CHAT
 // ==============================================
+// SPEAKING EXAM — AUDIO UPLOAD
+// ==============================================
+
+app.post(
+    "/api/speaking/upload",
+    upload.single("audio"),
+    async (req, res) => {
+        try {
+            const user =
+                await getAuthenticatedUser(req);
+
+            if (!user?.id) {
+                return res.status(401).json({
+                    error:
+                        "Speaking Exam uchun Login qiling."
+                });
+            }
+
+            if (!req.file) {
+                return res.status(400).json({
+                    error:
+                        "Audio fayl yuborilmadi."
+                });
+            }
+
+            const allowedMimeTypes = [
+                "audio/webm",
+                "audio/webm;codecs=opus",
+                "audio/ogg",
+                "audio/mp4",
+                "audio/mpeg",
+                "audio/wav"
+            ];
+
+            if (
+                !allowedMimeTypes.includes(
+                    req.file.mimetype
+                )
+            ) {
+                return res.status(400).json({
+                    error:
+                        "Audio formati qo‘llab-quvvatlanmaydi."
+                });
+            }
+
+            console.log(
+                "🎤 SPEAKING AUDIO RECEIVED:",
+                {
+                    userId: user.id,
+                    mimeType: req.file.mimetype,
+                    size: req.file.size
+                }
+            );
+
+            return res.json({
+                success: true,
+                received: true,
+                mimeType: req.file.mimetype,
+                size: req.file.size
+            });
+        } catch (error) {
+            console.error(
+                "❌ Speaking audio upload error:",
+                error?.message || error
+            );
+
+            return res.status(500).json({
+                error:
+                    "Audio qabul qilishda xatolik."
+            });
+        }
+    }
+);
+
+// ==============================================
+// NORMAL CHAT
+// ==============================================
+
 app.post(
     "/api/chat",
     async (req, res) => {
-
         try {
-
             if (!ai) {
-
                 return res.status(500)
                     .json({
                         error:
@@ -2187,7 +2957,6 @@ app.post(
                 ).trim();
 
             if (!message) {
-
                 return res.status(400)
                     .json({
                         error:
@@ -2195,9 +2964,71 @@ app.post(
                     });
             }
 
-            const result =
-                await ai.models.generateContent({
+            const user =
+                await getAuthenticatedUser(req);
 
+            let memory = null;
+
+            if (user?.id) {
+                memory =
+                    await getLearnerMemory(
+                        user.id
+                    );
+            }
+
+            const learnerName =
+                user?.fullName ||
+                "o‘quvchi";
+
+            const memoryInstruction =
+                buildLearnerMemoryInstruction(
+                    memory
+                );
+
+            const currentTopic =
+    memory?.profile?.current_topic || "";
+
+const lastLessonSummary =
+    memory?.profile?.last_lesson_summary || "";
+
+const learnerContext = `
+CURRENT LEARNER:
+
+Ismi:
+${learnerName}
+
+Email:
+${user?.email || "Mavjud emas"}
+
+CEFR:
+${memory?.profile?.cefr_level || "Hali aniqlanmagan"}
+
+JORIY MAVZU:
+${currentTopic || "Hali aniqlanmagan"}
+
+OXIRGI DARS XULOSASI:
+${lastLessonSummary || "Hali mavjud emas"}
+
+${memoryInstruction}
+
+DAVOM ETTIRISH UCHUN YUQORI USTUVOR QOIDA:
+
+Agar foydalanuvchi "davom etamiz", "davom etaylik",
+"darsni davom ettiraylik", "continue" yoki shu mazmundagi
+ibora bilan murojaat qilsa:
+
+- Agar JORIY MAVZU mavjud bo‘lsa, aynan shu mavzuni davom ettiring.
+- Yangi mavzu tanlamang va "qaysi mavzuda davom etamiz?" deb qayta so‘ramang.
+- OXIRGI DARS XULOSASI asosida keyingi mantiqiy mashqni boshlang.
+- Javob boshida oldingi mavzuni qisqa eslating.
+- Masalan, JORIY MAVZU "Present Perfect" bo‘lsa,
+  aynan Present Perfect bo‘yicha practice, speaking,
+  correction yoki qisqa testni davom ettiring.
+- Foydalanuvchi yangi mavzu so‘ramagan bo‘lsa, boshqa mavzuga o‘tmang.
+`;
+
+            const result =
+                await generateGeminiWithRetry({
                     model:
                         CHAT_MODEL,
 
@@ -2205,20 +3036,30 @@ app.post(
                         message,
 
                     config: {
-
                         systemInstruction:
-                            TEACHER_INSTRUCTION
+                            TEACHER_INSTRUCTION +
+                            "\n\n" +
+                            learnerContext
                     }
                 });
 
-            return res.json({
+            const reply =
+                result.text ||
+                "Javob olinmadi.";
 
+            if (user?.id) {
+                await updateLearnerMemoryFromChat(
+                    user.id,
+                    message,
+                    reply,
+                    memory
+                );
+            }
+
+            return res.json({
                 success:
                     true,
-
-                reply:
-                    result.text ||
-                    "Javob olinmadi."
+                reply
             });
 
         } catch (error) {
@@ -2230,7 +3071,6 @@ app.post(
 
             return res.status(500)
                 .json({
-
                     success:
                         false,
 
@@ -2245,7 +3085,11 @@ app.post(
 );
 
 
-// ==============================================// ADMIN AUTH MIDDLEWARE
+// ==============================================
+// ADMIN AUTH MIDDLEWARE
+// ==============================================
+
+
 // ==============================================
 function requireAdmin(
     req,
@@ -2319,7 +3163,7 @@ app.post(
             ADMIN_USERNAME ||
             password !==
             ADMIN_PASSWORD
-        ) {
+        ){
 
             return res.status(401)
                 .json({

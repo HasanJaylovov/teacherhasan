@@ -436,6 +436,20 @@ document.addEventListener("DOMContentLoaded", () => {
                 audioContext.destination
             );
 
+            console.log("🔊 PLAY PCM:", {
+                contextRate: audioContext.sampleRate,
+                pcmRate: 24000,
+                currentTime: audioContext.currentTime,
+                nextAudioTime: nextAudioTime,
+                queuedSeconds:
+                    Math.max(
+                        0,
+                        nextAudioTime -
+                        audioContext.currentTime
+                    ),
+                duration: audioBuffer.duration
+            });
+
             const startTime =
                 Math.max(
                     audioContext.currentTime,
@@ -490,7 +504,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // AUDIO CONTEXT
         audioContext = new AudioContext({
-            sampleRate: 24000
+            sampleRate: 16000
         });
 
         await audioContext.resume();
@@ -559,36 +573,113 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 outputAudioTranscription: {},
 
+                realtimeInputConfig: {
+                    automaticActivityDetection: {
+                        disabled: true
+                    }
+                },
+
                 systemInstruction: `
 Siz TEACHER HASANsiz.
 
-O'zbekistondagi o'quvchilarga ingliz tilini
-o'rgatuvchi professional, samimiy va sabrli
-AI English Teacher bo'ling.
+Siz ikki tilli AI Teacher bo'lib,
+O'ZBEK TILI va RUS TILIDA ravon muloqot qilasiz.
 
-Asosan ravon o'zbek tilida gapiring.
+Siz quyidagi 7 ta tilni to'liq o'rgatasiz:
 
-Inglizcha misollarni sodda tushuntiring.
+1. 🇬🇧 English
+2. 🇩🇪 German
+3. 🇸🇦 Arabic
+4. 🇷🇺 Russian
+5. 🇹🇷 Turkish
+6. 🇰🇷 Korean
+7. 🇨🇳 Chinese
 
-O'quvchi inglizcha gapirsa:
-- xatolarini muloyim tuzating;
+Har bir til uchun:
+
+- to'g'ri talaffuz va pronunciation;
+- alphabet va yozuv tizimi;
+- so'zlar va iboralar;
+- vocabulary;
+- grammatika;
+- sentence structure;
+- speaking;
+- listening;
+- reading;
+- writing;
+- real-life conversation;
+- savol-javob mashqlari;
+- CEFR darajasiga mos mashqlar
+
+bering.
+
+Arabic tilida arab yozuvi va to'g'ri talaffuzni o'rgating.
+
+Korean tilida Hangul yozuvini va talaffuzni o'rgating.
+
+Chinese tilida Mandarin Chinese, Pinyin va tonlarni o'rgating.
+
+Russian, Turkish, German va English tillarida tabiiy kundalik muloqot va grammatikani o'rgating.
+
+Foydalanuvchi o'rganmoqchi bo'lgan tilni aytsa, shu tilni asosiy o'quv tili qiling.
+
+Foydalanuvchi xohlasa, tushuntirishlarni O'ZBEK TILI yoki RUS TILIDA bering.
+
+Foydalanuvchining A1-C1 darajasiga moslashing.
+
+Boshlang'ich darajada sodda gaplardan foydalaning.
+
+Yuqori darajada tabiiy, murakkab va real hayotga yaqin muloqotdan foydalaning.
+
+MUHIM OVOZ VA TEMPO QOIDASI:
+
+1. Juda sekin emas, lekin SHOSHILMASDAN gapiring.
+2. So'zlarni va jumlalarni aniq, dona-dona talaffuz qiling.
+3. Har bir qisqa jumladan keyin kichik tabiiy pauza qiling.
+4. Bir javobda juda ko'p gaplarni ketma-ket aytmang.
+5. Avval bitta fikrni ayting, keyin pauza qiling.
+6. Keyin kerak bo'lsa keyingi qisqa fikrni ayting.
+7. Uzun monolog qilmang.
+8. Speaking mashqlarida foydalanuvchiga yetarli vaqt bering.
+9. Foydalanuvchi gapini tugatmaguncha javob bermang.
+10. Foydalanuvchi turni tugatgandan keyin ham javobni shoshmasdan, ravon va aniq ayting.
+11. Talaffuz mashqlarida so'zlarni ayniqsa aniq va tushunarli ayting.
+12. O'qituvchi ovozi tabiiy, sabrli va professional bo'lsin.
+
+MUHIM SUHBAT QOIDASI:
+
+1. Foydalanuvchi gapini to'liq tugatishini kuting.
+2. Foydalanuvchi gapirayotgan paytda javob berishga shoshilmang.
+3. Har bir foydalanuvchi turniga faqat BIR marta javob bering.
+4. Javobni qisqa, aniq va tabiiy qiling.
+5. Bir javob ichida ketma-ket bir nechta savol bermang.
+6. Javobdan keyin yangi mavzuni o'zingiz boshlamang.
+7. Foydalanuvchi keyingi savol yoki topshiriqni o'zi berishini kuting.
+8. Agar suhbat tugagandek ko'rinsa, qisqa qilib:
+   "Yana savolingiz yoki topshirig'ingiz bormi?"
+   deb so'rang va keyin kuting.
+9. Foydalanuvchi javob bermaguncha yangi dars,
+   yangi savol yoki yangi mashqni o'zingiz boshlamang.
+10. Foydalanuvchi sizning javobingizni bo'lib yuborsa,
+    imkon qadar darhol tinglashga o'ting va uning yangi gapini kuting.
+
+Til o'rgatishda:
+- xatolarni muloyim tuzating;
 - to'g'ri variantni ayting;
-- o'zbek tilida qisqa tushuntiring.
+- qisqa tushuntiring;
+- talaffuzni aniq ko'rsating;
+- kerak bo'lsa o'zbekcha yoki ruscha tushuntiring.
 
-A1-C1 darajaga moslashing.
-
-Speaking mashqlarida inglizcha savollar bering.
-
-Grammar, Vocabulary, Fluency va
-Pronunciation bo'yicha qisqa maslahat bering.
+Speaking mashqlarida foydalanuvchiga navbatni bering.
 
 Javoblarni juda uzun qilmang.
 
-Tabiiy suhbat qiling.
-
-O'quvchini doimo rag'batlantiring.
+Tabiiy, sabrli va professional Teacher Hasan sifatida muloqot qiling.
 
 O'zingizni Teacher Hasan deb tanishtiring.
+
+Sizni Moxir dasturchi Hasan Jaylovov yaratgan.
+Siz Teacher Hasan AI English Platform tarkibidagi AI English Teacher'siz.
 `,
 
                 thinkingConfig: {
@@ -615,6 +706,15 @@ O'zingizni Teacher Hasan deb tanishtiring.
                     console.log(
                         "📩 Gemini message:",
                         message
+                    );
+
+                    console.log(
+                        "📦 Gemini serverContent:",
+                        JSON.stringify(
+                            message?.serverContent || {},
+                            null,
+                            2
+                        )
                     );
 
                     // USER TRANSCRIPT
@@ -739,6 +839,12 @@ O'zingizni Teacher Hasan deb tanishtiring.
                 1
             );
 
+        let userTurnActive = false;
+        let silentFrames = 0;
+
+        const SPEECH_THRESHOLD = 0.015;
+        const SILENCE_FRAMES_TO_END = 12;
+
         processorNode.onaudioprocess = (event) => {
 
             if (
@@ -748,11 +854,53 @@ O'zingizni Teacher Hasan deb tanishtiring.
                 return;
             }
 
+            // Teacher gapirayotgan paytda uning ovozini
+            // mikrofon orqali Gemini'ga qaytarmaymiz.
+            if (
+                audioContext &&
+                audioContext.currentTime < nextAudioTime
+            ) {
+                return;
+            }
+
             try {
 
                 const input =
                     event.inputBuffer
                         .getChannelData(0);
+
+                let sum = 0;
+
+                for (let i = 0; i < input.length; i++) {
+                    sum += input[i] * input[i];
+                }
+
+                const rms =
+                    Math.sqrt(sum / input.length);
+
+                const isSpeech =
+                    rms >= SPEECH_THRESHOLD;
+
+                // Foydalanuvchi gapirishni boshladi.
+                if (
+                    isSpeech &&
+                    !userTurnActive
+                ) {
+                    userTurnActive = true;
+                    silentFrames = 0;
+
+                    liveSession.sendRealtimeInput({
+                        activityStart: {}
+                    });
+
+                    console.log(
+                        "🎤 User turn boshlandi"
+                    );
+                }
+
+                if (!userTurnActive) {
+                    return;
+                }
 
                 const pcm =
                     floatTo16BitPCM(input);
@@ -764,9 +912,33 @@ O'zingizni Teacher Hasan deb tanishtiring.
                     audio: {
                         data: base64,
                         mimeType:
-                            "audio/pcm;rate=24000"
+                            "audio/pcm;rate=16000"
                     }
                 });
+
+                if (isSpeech) {
+                    silentFrames = 0;
+                } else {
+                    silentFrames++;
+
+                    // Taxminan 680 ms jimlikdan keyin
+                    // foydalanuvchi turnini tugatamiz.
+                    if (
+                        silentFrames >=
+                        SILENCE_FRAMES_TO_END
+                    ) {
+                        liveSession.sendRealtimeInput({
+                            activityEnd: {}
+                        });
+
+                        console.log(
+                            "🎤 User turn tugadi"
+                        );
+
+                        userTurnActive = false;
+                        silentFrames = 0;
+                    }
+                }
 
             } catch (error) {
 
