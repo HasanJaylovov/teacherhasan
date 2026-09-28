@@ -59,7 +59,18 @@ document.addEventListener("DOMContentLoaded", () => {
                 "/api/guest/start",
                 {
                     method: "POST",
-                    credentials: "same-origin"
+                    credentials: "same-origin",
+                    headers: (() => {
+                        const token =
+                            localStorage.getItem("th_auth_token");
+
+                        return token
+                            ? {
+                                Authorization:
+                                    `Bearer ${token}`
+                            }
+                            : {};
+                    })()
                 }
             );
 
@@ -489,7 +500,19 @@ document.addEventListener("DOMContentLoaded", () => {
         console.log("🔊 AudioContext tayyor");
 
         // EPHEMERAL TOKEN
-        const tokenResponse = await fetch("/api/live-token");
+        const tokenResponse = await fetch("/api/live-token", {
+            headers: (() => {
+                const token =
+                    localStorage.getItem("th_auth_token");
+
+                return token
+                    ? {
+                        Authorization:
+                            `Bearer ${token}`
+                    }
+                    : {};
+            })()
+        });
 
         if (!tokenResponse.ok) {
             const errorData = await tokenResponse
