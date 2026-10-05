@@ -6,6 +6,7 @@ import { fileURLToPath } from "url";
 import { GoogleGenAI } from "@google/genai";
 import pg from "pg";
 import multer from "multer";
+import nodemailer from "nodemailer";
 
 const { Pool } = pg;
 
@@ -73,6 +74,121 @@ const GUEST_MINUTES =
 
 const TRIAL_DAYS =
     Number(process.env.TRIAL_DAYS || 1);
+
+// ==============================================
+// PASSWORD RESET EMAIL
+// ==============================================
+
+const SMTP_HOST =
+    process.env.SMTP_HOST || "";
+
+const SMTP_PORT =
+    Number(process.env.SMTP_PORT || 587);
+
+const SMTP_USER =
+    process.env.SMTP_USER || "";
+
+const SMTP_PASSWORD =
+    process.env.SMTP_PASSWORD || "";
+
+const SMTP_FROM =
+    process.env.SMTP_FROM ||
+    SMTP_USER ||
+    "no-reply@teacherhasan.uz";
+
+const PASSWORD_RESET_URL =
+    process.env.PASSWORD_RESET_URL ||
+    "https://teacherhasan.uz/reset-password.html";
+
+const mailTransporter =
+    SMTP_HOST && SMTP_USER && SMTP_PASSWORD
+        ? nodemailer.createTransport({
+            host: SMTP_HOST,
+            port: SMTP_PORT,
+            secure:
+                String(process.env.SMTP_SECURE || "false")
+                    .toLowerCase() === "true",
+            auth: {
+                user: SMTP_USER,
+                pass: SMTP_PASSWORD
+            }
+        })
+        : null;
+
+function hashResetToken(token) {
+    return crypto
+        .createHash("sha256")
+        .update(String(token))
+        .digest("hex");
+}
+
+async function sendPasswordResetEmail({
+    email,
+    fullName,
+    token
+}) {
+    if (!mailTransporter) {
+        throw new Error(
+            "SMTP sozlamalari mavjud emas."
+        );
+    }
+
+    const resetUrl =
+        `${PASSWORD_RESET_URL}?token=${encodeURIComponent(token)}`;
+
+    const safeName =
+        String(fullName || "Teacher Hasan o‘quvchisi");
+
+    await mailTransporter.sendMail({
+        from: SMTP_FROM,
+        to: email,
+        subject: "Teacher Hasan — parolni almashtirish",
+        text:
+            `Assalomu alaykum, ${safeName}!\n\n` +
+            `Parolingizni almashtirish uchun quyidagi havolani oching:\n\n` +
+            `${resetUrl}\n\n` +
+            `Havola 15 daqiqa amal qiladi.\n\n` +
+            `Agar bu so‘rovni siz yubormagan bo‘lsangiz, ushbu xabarni e’tiborsiz qoldiring.`,
+        html: `
+            <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:30px">
+                <h2>Teacher Hasan</h2>
+
+                <p>Assalomu alaykum, ${safeName}!</p>
+
+                <p>
+                    Parolingizni almashtirish uchun quyidagi tugmani bosing:
+                </p>
+
+                <p>
+                    <a
+                        href="${resetUrl}"
+                        style="
+                            display:inline-block;
+                            padding:14px 24px;
+                            background:#2563eb;
+                            color:white;
+                            text-decoration:none;
+                            border-radius:10px;
+                            font-weight:bold;
+                        "
+                    >
+                        🔐 PAROLNI ALMASHTIRISH
+                    </a>
+                </p>
+
+                <p>
+                    Ushbu havola <b>15 daqiqa</b> amal qiladi.
+                </p>
+
+                <p style="color:#777">
+                    Agar bu so‘rovni siz yubormagan bo‘lsangiz,
+                    ushbu xabarni e’tiborsiz qoldiring.
+                </p>
+            </div>
+        `
+    });
+}
+
 
 const PLAN_1_MONTH =
     Number(process.env.PLAN_1_MONTH || 35000);
@@ -1894,6 +2010,436 @@ app.post(
                     error:
                         "Kirishda xatolik."
                 });
+        }
+    }
+);
+
+
+
+// ==============================================
+// FORGOT PASSWORD
+// ==============================================
+
+app.post(
+    "/api/auth/forgot-password",
+    async (req, res) => {
+        try {
+            const email =
+                normalizeEmail(req.body?.email);
+
+            // User mavjud yoki yo‘qligini oshkor qilmaymiz.
+            const genericResponse = {
+                success: true,
+                message:
+                    "Agar ushbu email Teacher Hasan akkauntiga tegishli bo‘lsa, parolni almashtirish havolasi yuborildi."
+            };
+
+            if (!email) {
+                return res.json(genericResponse);
+            }
+
+            if (!pool) {
+                return res.status(500).json({
+                    success: false,
+                    error:
+                        "PostgreSQL mavjud emas."
+                });
+            }
+
+            const result =
+                await pool.query(
+                    `
+                    SELECT
+                        id,
+                        full_name,
+                        email
+                    FROM users
+                    WHERE LOWER(email) = LOWER($1)
+                    LIMIT 1
+                    `,
+                    [email]
+                );
+
+            const user =
+                result.rows[0];
+
+            if (!user || !user.email) {
+                return res.json(
+                    genericResponse
+                );
+            }
+
+            const rawToken =
+                crypto
+                    .randomBytes(32)
+                    .toString("hex");
+
+            const tokenHash =
+                hashResetToken(
+                    rawToken
+                );
+
+            const expiresAt =
+                new Date(
+                    Date.now() +
+                    15 * 60 * 1000
+                );
+
+            await pool.query(
+                `
+                UPDATE password_reset_tokens
+                SET used_at = NOW()
+                WHERE user_id = $1
+                  AND used_at IS NULL
+                `,
+                [user.id]
+            );
+
+            await pool.query(
+                `
+                INSERT INTO password_reset_tokens (
+                    user_id,
+                    token_hash,
+                    expires_at
+                )
+                VALUES ($1, $2, $3)
+                `,
+                [
+                    user.id,
+                    tokenHash,
+                    expiresAt
+                ]
+            );
+
+            await sendPasswordResetEmail({
+                email: user.email,
+                fullName: user.full_name,
+                token: rawToken
+            });
+
+            return res.json(
+                genericResponse
+            );
+
+        } catch (error) {
+            console.error(
+                "FORGOT PASSWORD ERROR:",
+                error
+            );
+
+            return res.status(500).json({
+                success: false,
+                error:
+                    "Parolni tiklash emailini yuborishda xatolik."
+            });
+        }
+    }
+);
+
+// ==============================================
+// RESET PASSWORD
+// ==============================================
+
+app.post(
+    "/api/auth/reset-password",
+    async (req, res) => {
+        const token =
+            String(
+                req.body?.token || ""
+            ).trim();
+
+        const newPassword =
+            String(
+                req.body?.password || ""
+            );
+
+        if (!token) {
+            return res.status(400).json({
+                success: false,
+                error:
+                    "Parolni tiklash tokeni mavjud emas."
+            });
+        }
+
+        if (newPassword.length < 6) {
+            return res.status(400).json({
+                success: false,
+                error:
+                    "Yangi parol kamida 6 belgidan iborat bo‘lishi kerak."
+            });
+        }
+
+        if (!pool) {
+            return res.status(500).json({
+                success: false,
+                error:
+                    "PostgreSQL mavjud emas."
+            });
+        }
+
+        try {
+            const tokenHash =
+                hashResetToken(token);
+
+            const result =
+                await pool.query(
+                    `
+                    SELECT
+                        id,
+                        user_id,
+                        expires_at,
+                        used_at
+                    FROM password_reset_tokens
+                    WHERE token_hash = $1
+                    LIMIT 1
+                    `,
+                    [tokenHash]
+                );
+
+            const reset =
+                result.rows[0];
+
+            if (
+                !reset ||
+                reset.used_at ||
+                new Date(reset.expires_at).getTime() < Date.now()
+            ) {
+                return res.status(400).json({
+                    success: false,
+                    error:
+                        "Parolni almashtirish havolasi yaroqsiz yoki muddati tugagan."
+                });
+            }
+
+            await pool.query(
+                `
+                UPDATE users
+                SET password_hash = $1
+                WHERE id = $2
+                `,
+                [
+                    hashPassword(
+                        newPassword
+                    ),
+                    reset.user_id
+                ]
+            );
+
+            await pool.query(
+                `
+                UPDATE password_reset_tokens
+                SET used_at = NOW()
+                WHERE id = $1
+                `,
+                [reset.id]
+            );
+
+            // Barcha eski sessionlarni bekor qilamiz.
+            for (
+                const [
+                    sessionToken,
+                    userId
+                ] of userSessions.entries()
+            ) {
+                if (
+                    String(userId) ===
+                    String(reset.user_id)
+                ) {
+                    userSessions.delete(
+                        sessionToken
+                    );
+                }
+            }
+
+            return res.json({
+                success: true,
+                message:
+                    "Parol muvaffaqiyatli almashtirildi."
+            });
+
+        } catch (error) {
+            console.error(
+                "RESET PASSWORD ERROR:",
+                error
+            );
+
+            return res.status(500).json({
+                success: false,
+                error:
+                    "Parolni almashtirishda xatolik."
+            });
+        }
+    }
+);
+
+
+// ==============================================
+// CHANGE PASSWORD
+// ==============================================
+
+app.post(
+    "/api/auth/change-password",
+    async (req, res) => {
+        try {
+            if (!pool) {
+                return res.status(500).json({
+                    success: false,
+                    error: "PostgreSQL mavjud emas."
+                });
+            }
+
+            const currentPassword = String(
+                req.body?.currentPassword || ""
+            );
+
+            const newPassword = String(
+                req.body?.newPassword || ""
+            );
+
+            if (!currentPassword || !newPassword) {
+                return res.status(400).json({
+                    success: false,
+                    error: "Eski va yangi parolni kiriting."
+                });
+            }
+
+            if (newPassword.length < 6) {
+                return res.status(400).json({
+                    success: false,
+                    error:
+                        "Yangi parol kamida 6 belgidan iborat bo‘lishi kerak."
+                });
+            }
+
+            if (currentPassword === newPassword) {
+                return res.status(400).json({
+                    success: false,
+                    error:
+                        "Yangi parol eski paroldan farq qilishi kerak."
+                });
+            }
+
+            // Joriy Bearer session orqali foydalanuvchini aniqlaymiz.
+            const token =
+                req.headers.authorization
+                    ?.replace(/^Bearer\s+/i, "")
+                    ||
+                req.headers["x-auth-token"];
+
+            if (!token) {
+                return res.status(401).json({
+                    success: false,
+                    error:
+                        "Avval akkauntingizga kiring."
+                });
+            }
+
+            const userId = userSessions.get(token);
+
+            if (!userId) {
+                return res.status(401).json({
+                    success: false,
+                    error:
+                        "Sessiya yaroqsiz yoki muddati tugagan."
+                });
+            }
+
+            const result = await pool.query(
+                `
+                SELECT
+                    id,
+                    password_hash,
+                    blocked
+                FROM users
+                WHERE id = $1
+                LIMIT 1
+                `,
+                [userId]
+            );
+
+            const row = result.rows[0];
+
+            if (!row) {
+                return res.status(404).json({
+                    success: false,
+                    error:
+                        "Foydalanuvchi topilmadi."
+                });
+            }
+
+            if (row.blocked) {
+                return res.status(403).json({
+                    success: false,
+                    error:
+                        "Akkauntingiz bloklangan."
+                });
+            }
+
+            // Eski parolni serverdagi mavjud SHA-256
+            // mexanizmi bilan tekshiramiz.
+            if (
+                row.password_hash !==
+                hashPassword(currentPassword)
+            ) {
+                return res.status(401).json({
+                    success: false,
+                    error:
+                        "Eski parol noto‘g‘ri."
+                });
+            }
+
+            const newPasswordHash =
+                hashPassword(newPassword);
+
+            await pool.query(
+                `
+                UPDATE users
+                SET password_hash = $1
+                WHERE id = $2
+                `,
+                [
+                    newPasswordHash,
+                    userId
+                ]
+            );
+
+            // Xavfsizlik uchun boshqa eski sessionlarni
+            // bekor qilamiz, lekin hozirgi sessionni
+            // saqlab qolamiz.
+            for (
+                const [
+                    sessionToken,
+                    sessionUserId
+                ] of userSessions.entries()
+            ) {
+                if (
+                    String(sessionUserId) ===
+                        String(userId) &&
+                    sessionToken !== token
+                ) {
+                    userSessions.delete(
+                        sessionToken
+                    );
+                }
+            }
+
+            return res.json({
+                success: true,
+                message:
+                    "Parol muvaffaqiyatli o‘zgartirildi."
+            });
+
+        } catch (error) {
+            console.error(
+                "CHANGE PASSWORD ERROR:",
+                error
+            );
+
+            return res.status(500).json({
+                success: false,
+                error:
+                    "Parolni o‘zgartirishda xatolik."
+            });
         }
     }
 );
