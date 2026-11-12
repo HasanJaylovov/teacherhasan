@@ -940,3 +940,81 @@ body {
   .topbar-account-link { padding-inline: 4px; font-size: 8px; }
   .language-button { padding-inline: 4px; }
 }
+
+
+/* ===== Larger AI teacher response board + compact voice dock =====
+   Visual-only overrides: preserve #transcript, #startBtn and #stopBtn IDs. */
+#transcript {
+  width: min(820px, 100%);
+  min-height: clamp(150px, 22svh, 250px);
+  max-height: min(42svh, 420px);
+  margin: 18px auto 0;
+  padding: 22px 25px;
+  border: 1px solid rgba(255,255,255,.98);
+  border-radius: 25px;
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.94), rgba(245,247,255,.86));
+  color: #303b55;
+  box-shadow:
+    0 16px 42px rgba(111,132,184,.15),
+    inset 0 1px 0 rgba(255,255,255,1);
+  font-size: 15px;
+  line-height: 1.85;
+  text-align: left;
+  overflow-wrap: anywhere;
+  flex: 1 1 auto;
+}
+.controls {
+  min-height: 66px;
+  padding: 7px 16px 8px;
+  gap: 12px;
+}
+.control-button {
+  width: 48px;
+  min-width: 48px;
+  height: 48px;
+  min-height: 48px;
+}
+#startBtn { flex-basis: 48px; }
+#stopBtn {
+  width: 38px;
+  min-width: 38px;
+  height: 38px;
+  min-height: 38px;
+  flex-basis: 38px;
+}
+#startBtn::before { font-size: 20px; }
+#stopBtn::before { font-size: 21px; }
+@media (max-width: 680px) {
+  #transcript {
+    width: 100%;
+    min-height: clamp(130px, 20svh, 190px);
+    max-height: 36svh;
+    margin-top: 12px;
+    padding: 17px 18px;
+    border-radius: 21px;
+    font-size: 14px;
+    line-height: 1.75;
+  }
+  .controls {
+    min-height: 58px;
+    padding: 5px 12px calc(6px + env(safe-area-inset-bottom));
+    gap: 10px;
+  }
+  .control-button {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
+  }
+  #startBtn { flex-basis: 44px; }
+  #stopBtn {
+    width: 36px;
+    min-width: 36px;
+    height: 36px;
+    min-height: 36px;
+    flex-basis: 36px;
+  }
+  #startBtn::before { font-size: 19px; }
+  #stopBtn::before { font-size: 20px; }
+}
