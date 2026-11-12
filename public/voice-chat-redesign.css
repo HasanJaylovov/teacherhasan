@@ -1240,3 +1240,33 @@ body {
   .teacher-hero { margin-bottom: 0; }
   #transcript { min-height: 92px; }
 }
+
+
+/* Footer privacy-policy link replaces the previous brand signature. */
+.footer-privacy-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 6px 13px;
+  border: 1px solid rgba(255,255,255,.72);
+  border-radius: 999px;
+  background: rgba(255,255,255,.46);
+  color: #596783;
+  font-size: 11px;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: 0 5px 16px rgba(100,117,163,.08), inset 0 1px 0 rgba(255,255,255,.8);
+  transition: background .18s ease, transform .18s ease;
+}
+.footer-privacy-link:hover {
+  background: rgba(255,255,255,.78);
+  transform: translateY(-1px);
+}
+.footer-privacy-link:focus-visible {
+  outline: 2px solid #7d9fe0;
+  outline-offset: 3px;
+}
+@media (max-width: 680px) {
+  .footer-privacy-link { min-height: 26px; padding: 4px 11px; font-size: 10px; }
+}
