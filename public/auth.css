@@ -99,3 +99,15 @@ body{
 @media(prefers-reduced-motion:reduce){
  *,*::before,*::after{transition:none!important;animation:none!important}
 }
+
+
+/* Form controls: readable contrast on the pastel glass surfaces. */
+html { color-scheme: light; }
+.consent { color: #59667e; }
+.consent a { color: #65549a !important; text-underline-offset: 3px; }
+.consent input { accent-color: #8f79c7; }
+.input:focus-visible, .btn:focus-visible, .nav a:focus-visible, .nav button:focus-visible {
+  outline: 3px solid rgba(132,151,219,.72);
+  outline-offset: 3px;
+}
+.btn:disabled { opacity: .62; cursor: wait; transform: none; }
