@@ -1100,3 +1100,143 @@ body {
   #startBtn::before { font-size: 16px; }
   #stopBtn::before { font-size: 17px; }
 }
+
+
+/* ===== Refined proportions: balanced glass shell and navigation ===== */
+/* Visual-only sizing; existing app structure and behavior are unchanged. */
+.app {
+  width: min(960px, calc(100% - 64px));
+  height: calc(100svh - 56px);
+  min-height: 0;
+  margin: 28px auto;
+  border-radius: 30px;
+}
+.topbar {
+  min-height: 56px;
+  padding-top: 7px;
+  padding-bottom: 7px;
+}
+.topbar-title { font-size: 14px; }
+.topbar-subtitle { font-size: 9px; }
+.menu-button {
+  top: 11px;
+  width: 36px;
+  height: 36px;
+}
+.controls {
+  min-height: 44px;
+  padding: 3px 12px 4px;
+  gap: 8px;
+}
+.control-button {
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+}
+#startBtn { flex-basis: 34px; }
+#stopBtn {
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  min-height: 28px;
+  flex-basis: 28px;
+}
+#startBtn::before { font-size: 16px; }
+#stopBtn::before { font-size: 17px; }
+.conversation {
+  padding: 24px 28px 16px;
+}
+.avatar {
+  width: clamp(148px, 17vw, 190px);
+  height: clamp(148px, 17vw, 190px);
+  margin-bottom: 24px;
+}
+.teacher-hero { margin-bottom: 4px; }
+#transcript {
+  min-height: clamp(120px, 18svh, 205px);
+  max-height: min(38svh, 340px);
+  margin-top: 12px;
+  padding: 17px 21px;
+}
+@media (max-width: 900px) {
+  .app {
+    width: calc(100% - 36px);
+    height: calc(100svh - 36px);
+    margin: 18px auto;
+    border-radius: 26px;
+  }
+}
+@media (max-width: 680px) {
+  .app {
+    width: calc(100% - 16px);
+    height: calc(100svh - 16px);
+    min-height: 0;
+    margin: 8px auto;
+    padding-bottom: env(safe-area-inset-bottom);
+    border: 1px solid rgba(255,255,255,.88);
+    border-radius: 24px;
+    box-shadow: 0 14px 42px rgba(96,104,148,.16), inset 0 1px 0 #fff;
+  }
+  .topbar {
+    min-height: 50px;
+    padding-top: max(6px, env(safe-area-inset-top));
+    padding-bottom: 5px;
+  }
+  .topbar-title { font-size: 12px; }
+  .topbar-subtitle { font-size: 8px; }
+  .menu-button {
+    top: max(8px, env(safe-area-inset-top));
+    width: 34px;
+    height: 34px;
+  }
+  .conversation {
+    min-height: 0 !important;
+    padding: 16px 15px 12px;
+  }
+  .avatar {
+    width: 136px;
+    height: 136px;
+    margin-bottom: 18px;
+  }
+  .teacher-hero h1 { font-size: 24px; }
+  .teacher-hero .subtitle { font-size: 13px; }
+  .welcome { padding: 5px 3px; }
+  .welcome h2 { font-size: 16px; }
+  .welcome p { font-size: 13px; line-height: 1.5; }
+  #transcript {
+    min-height: clamp(112px, 17svh, 155px);
+    max-height: 32svh;
+    margin-top: 8px;
+    padding: 13px 15px;
+    font-size: 13px;
+  }
+  .controls {
+    min-height: 40px;
+    padding: 3px 10px calc(4px + env(safe-area-inset-bottom));
+    gap: 7px;
+  }
+  .control-button {
+    width: 32px;
+    min-width: 32px;
+    height: 32px;
+    min-height: 32px;
+  }
+  #startBtn { flex-basis: 32px; }
+  #stopBtn {
+    width: 26px;
+    min-width: 26px;
+    height: 26px;
+    min-height: 26px;
+    flex-basis: 26px;
+  }
+  #startBtn::before { font-size: 15px; }
+  #stopBtn::before { font-size: 16px; }
+  .footer { padding: 8px 10px; font-size: 9px; }
+}
+@media (max-height: 700px) and (max-width: 680px) {
+  .conversation { padding-top: 10px; }
+  .avatar { width: 108px; height: 108px; margin-bottom: 12px; }
+  .teacher-hero { margin-bottom: 0; }
+  #transcript { min-height: 92px; }
+}
