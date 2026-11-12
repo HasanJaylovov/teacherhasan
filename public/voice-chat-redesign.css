@@ -1018,3 +1018,85 @@ body {
   #startBtn::before { font-size: 19px; }
   #stopBtn::before { font-size: 20px; }
 }
+
+
+/* ===== Extra-compact top and bottom navigation ===== */
+.topbar {
+  min-height: 50px;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  gap: 8px;
+}
+.topbar-title { font-size: 13px; line-height: 1.15; }
+.topbar-subtitle { font-size: 9px; line-height: 1.15; }
+.topbar-right { gap: 5px; }
+.language-button,
+.topbar-account-link {
+  min-height: 26px;
+  padding: 4px 7px;
+  font-size: 9px;
+  border-radius: 10px;
+}
+.topbar-user-info { min-height: 26px; padding: 4px 7px; }
+.menu-button { width: 34px; height: 34px; }
+.controls {
+  min-height: 52px;
+  padding: 4px 12px 5px;
+  gap: 9px;
+}
+.control-button {
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  min-height: 40px;
+}
+#startBtn { flex-basis: 40px; }
+#stopBtn {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  min-height: 32px;
+  flex-basis: 32px;
+}
+#startBtn::before { font-size: 17px; }
+#stopBtn::before { font-size: 18px; }
+@media (max-width: 680px) {
+  .topbar {
+    min-height: 46px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    gap: 5px;
+  }
+  .topbar-title { font-size: 12px; }
+  .topbar-subtitle { font-size: 8px; }
+  .language-button,
+  .topbar-account-link {
+    min-height: 23px;
+    padding: 3px 5px;
+    font-size: 8px;
+    border-radius: 8px;
+  }
+  .topbar-user-info { min-height: 23px; padding: 3px 5px; }
+  .menu-button { width: 32px; height: 32px; }
+  .controls {
+    min-height: 48px;
+    padding: 3px 10px calc(4px + env(safe-area-inset-bottom));
+    gap: 8px;
+  }
+  .control-button {
+    width: 36px;
+    min-width: 36px;
+    height: 36px;
+    min-height: 36px;
+  }
+  #startBtn { flex-basis: 36px; }
+  #stopBtn {
+    width: 29px;
+    min-width: 29px;
+    height: 29px;
+    min-height: 29px;
+    flex-basis: 29px;
+  }
+  #startBtn::before { font-size: 16px; }
+  #stopBtn::before { font-size: 17px; }
+}
