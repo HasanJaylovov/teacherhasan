@@ -6,3 +6,85 @@
 .premium-select{min-height:38px;padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.14);background:rgba(10,14,28,.78);color:inherit}
 .premium-action{white-space:nowrap}
 @media (max-width:900px){.user-actions{align-items:stretch}.premium-select,.premium-action{width:100%}}
+
+
+/* ===== Admin control center — pastel glass theme ===== */
+body{color:#20263a;background:linear-gradient(135deg,#d4e8f4,#e8d8fb 48%,#dceaff)}
+.bg{background:radial-gradient(circle at 10% 0%,rgba(255,255,255,.8),transparent 32%),radial-gradient(circle at 90% 90%,rgba(177,157,235,.34),transparent 30%),linear-gradient(135deg,#d4e8f4,#e8d8fb 48%,#dceaff)}
+.glass{background:rgba(250,249,255,.70);border:1px solid rgba(255,255,255,.9);box-shadow:0 24px 70px rgba(95,108,153,.14),inset 0 1px rgba(255,255,255,.8)}
+.brand{color:#273149}.brand small,.muted{color:#68748a}
+.logo{background:linear-gradient(135deg,#c6a8f1,#a9d9f5);color:#35405b;box-shadow:0 10px 28px rgba(131,139,196,.18)}
+.input{color:#263149;border-color:rgba(255,255,255,.95);background:rgba(255,255,255,.72)}
+.input:focus{border-color:#a98be4;box-shadow:0 0 0 4px rgba(169,139,228,.13)}
+.field label{color:#58647b}
+.btn{color:#29334b;background:linear-gradient(110deg,#c4a7ee,#a9d6f4);box-shadow:0 12px 30px rgba(134,147,205,.22),inset 0 1px rgba(255,255,255,.8)}
+.nav button{color:#53617a}.nav button:hover,.nav button.active{background:rgba(183,160,232,.20);border-color:rgba(169,139,228,.28);color:#4e477a}
+.admin,.card,.box{color:#34405a;background:rgba(255,255,255,.52);border-color:rgba(255,255,255,.9)}
+.card span,.table th{color:#77839a}.card b,.head h2,.top h1{color:#20263a}
+.table th,.table td{border-bottom-color:rgba(114,130,168,.14)}
+.pill{background:rgba(169,139,228,.13);color:#65568c}
+.ok{color:#397e69;background:rgba(207,245,228,.72)}
+.bad{color:#a34e68;background:rgba(255,232,237,.78)}
+.action{color:#35405b;border-color:rgba(255,255,255,.94);background:rgba(255,255,255,.65)}
+.online{color:#397e69;background:rgba(207,245,228,.72);border-color:rgba(135,205,174,.42)}
+
+
+/* Admin controls: consistent pastel inputs and visible focus states. */
+.premium-select{color:#35405b;background:rgba(255,255,255,.82);border-color:rgba(255,255,255,.95)}
+.premium-select option{color:#263149;background:#fff}
+.action:focus-visible,.premium-select:focus-visible,.nav button:focus-visible,
+#search:focus-visible,.btn:focus-visible{outline:3px solid rgba(132,151,219,.72);outline-offset:3px}
+.tablewrap{max-width:100%;overscroll-behavior-x:contain}
+@media(max-width:750px){
+ .main{padding:18px}
+ .side{padding:17px}
+ .head{flex-wrap:wrap}
+ .head .smallinput{width:100%;max-width:none}
+ .cards{gap:8px}
+ .card{min-width:0;padding:13px}
+ .card b{font-size:20px;overflow-wrap:anywhere}
+}
+
+
+/* ===== Admin dashboard finishing pass ===== */
+body { min-height:100svh; }
+.login {
+  max-width:460px;
+  padding:34px;
+  border-radius:30px;
+  background:linear-gradient(145deg,rgba(250,249,255,.86),rgba(231,241,255,.82));
+}
+.login h1 { color:#20263a; letter-spacing:-.04em; }
+.admin { border:1px solid rgba(255,255,255,.88); }
+.side { background:linear-gradient(155deg,rgba(250,249,255,.82),rgba(226,239,255,.76)); }
+.main { background:linear-gradient(155deg,rgba(250,249,255,.78),rgba(230,241,255,.72)); }
+.card {
+  border-radius:19px;
+  box-shadow:0 10px 28px rgba(95,108,153,.07),inset 0 1px rgba(255,255,255,.8);
+}
+.box {
+  border-radius:21px;
+  box-shadow:0 12px 32px rgba(95,108,153,.07),inset 0 1px rgba(255,255,255,.78);
+}
+.table { min-width:680px; }
+.table th { font-weight:800; letter-spacing:.06em; }
+.table td { color:#46536d; }
+.action { border-radius:11px; font-weight:750; transition:transform .18s ease,background .18s ease; }
+.action:hover { transform:translateY(-1px); background:rgba(255,255,255,.9); }
+.error { color:#a43e58; background:rgba(255,232,237,.82); border:1px solid rgba(226,145,164,.35); }
+@media(max-width:750px) {
+  .shell { width:calc(100% - 16px); margin:8px auto; gap:9px; }
+  .side,.main { border-radius:20px; }
+  .side { min-height:0; }
+  .main { padding:16px; }
+  .top h1 { font-size:24px; }
+  .cards { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media(max-width:420px) {
+  .login { padding:25px 21px; }
+  .nav { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .nav button { min-width:0; padding:10px 8px; font-size:10px; }
+  .cards { gap:7px; }
+  .card { padding:11px; }
+  .card b { font-size:18px; }
+}
