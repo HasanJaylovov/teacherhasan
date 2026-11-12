@@ -111,3 +111,11 @@ html { color-scheme: light; }
   outline-offset: 3px;
 }
 .btn:disabled { opacity: .62; cursor: wait; transform: none; }
+
+@media(max-width:600px){
+  .top{gap:12px;align-items:flex-start}
+  .top .online{white-space:nowrap}
+  .wrap{margin-top:18px;margin-bottom:24px}
+  .field input,.field select{font-size:16px}
+  .legal{overflow-wrap:anywhere}
+}
