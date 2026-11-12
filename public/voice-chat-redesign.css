@@ -691,3 +691,42 @@ html { scroll-behavior: smooth; }
   .teacher-hero h1 { font-size: 24px; }
   .control-button { padding-inline: 7px; font-size: 11px; }
 }
+
+
+/* ===== Persistent top navigation and voice controls ===== */
+/* Keep the existing header and Start/Stop controls in view while the
+   conversation content scrolls. Existing IDs and JS behavior stay intact. */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  flex-shrink: 0;
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+}
+.controls {
+  position: sticky;
+  bottom: 0;
+  z-index: 25;
+  flex-shrink: 0;
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  padding-bottom: max(20px, env(safe-area-inset-bottom));
+}
+.main {
+  min-width: 0;
+}
+.conversation {
+  scroll-margin-top: 90px;
+  scroll-margin-bottom: 120px;
+}
+@media (max-width: 680px) {
+  .topbar {
+    top: 0;
+    padding-top: max(10px, env(safe-area-inset-top));
+  }
+  .controls {
+    bottom: 0;
+    padding-bottom: max(18px, env(safe-area-inset-bottom));
+  }
+}
