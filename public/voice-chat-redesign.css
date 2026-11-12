@@ -628,3 +628,38 @@ body::before {
   .teacher-hero { margin-bottom: 4px; }
   .welcome { margin-top: 0; }
 }
+
+
+/* ===== Interaction polish and accessibility ===== */
+#startBtn::before {
+  content: "🎙";
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+  font-size: 27px;
+  line-height: 1;
+}
+#startBtn:disabled {
+  opacity: 1;
+  animation: th-active-pulse 1.8s ease-in-out infinite;
+}
+#startBtn:disabled::before {
+  content: "🎙";
+}
+#stopBtn:disabled { opacity: .38; }
+.control-button:focus-visible,
+.menu-button:focus-visible,
+.language-button:focus-visible,
+.topbar-account-link:focus-visible,
+.menu-item:focus-visible,
+.close-menu:focus-visible {
+  outline: 3px solid rgba(105,151,220,.72);
+  outline-offset: 3px;
+}
+.control-button:active:not(:disabled) { transform: scale(.96); }
+#transcript { overflow-wrap: anywhere; }
+@keyframes th-active-pulse {
+  0%, 100% { box-shadow: 0 8px 25px rgba(120,143,204,.20), 0 0 0 0 rgba(151,137,226,.0), inset 0 2px 7px rgba(255,255,255,.9); }
+  50% { box-shadow: 0 10px 32px rgba(120,143,204,.28), 0 0 0 12px rgba(151,137,226,.12), inset 0 2px 7px rgba(255,255,255,.9); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #startBtn:disabled { animation: none; }
+}
