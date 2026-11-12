@@ -730,3 +730,80 @@ html { scroll-behavior: smooth; }
     padding-bottom: max(18px, env(safe-area-inset-bottom));
   }
 }
+
+
+/* ===== Locked app shell: only conversation scrolls ===== */
+/* The previous min-height-only shell allowed the whole document to scroll.
+   Give the app a viewport-bounded height and make the conversation the
+   sole scroll region. Header, Start/Stop controls and footer stay in place. */
+html, body {
+  min-height: 100%;
+}
+body {
+  min-height: 100svh;
+}
+.app {
+  height: calc(100svh - 44px);
+  min-height: 0;
+  overflow: hidden;
+}
+.main {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+.topbar {
+  flex: 0 0 auto;
+  position: relative;
+  top: auto;
+}
+.conversation {
+  flex: 1 1 auto;
+  min-height: 0 !important;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.controls {
+  flex: 0 0 auto;
+  position: relative;
+  bottom: auto;
+}
+.footer {
+  flex: 0 0 auto;
+}
+@media (max-width: 900px) {
+  .app {
+    height: calc(100svh - 24px);
+    min-height: 0;
+  }
+}
+@media (max-width: 680px) {
+  .app {
+    height: 100svh;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .main {
+    height: 100%;
+    min-height: 0;
+  }
+  .topbar {
+    position: relative;
+    top: auto;
+    flex: 0 0 auto;
+  }
+  .conversation {
+    min-height: 0 !important;
+    flex: 1 1 auto;
+    overflow-y: auto;
+  }
+  .controls {
+    position: relative;
+    bottom: auto;
+    flex: 0 0 auto;
+  }
+}
