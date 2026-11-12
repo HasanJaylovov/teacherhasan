@@ -663,3 +663,31 @@ body::before {
 @media (prefers-reduced-motion: reduce) {
   #startBtn:disabled { animation: none; }
 }
+
+
+/* ===== Final responsive safeguards ===== */
+html { scroll-behavior: smooth; }
+.app, .conversation, .topbar, .controls { min-width: 0; }
+.topbar-account, .topbar-right { min-width: 0; }
+.topbar-user-info { max-width: 100%; }
+.topbar-user-name { overflow: hidden; text-overflow: ellipsis; }
+#transcript { white-space: pre-wrap; }
+@media (max-width: 680px) {
+  .topbar { flex-wrap: wrap; }
+  .topbar-brand { min-width: 0; }
+  .topbar-right { max-width: 100%; }
+  .conversation { overflow: visible; }
+  .teacher-hero .subtitle { overflow-wrap: anywhere; }
+  .controls { position: sticky; }
+}
+@media (max-width: 360px) {
+  .topbar { padding-left: 68px; }
+  .topbar-title { font-size: 13px; }
+  .topbar-subtitle { max-width: 145px; }
+  .topbar-account { flex-wrap: wrap; }
+  .topbar-account-link { flex: 1 1 auto; }
+  .language-button { padding-inline: 5px; }
+  .avatar { width: 108px; height: 108px; }
+  .teacher-hero h1 { font-size: 24px; }
+  .control-button { padding-inline: 7px; font-size: 11px; }
+}
