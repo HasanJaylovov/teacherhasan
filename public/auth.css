@@ -119,3 +119,47 @@ html { color-scheme: light; }
   .field input,.field select{font-size:16px}
   .legal{overflow-wrap:anywhere}
 }
+
+
+/* Shared fixed navigation for student-facing pages. */
+html{scroll-padding-top:88px;scroll-padding-bottom:92px}
+body{padding-bottom:92px}
+.top{
+  position:sticky;top:0;z-index:1200;
+  width:100%;margin:0 auto;padding:12px max(15px,calc((100% - 1180px)/2));
+  min-height:70px;
+  background:rgba(239,237,250,.84);
+  border-bottom:1px solid rgba(255,255,255,.82);
+  box-shadow:0 8px 28px rgba(95,108,153,.08);
+  backdrop-filter:blur(22px);
+}
+.site-bottom-nav{
+  position:fixed;z-index:1300;left:50%;bottom:max(12px,env(safe-area-inset-bottom));
+  transform:translateX(-50%);
+  width:min(560px,calc(100% - 24px));
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;
+  padding:8px;border:1px solid rgba(255,255,255,.94);border-radius:20px;
+  background:rgba(250,249,255,.88);
+  box-shadow:0 14px 44px rgba(74,83,128,.20),inset 0 1px rgba(255,255,255,.95);
+  backdrop-filter:blur(24px);
+}
+.site-bottom-nav a{
+  display:flex;min-width:0;min-height:48px;align-items:center;justify-content:center;gap:6px;
+  padding:8px 7px;border:1px solid transparent;border-radius:13px;
+  color:#68748a;text-decoration:none;font-size:12px;font-weight:800;white-space:nowrap;
+  transition:background .18s ease,color .18s ease,transform .18s ease;
+}
+.site-bottom-nav a:hover,.site-bottom-nav a:focus-visible{
+  color:#4e477a;background:rgba(196,167,238,.22);outline:none;
+}
+.site-bottom-nav a[aria-current="page"]{
+  color:#4e477a;border-color:rgba(169,139,228,.25);
+  background:linear-gradient(120deg,rgba(196,167,238,.42),rgba(169,214,244,.42));
+}
+@media(max-width:480px){
+  .top{padding:10px 14px;min-height:64px}
+  .site-bottom-nav{bottom:max(8px,env(safe-area-inset-bottom));gap:3px;padding:6px;border-radius:17px}
+  .site-bottom-nav a{min-height:46px;gap:3px;padding:7px 3px;font-size:10px}
+  body{padding-bottom:84px}
+}
+@media(prefers-reduced-motion:reduce){.site-bottom-nav a{transition:none}}
