@@ -27,3 +27,20 @@ body{color:#20263a;background:linear-gradient(135deg,#d4e8f4,#e8d8fb 48%,#dceaff
 .bad{color:#a34e68;background:rgba(255,232,237,.78)}
 .action{color:#35405b;border-color:rgba(255,255,255,.94);background:rgba(255,255,255,.65)}
 .online{color:#397e69;background:rgba(207,245,228,.72);border-color:rgba(135,205,174,.42)}
+
+
+/* Admin controls: consistent pastel inputs and visible focus states. */
+.premium-select{color:#35405b;background:rgba(255,255,255,.82);border-color:rgba(255,255,255,.95)}
+.premium-select option{color:#263149;background:#fff}
+.action:focus-visible,.premium-select:focus-visible,.nav button:focus-visible,
+#search:focus-visible,.btn:focus-visible{outline:3px solid rgba(132,151,219,.72);outline-offset:3px}
+.tablewrap{max-width:100%;overscroll-behavior-x:contain}
+@media(max-width:750px){
+ .main{padding:18px}
+ .side{padding:17px}
+ .head{flex-wrap:wrap}
+ .head .smallinput{width:100%;max-width:none}
+ .cards{gap:8px}
+ .card{min-width:0;padding:13px}
+ .card b{font-size:20px;overflow-wrap:anywhere}
+}
