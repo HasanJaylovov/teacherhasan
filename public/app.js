@@ -951,6 +951,13 @@ Siz Teacher Hasan AI English Platform tarkibidagi AI English Teacher'siz.
             }
         });
 
+        if (attemptId !== startAttemptId) {
+            try { await liveSession?.close(); } catch {}
+            liveSession = null;
+            if (guestMode) await stopGuestSession();
+            return;
+        }
+
         console.log(
             "✅ Gemini Live session tayyor"
         );
@@ -1187,13 +1194,6 @@ Siz Teacher Hasan AI English Platform tarkibidagi AI English Teacher'siz.
                 null;
 
             processorNode = null;
-        }
-
-        if (attemptId !== startAttemptId) {
-            try { await liveSession?.close(); } catch {}
-            liveSession = null;
-            if (guestMode) await stopGuestSession();
-            return;
         }
 
         // ==================================
