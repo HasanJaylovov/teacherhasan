@@ -35,6 +35,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const voiceAvatar = document.querySelector(".avatar");
     let learnerDisplayName = "";
+    let learnerMemoryContext = "";
     let pendingVoiceUserText = "";
     let pendingVoiceTeacherText = "";
 
@@ -608,6 +609,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const tokenData = await tokenResponse.json();
 
+        if (tokenData.learner?.fullName) {
+            learnerDisplayName = String(tokenData.learner.fullName).trim();
+        }
+        learnerMemoryContext = tokenData.learner?.memory
+            ? JSON.stringify(tokenData.learner.memory)
+            : "";
+
+
         console.log("🔑 Ephemeral token olindi");
         console.log("🤖 Model:", tokenData.model);
 
@@ -648,6 +657,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 systemInstruction: `
 O‘QUVCHI ISMI: ${learnerDisplayName || "hali aytilmagan"}. Agar ismi noma’lum bo‘lsa, suhbat boshida faqat ismini so‘rang. Ismini bilganingizdan keyin suhbat davomida shu ism bilan tabiiy murojaat qiling.
+
+O‘QUVCHINING AVVALGI O‘QUV XOTIRASI (JSON):
+${learnerMemoryContext || "Hozircha saqlangan dars tarixi yo‘q."}
+
+XOTIRADAN FOYDALANISH:
+- O‘quvchining darajasi, maqsadi, oxirgi mavzusi va xatolarini inobatga oling.
+- Foydalanuvchi "davom etamiz" desa, xotiradagi oxirgi mavzudan davom eting.
+- Oldin o‘rgatilgan so‘zlarni qayta so‘rab, mustahkamlash mashqlarini bering.
+- O‘quvchi avval bajargan mashqlarini qayta boshlamang; keyingi bosqichga o‘ting.
+- Xotirada yo‘q ma’lumotni to‘qib chiqarmang.
 
 Siz TEACHER HASANsiz.
 
