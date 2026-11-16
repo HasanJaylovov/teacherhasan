@@ -620,6 +620,12 @@ document.addEventListener("DOMContentLoaded", () => {
             : "";
 
         const rememberedProfile = tokenData.learner?.memory?.profile || {};
+        const learnerPreferredLanguage = rememberedProfile.preferred_language || "";
+        const hasPreviousLearning = Boolean(
+            learnerPreferredLanguage ||
+            rememberedProfile.current_topic ||
+            rememberedProfile.last_lesson_summary
+        );
         if (rememberedProfile.current_topic) {
             addTranscript(
                 "🧠 Eslab qolingan mavzu: " +
@@ -676,28 +682,27 @@ ${learnerMemoryContext || "Hozircha saqlangan dars tarixi yo‘q."}
 
 XOTIRADAN FOYDALANISH:
 - O‘quvchining darajasi, maqsadi, oxirgi mavzusi va xatolarini inobatga oling.
-- Suhbat boshida saqlangan current_topic va last_lesson_summary ni tekshiring.
-- Foydalanuvchi salomlashsa yoki "davom etamiz" desa, oldingi mavzuni nomi bilan eslatib, aynan o‘sha joydan davom etishni taklif qiling.
-- Foydalanuvchi davom etishni tasdiqlasa, last_lesson_summary dagi keyingi qadamni bajaring; darsni noldan boshlamang.
+- Saqlangan preferred_language — foydalanuvchi o‘rganayotgan asosiy til. Joriy mavzu shu tilga tegishli.
+- Mavjud foydalanuvchi bilan faqat saqlangan tilni davom ettiring; "qaysi tilni davom ettiramiz?" deb so‘ramang.
+- Foydalanuvchi "davom etamiz" desa, saqlangan til, current_topic va last_lesson_summary dagi keyingi qadamni darhol bajaring.
+- Mavjud foydalanuvchiga boshqa tillar ro‘yxatini aytmang, boshqa tilni taklif qilmang yoki unga o‘tmang.
+- Faqat foydalanuvchi boshqa tilni aniq so‘raganda preferred_language ni yangilang va yangi tilni o‘rgatishni boshlang.
+- Agar foydalanuvchi yangi bo‘lsa va xotirada til ham, dars tarixi ham bo‘lmasa, faqat shunda quyidagi tillarni taklif qiling: English, German, Arabic, Russian, Turkish, Korean, Chinese. Qaysi birini o‘rganmoqchiligini bir marta so‘rang.
+- Foydalanuvchi birinchi xabaridayoq tilni tanlasa, ro‘yxatni takrorlamasdan o‘sha tilni o‘rgating.
 - Oldin o‘rgatilgan so‘zlarni yangi kontekstda mustahkamlang va takroriy xatolarni mashqlarga qo‘shing.
 - O‘quvchi avval bajargan mashqlarini qayta bermang; keyingi mantiqiy bosqichga o‘ting.
-- Yangi mavzu so‘ralmaguncha current_topic ni almashtirmang.
 - Xotirada yo‘q ma’lumotni to‘qib chiqarmang.
+
+FOYDALANUVCHI HOLATI:
+${hasPreviousLearning ? "MAVJUD — o‘rganilayotgan til: " + (learnerPreferredLanguage || "xotiradagi joriy mavzudan aniqlang") + ". Shu tilda davom eting." : "YANGI — barcha 7 tilni sanab, qaysi tilni tanlashini so‘rang."}
+
+YARATUVCHI HAQIDAGI SAVOLLAR:
+- "Seni kim yaratgan?", "Kim ishlab chiqqan?", "Muallifing kim?", "Kimning loyihasisan?" kabi yaratuvchi/dasturchi haqidagi savollarga "Meni Hasan Jaylovov yaratgan" deb qisqa javob bering.
+- Boshqa shaxs yoki kompaniyani yaratuvchi sifatida ko‘rsatmang.
 
 Siz TEACHER HASANsiz.
 
-Siz ikki tilli AI Teacher bo'lib,
-O'ZBEK TILI va RUS TILIDA ravon muloqot qilasiz.
-
-Siz quyidagi 7 ta tilni to'liq o'rgatasiz:
-
-1. 🇬🇧 English
-2. 🇩🇪 German
-3. 🇸🇦 Arabic
-4. 🇷🇺 Russian
-5. 🇹🇷 Turkish
-6. 🇰🇷 Korean
-7. 🇨🇳 Chinese
+Siz O'ZBEK TILI va RUS TILIDA ravon muloqot qilasiz. O'rganiladigan tilni foydalanuvchining saqlangan tanloviga qarab belgilang. Faqat yangi foydalanuvchiga 7 ta til ro'yxatini ayting.
 
 Har bir til uchun:
 
@@ -801,15 +806,23 @@ Siz Teacher Hasan AI English Platform tarkibidagi AI English Teacher'siz.
                     );
 
                     const remembered = tokenData.learner?.memory?.profile || {};
-                    const opening = remembered.current_topic
+                    const savedLanguage = remembered.preferred_language || "";
+                    const hasHistory = Boolean(
+                        savedLanguage ||
+                        remembered.current_topic ||
+                        remembered.last_lesson_summary
+                    );
+                    const opening = hasHistory
                         ? "👨‍🏫 Teacher Hasan: Xush kelibsiz" +
                           (learnerDisplayName ? ", " + learnerDisplayName : "") +
-                          "! Oxirgi darsimiz " + remembered.current_topic + " mavzusida edi." +
-                          (remembered.last_lesson_summary
-                              ? " " + remembered.last_lesson_summary
-                              : "") +
-                          " Shu joydan davom etishimiz mumkin."
-                        : "👨‍🏫 Teacher Hasan: Salom! Men Teacher Hasanman. Ingliz tilini birga mashq qilamiz.";
+                          "! " +
+                          (savedLanguage ? savedLanguage + " tilidagi " : "") +
+                          (remembered.current_topic
+                              ? remembered.current_topic + " mavzusini "
+                              : "oldingi darsimizni ") +
+                          "davom ettiramiz. " +
+                          (remembered.last_lesson_summary || "Oxirgi darsimizdagi keyingi qadamdan boshlaymiz.")
+                        : "👨‍🏫 Teacher Hasan: Salom! Men Teacher Hasanman. English, German, Arabic, Russian, Turkish, Korean va Chinese tillarini o‘rgata olaman. Qaysi tilni o‘rganmoqchisiz?";
                     addTranscript(opening);
                 },
 
