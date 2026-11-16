@@ -73,13 +73,15 @@ document.addEventListener("DOMContentLoaded", () => {
     async function saveVoiceTurnMemory() {
         const userText = pendingVoiceUserText.trim();
         const teacherText = pendingVoiceTeacherText.trim();
-        pendingVoiceUserText = "";
-        pendingVoiceTeacherText = "";
         if (!userText || !teacherText) return;
         const token = localStorage.getItem("th_auth_token") || "";
-        if (!token) return;
+        if (!token) {
+            pendingVoiceUserText = "";
+            pendingVoiceTeacherText = "";
+            return;
+        }
         try {
-            await fetch("/api/learner/voice-memory", {
+            const response = await fetch("/api/learner/voice-memory", {
                 method: "POST",
                 credentials: "same-origin",
                 headers: {
@@ -88,6 +90,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 },
                 body: JSON.stringify({ message: userText, reply: teacherText })
             });
+            if (!response.ok) {
+                throw new Error("HTTP " + response.status);
+            }
+            pendingVoiceUserText = "";
+            pendingVoiceTeacherText = "";
+            console.log("🧠 Voice dars xotirasi saqlandi");
         } catch (error) {
             console.warn("Voice learner memory save:", error);
         }
@@ -611,6 +619,16 @@ document.addEventListener("DOMContentLoaded", () => {
             ? JSON.stringify(tokenData.learner.memory)
             : "";
 
+        const rememberedProfile = tokenData.learner?.memory?.profile || {};
+        if (rememberedProfile.current_topic) {
+            addTranscript(
+                "🧠 Eslab qolingan mavzu: " +
+                rememberedProfile.current_topic +
+                (rememberedProfile.last_lesson_summary
+                    ? "\\nOxirgi dars: " + rememberedProfile.last_lesson_summary
+                    : "")
+            );
+        }
 
         console.log("🔑 Ephemeral token olindi");
         console.log("🤖 Model:", tokenData.model);
@@ -658,9 +676,12 @@ ${learnerMemoryContext || "Hozircha saqlangan dars tarixi yo‘q."}
 
 XOTIRADAN FOYDALANISH:
 - O‘quvchining darajasi, maqsadi, oxirgi mavzusi va xatolarini inobatga oling.
-- Foydalanuvchi "davom etamiz" desa, xotiradagi oxirgi mavzudan davom eting.
-- Oldin o‘rgatilgan so‘zlarni qayta so‘rab, mustahkamlash mashqlarini bering.
-- O‘quvchi avval bajargan mashqlarini qayta boshlamang; keyingi bosqichga o‘ting.
+- Suhbat boshida saqlangan current_topic va last_lesson_summary ni tekshiring.
+- Foydalanuvchi salomlashsa yoki "davom etamiz" desa, oldingi mavzuni nomi bilan eslatib, aynan o‘sha joydan davom etishni taklif qiling.
+- Foydalanuvchi davom etishni tasdiqlasa, last_lesson_summary dagi keyingi qadamni bajaring; darsni noldan boshlamang.
+- Oldin o‘rgatilgan so‘zlarni yangi kontekstda mustahkamlang va takroriy xatolarni mashqlarga qo‘shing.
+- O‘quvchi avval bajargan mashqlarini qayta bermang; keyingi mantiqiy bosqichga o‘ting.
+- Yangi mavzu so‘ralmaguncha current_topic ni almashtirmang.
 - Xotirada yo‘q ma’lumotni to‘qib chiqarmang.
 
 Siz TEACHER HASANsiz.
@@ -779,9 +800,17 @@ Siz Teacher Hasan AI English Platform tarkibidagi AI English Teacher'siz.
                         "🟢 Teacher Hasan tinglamoqda..."
                     );
 
-                    addTranscript(
-                        "👨‍🏫 Teacher Hasan: Salom! Men Teacher Hasanman. Ingliz tilini birga mashq qilamiz."
-                    );
+                    const remembered = tokenData.learner?.memory?.profile || {};
+                    const opening = remembered.current_topic
+                        ? "👨‍🏫 Teacher Hasan: Xush kelibsiz" +
+                          (learnerDisplayName ? ", " + learnerDisplayName : "") +
+                          "! Oxirgi darsimiz " + remembered.current_topic + " mavzusida edi." +
+                          (remembered.last_lesson_summary
+                              ? " " + remembered.last_lesson_summary
+                              : "") +
+                          " Shu joydan davom etishimiz mumkin."
+                        : "👨‍🏫 Teacher Hasan: Salom! Men Teacher Hasanman. Ingliz tilini birga mashq qilamiz.";
+                    addTranscript(opening);
                 },
 
                 onmessage: (message) => {
