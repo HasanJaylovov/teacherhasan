@@ -551,6 +551,12 @@ document.addEventListener("DOMContentLoaded", () => {
     if (isRunning) return;
     const attemptId = ++startAttemptId;
 
+    // Stop tugmasi startup jarayonining boshidanoq faol bo'lishi shart.
+    // resolveLearnerName/fetch/token kabi await'lar tugashini kutmaymiz.
+    startBtn.disabled = true;
+    stopBtn.disabled = false;
+    setStatus("🔄 Teacher Hasan ulanmoqda...");
+
     try {
         console.log("🎤 START bosildi");
 
@@ -559,11 +565,6 @@ document.addEventListener("DOMContentLoaded", () => {
         pendingVoiceUserText = "";
         pendingVoiceTeacherText = "";
 
-
-        startBtn.disabled = true;
-        stopBtn.disabled = false;
-
-        setStatus("🔄 Teacher Hasan ulanmoqda...");
 
         // ACCESS / GUEST PREFLIGHT
         const accessData =
@@ -1145,149 +1146,122 @@ Siz Teacher Hasan AI English Platform tarkibidagi AI English Teacher'siz.
         );
 
     } catch (error) {
-
-        console.error(
-            "❌ Teacher Hasan start xatosi:",
-            error
-        );
-
-        if (guestMode) {
-            await stopGuestSession();
+        // STOP bosilgandan keyin eski start urinishining xatosi UI'ni qayta
+        // ishga tushirmasligi yoki statusni buzmasligi kerak.
+        if (attemptId !== startAttemptId) {
+            console.info("Start urinish bekor qilindi:", error?.message || error);
+            return;
         }
 
-        setStatus(
-            "❌ Xato: " + error.message
-        );
+        console.error("❌ Teacher Hasan start xatosi:", error);
+        if (guestMode) void stopGuestSession();
+
+        setStatus("❌ Xato: " + (error?.message || "Noma'lum xato"));
 
         if (error.code === "guest_exhausted") {
-            setTimeout(() => {
-                location.replace("/login.html");
-            }, 800);
+            setTimeout(() => location.replace("/login.html"), 800);
         }
 
+        isRunning = false;
         startBtn.disabled = false;
         stopBtn.disabled = true;
-
-        isRunning = false;
     }
 }
-      async function stopTeacher() {
-        console.log(
-            "🔴 Teacher Hasan STOP"
-        );
+
+    // STOP sinxron ravishda barcha lokal audio/mikrofon resurslarini uzadi.
+    // Uzoq davom etishi mumkin bo'lgan SDK close()/AudioContext.close()
+    // natijasini kutib, tugma yoki UI holatini bloklamaydi.
+    function stopTeacher() {
+        console.log("🔴 Teacher Hasan STOP bosildi");
         startAttemptId++;
         isRunning = false;
 
+        // Tugma va holatni darhol yangilash.
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+        setStatus("⏹️ Suhbat to'xtatilmoqda...");
+
+        if (guestHeartbeatTimer) {
+            clearInterval(guestHeartbeatTimer);
+            guestHeartbeatTimer = null;
+        }
+        if (teacherVoiceDecayTimer) {
+            clearTimeout(teacherVoiceDecayTimer);
+            teacherVoiceDecayTimer = null;
+        }
+
+        // Navbatdagi va hozir ijro etilayotgan barcha audio manbalarni to'xtatish.
         for (const audioSource of activeAudioSources) {
             try { audioSource.stop(0); } catch {}
             try { audioSource.disconnect(); } catch {}
         }
         activeAudioSources.clear();
-        nextAudioTime = audioContext?.currentTime || 0;
+        nextAudioTime = 0;
+
+        // Mikrofon callback'ini avval o'chiramiz, keyin node va track'larni uzamiz.
+        if (processorNode) {
+            try { processorNode.onaudioprocess = null; } catch {}
+            try { processorNode.disconnect(); } catch {}
+            processorNode = null;
+        }
+        if (sourceNode) {
+            try { sourceNode.disconnect(); } catch {}
+            sourceNode = null;
+        }
+        if (mediaStream) {
+            try {
+                mediaStream.getTracks().forEach(track => {
+                    try { track.enabled = false; } catch {}
+                    try { track.stop(); } catch {}
+                });
+            } catch (error) {
+                console.warn("Mikrofonni yopishda xato:", error);
+            }
+            mediaStream = null;
+        }
+
+        // Live sessiyani kutmasdan yopish: SDK close() Promise qaytarsa ham
+        // Stop tugmasi javob berishda davom etadi.
+        const sessionToClose = liveSession;
+        liveSession = null;
+        if (sessionToClose) {
+            try {
+                const closing = sessionToClose.close();
+                if (closing && typeof closing.catch === "function") {
+                    closing.catch(error => console.warn("Gemini sessiya close:", error));
+                }
+            } catch (error) {
+                console.warn("Gemini sessiyani yopishda xato:", error);
+            }
+        }
+
+        const contextToClose = audioContext;
+        audioContext = null;
+        if (contextToClose && contextToClose.state !== "closed") {
+            try {
+                const closing = contextToClose.close();
+                if (closing && typeof closing.catch === "function") {
+                    closing.catch(error => console.warn("AudioContext close:", error));
+                }
+            } catch (error) {
+                console.warn("AudioContext yopishda xato:", error);
+            }
+        }
 
         if (guestMode) {
-            void stopGuestSession();
+            guestMode = false;
+            void stopGuestSession().catch(error => {
+                console.warn("Guest sessiyani to'xtatishda xato:", error);
+            });
         }
 
         voiceMicLevel = 0;
         voiceTeacherLevel = 0;
-        if (teacherVoiceDecayTimer) clearTimeout(teacherVoiceDecayTimer);
         updateVoiceVisualizer(0, "user");
         updateVoiceVisualizer(0, "teacher");
 
-        // ==================================
-        // PROCESSOR
-        // ==================================
-
-        if (processorNode) {
-
-            processorNode.disconnect();
-
-            processorNode.onaudioprocess =
-                null;
-
-            processorNode = null;
-        }
-
-        // ==================================
-        // MICROPHONE SOURCE
-        // ==================================
-
-        if (sourceNode) {
-
-            sourceNode.disconnect();
-
-            sourceNode = null;
-        }
-
-        // ==================================
-        // MICROPHONE STREAM
-        // ==================================
-
-        if (mediaStream) {
-
-            mediaStream
-                .getTracks()
-                .forEach(
-                    track =>
-                        track.stop()
-                );
-
-            mediaStream = null;
-        }
-
-        // ==================================
-        // GEMINI SESSION
-        // ==================================
-
-        if (liveSession) {
-
-            try {
-
-                await Promise.resolve(liveSession.close());
-
-            } catch (error) {
-
-                console.warn(
-                    "Session yopishda xato:",
-                    error
-                );
-            }
-
-            liveSession = null;
-        }
-
-        // ==================================
-        // AUDIO CONTEXT
-        // ==================================
-
-        if (audioContext) {
-
-            try {
-
-                await audioContext.close();
-
-            } catch (error) {
-
-                console.warn(
-                    "AudioContext yopishda xato:",
-                    error
-                );
-            }
-
-            audioContext = null;
-        }
-
-        startBtn.disabled = false;
-        stopBtn.disabled = true;
-
-        setStatus(
-            "⚪ Tayyor. Start tugmasini bosing."
-        );
-
-        console.log(
-            "✅ Teacher Hasan to'xtatildi"
-        );
+        setStatus("⚪ Suhbat to'xtatildi. Start tugmasini bosing.");
+        console.log("✅ Teacher Hasan lokal audio va mikrofon resurslari uzildi");
     }
 
     // ==========================================
