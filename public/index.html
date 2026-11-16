@@ -1053,6 +1053,44 @@
             }
         }
     </style>
+    <style id="voice-reactive-visualizer">
+        .avatar {
+            position: relative;
+            isolation: isolate;
+            transform: scale(var(--voice-scale, 1));
+            transition: transform 75ms ease-out, filter 75ms ease-out;
+            will-change: transform, filter;
+        }
+        .avatar::before,
+        .avatar::after {
+            content: "";
+            position: absolute;
+            inset: -9px;
+            z-index: -1;
+            border-radius: 50%;
+            pointer-events: none;
+            opacity: var(--voice-glow, .12);
+            transition: opacity 90ms linear, transform 90ms linear;
+        }
+        .avatar::before {
+            border: 2px solid rgba(174, 188, 255, .78);
+            box-shadow: 0 0 16px rgba(102, 126, 234, .34),
+                        inset 0 0 16px rgba(102, 126, 234, .16);
+            transform: scale(1.02);
+        }
+        .avatar::after {
+            inset: -18px;
+            background: radial-gradient(circle, rgba(102,126,234,.22), rgba(118,75,162,.10) 48%, transparent 72%);
+            filter: blur(7px);
+            transform: scale(var(--voice-scale, 1));
+        }
+        .avatar.voice-active::before {
+            border-color: rgba(205, 215, 255, .96);
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .avatar, .avatar::before, .avatar::after { transition: none; }
+        }
+    </style>
 </head>
 
 <body>
