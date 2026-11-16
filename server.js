@@ -61,7 +61,7 @@ const GEMINI_API_KEY =
 const LIVE_MODEL =
     "gemini-3.1-flash-live-preview";
 
-const CHAT_MODEL = process.env.CHAT_MODEL || "gemini-2.5-flash";
+const CHAT_MODEL = process.env.CHAT_MODEL || "gemini-3.8-flash";
 
 const ADMIN_USERNAME =
     process.env.ADMIN_USERNAME || "admin";
@@ -1041,98 +1041,78 @@ async function saveLearnerMemory(userId, memory = {}) {
 }
 
 
+function detectExplicitLearningLanguage(message) {
+    const value = String(message || "").trim().toLowerCase();
+    if (!value) return null;
+    const languages = [
+        ["English", /(?:english|ingliz(?:cha)?|ingliz tili)/i],
+        ["German", /(?:german|nemis(?:cha)?|nemis tili)/i],
+        ["Arabic", /(?:arabic|arab(?:cha)?|arab tili)/i],
+        ["Russian", /(?:russian|rus(?:cha)?|rus tili)/i],
+        ["Turkish", /(?:turkish|turk(?:cha)?|turk tili)/i],
+        ["Korean", /(?:korean|koreys(?:cha)?|koreys tili)/i],
+        ["Chinese", /(?:chinese|xitoy(?:cha)?|xitoy tili)/i]
+    ];
+    const bareChoice = /^(english|ingliz(cha)?|ingliz tili|german|nemis(cha)?|nemis tili|arabic|arab(cha)?|arab tili|russian|rus(cha)?|rus tili|turkish|turk(cha)?|turk tili|korean|koreys(cha)?|koreys tili|chinese|xitoy(cha)?|xitoy tili)[.! ]*$/i.test(value);
+    const explicitLearning = /(?:o'rgan|organ|boshl|tanla|davom|teach me|learn|study|start learning)/i.test(value);
+    if (!bareChoice && !explicitLearning) return null;
+    return languages.find(([, pattern]) => pattern.test(value))?.[0] || null;
+}
+
 async function updateLearnerMemoryFromChat(userId, message, reply, existingMemory = null) {
-    if (!pool || !userId) {
-        return null;
-    }
+    if (!pool || !userId) return null;
 
     const profile = existingMemory?.profile || {};
-
     const normalizedMessage = String(message || "").trim();
     const normalizedReply = String(reply || "").trim();
+    if (!normalizedMessage || !normalizedReply) return null;
 
-    if (!normalizedMessage || !normalizedReply) {
-        return null;
-    }
-
-    const topic =
-        profile.current_topic ||
+    const topic = profile.current_topic || null;
+    const level = profile.cefr_level || null;
+    const preferredLanguage =
+        detectExplicitLearningLanguage(normalizedMessage) ||
+        profile.preferred_language ||
         null;
+    const summary = topic
+        ? `${topic} bo‘yicha dars davom ettirildi. O‘quvchi yangi mashq bajardi va Teacher Hasan javob berdi.`
+        : null;
 
-    const level =
-        profile.cefr_level ||
-        null;
-
-    const summary =
-        topic
-            ? `${topic} bo‘yicha dars davom ettirildi. O‘quvchi yangi mashq bajardi va Teacher Hasan javob berdi.`
-            : null;
-
-    if (!topic && !level) {
-        return null;
-    }
+    if (!topic && !level && !preferredLanguage) return null;
 
     await pool.query(
         `
         INSERT INTO learner_profiles (
-            user_id,
-            cefr_level,
-            current_topic,
-            last_lesson_summary,
-            updated_at
+            user_id, cefr_level, current_topic, last_lesson_summary,
+            preferred_language, updated_at
         )
-        VALUES ($1, $2, $3, $4, NOW())
+        VALUES ($1, $2, $3, $4, $5, NOW())
         ON CONFLICT (user_id)
         DO UPDATE SET
             cefr_level = COALESCE(EXCLUDED.cefr_level, learner_profiles.cefr_level),
             current_topic = COALESCE(EXCLUDED.current_topic, learner_profiles.current_topic),
-            last_lesson_summary = COALESCE(
-                EXCLUDED.last_lesson_summary,
-                learner_profiles.last_lesson_summary
-            ),
+            last_lesson_summary = COALESCE(EXCLUDED.last_lesson_summary, learner_profiles.last_lesson_summary),
+            preferred_language = COALESCE(EXCLUDED.preferred_language, learner_profiles.preferred_language),
             updated_at = NOW()
         `,
-        [
-            userId,
-            level,
-            topic,
-            summary
-        ]
+        [userId, level, topic, summary, preferredLanguage]
     );
 
     if (topic) {
         await pool.query(
             `
-            INSERT INTO learning_sessions (
-                user_id,
-                topic,
-                level,
-                summary
-            )
+            INSERT INTO learning_sessions (user_id, topic, level, summary)
             VALUES ($1, $2, $3, $4)
             `,
-            [
-                userId,
-                topic,
-                level,
-                summary
-            ]
+            [userId, topic, level, summary]
         );
     }
 
     console.log("💾 LEARNER MEMORY SAVED:", {
-        userId,
-        topic,
-        level
+        userId, topic, level, preferredLanguage
     });
 
-    return {
-        topic,
-        level,
-        summary
-    };
+    return { topic, level, summary, preferredLanguage };
 }
-
 
 async function extractLearnerMemory(userId, message, reply, existingMemory = null) {
     console.log("🧠 MEMORY EXTRACTOR START:", userId);
@@ -1172,7 +1152,8 @@ JSON faqat quyidagi strukturada bo‘lsin:
     "cefr_level": null,
     "learning_goal": null,
     "current_topic": null,
-    "last_lesson_summary": null
+    "last_lesson_summary": null,
+    "preferred_language": null
   },
   "session": {
     "topic": null,
