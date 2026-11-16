@@ -3349,6 +3349,11 @@ app.get(
                 "=========================================="
             );
 
+            const learner = await getAuthenticatedUser(req);
+            const learnerMemory = learner?.id
+                ? await getLearnerMemory(learner.id)
+                : null;
+
             return res.json({
 
                 success:
@@ -3359,6 +3364,19 @@ app.get(
 
                 model:
                     LIVE_MODEL,
+
+                learner: {
+                    fullName: learner?.fullName || "",
+                    memory: learnerMemory
+                        ? {
+                            profile: learnerMemory.profile,
+                            sessions: learnerMemory.sessions,
+                            progress: learnerMemory.progress,
+                            mistakes: learnerMemory.mistakes,
+                            vocabulary: learnerMemory.vocabulary
+                        }
+                        : null
+                },
                 access: {
                     mode:
                         access.mode,
@@ -3594,7 +3612,7 @@ ibora bilan murojaat qilsa:
                 "Javob olinmadi.";
 
             if (user?.id) {
-                await updateLearnerMemoryFromChat(
+                await extractLearnerMemory(
                     user.id,
                     message,
                     reply,
@@ -3626,6 +3644,54 @@ ibora bilan murojaat qilsa:
                     details:
                         error?.message
                 });
+        }
+    }
+);
+
+
+// ==============================================
+// VOICE LEARNER MEMORY
+// ==============================================
+app.post(
+    "/api/learner/voice-memory",
+    async (req, res) => {
+        try {
+            const user = await getAuthenticatedUser(req);
+            if (!user?.id) {
+                return res.status(401).json({
+                    success: false,
+                    error: "O‘quv jarayonini saqlash uchun hisobingizga kiring."
+                });
+            }
+
+            const message = String(req.body?.message || "").trim().slice(0, 12000);
+            const reply = String(req.body?.reply || "").trim().slice(0, 12000);
+
+            if (!message || !reply) {
+                return res.status(400).json({
+                    success: false,
+                    error: "Suhbat matni to‘liq yuborilmadi."
+                });
+            }
+
+            const memory = await getLearnerMemory(user.id);
+            const saved = await extractLearnerMemory(
+                user.id,
+                message,
+                reply,
+                memory
+            );
+
+            return res.json({
+                success: true,
+                saved: Boolean(saved)
+            });
+        } catch (error) {
+            console.error("VOICE MEMORY ERROR:", error?.message || error);
+            return res.status(500).json({
+                success: false,
+                error: "O‘quv xotirasini saqlashda xatolik."
+            });
         }
     }
 );
