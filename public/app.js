@@ -34,113 +34,18 @@ document.addEventListener("DOMContentLoaded", () => {
     const transcript = document.getElementById("transcript");
 
     const voiceAvatars = Array.from(document.querySelectorAll(".avatar"));
-    const voiceStage = document.getElementById("voiceStage");
-    const voiceStageLog = document.getElementById("voiceStageLog");
-    const voiceStageSpeaker = document.getElementById("voiceStageSpeaker");
-    const voiceStageClose = document.getElementById("voiceStageClose");
-    const voiceStageReopen = document.getElementById("voiceStageReopen");
-    let voiceMicLevel = 0;
-    let voiceTeacherLevel = 0;
-    let teacherVoiceDecayTimer = null;
-    let activeUserMessage = null;
-    let activeTeacherMessage = null;
     let learnerDisplayName = "";
     let learnerMemoryContext = "";
     let pendingVoiceUserText = "";
     let pendingVoiceTeacherText = "";
 
-    function updateVoiceVisualizer(level = 0, source = "user") {
+    function updateVoiceVisualizer(level = 0) {
         const normalized = Math.max(0, Math.min(1, Number(level) || 0));
-        if (source === "teacher") {
-            voiceTeacherLevel = normalized;
-            if (teacherVoiceDecayTimer) clearTimeout(teacherVoiceDecayTimer);
-            teacherVoiceDecayTimer = setTimeout(() => {
-                voiceTeacherLevel = 0;
-                renderVoiceVisualizer();
-            }, 190);
-        } else {
-            voiceMicLevel = normalized;
-        }
-        renderVoiceVisualizer();
-    }
-
-    function renderVoiceVisualizer() {
-        const normalized = Math.max(voiceMicLevel, voiceTeacherLevel);
-        const speaker = voiceTeacherLevel >= voiceMicLevel && voiceTeacherLevel > 0.035 ? "teacher" : "user";
-        if (voiceStageSpeaker) {
-            voiceStageSpeaker.textContent = normalized <= 0.035
-                ? "Tinglashga tayyor"
-                : speaker === "teacher" ? "Teacher Hasan gapiryapti" : "Siz gapiryapsiz";
-        }
         voiceAvatars.forEach((avatar) => {
             avatar.style.setProperty("--voice-scale", String(1 + normalized * 0.22));
             avatar.style.setProperty("--voice-glow", String(0.12 + normalized * 0.72));
             avatar.classList.toggle("voice-active", normalized > 0.035);
-            avatar.dataset.speaker = speaker;
         });
-    }
-
-    function openVoiceStage() {
-        if (!voiceStage) return;
-        voiceStage.hidden = false;
-        if (voiceStageReopen) voiceStageReopen.hidden = true;
-    }
-
-    function closeVoiceStage() {
-        if (!voiceStage) return;
-        voiceStage.hidden = true;
-        if (voiceStageReopen) voiceStageReopen.hidden = !isRunning;
-    }
-
-    function createVoiceMessage(role) {
-        if (!voiceStageLog) return null;
-        const emptyState = voiceStageLog.querySelector(".voice-stage-empty");
-        if (emptyState) emptyState.remove();
-        const article = document.createElement("article");
-        article.className = "voice-message voice-message-" + role;
-        const heading = document.createElement("div");
-        heading.className = "voice-message-heading";
-        heading.textContent = role === "teacher" ? "👨‍🏫 Teacher Hasan" : "👤 Siz";
-        const sentenceLabel = document.createElement("div");
-        sentenceLabel.className = "voice-message-label";
-        sentenceLabel.textContent = "To‘liq jumla";
-        const sentence = document.createElement("p");
-        sentence.className = "voice-message-sentence";
-        const wordsLabel = document.createElement("div");
-        wordsLabel.className = "voice-message-label";
-        wordsLabel.textContent = "Aniqlangan so‘zlar";
-        const words = document.createElement("div");
-        words.className = "voice-message-words";
-        article.append(heading, sentenceLabel, sentence, wordsLabel, words);
-        voiceStageLog.append(article);
-        return { article, sentence, words, text: "" };
-    }
-
-    function appendVoiceMessage(role, delta) {
-        if (!delta || !voiceStageLog) return;
-        let message;
-        if (role === "teacher") {
-            if (!activeTeacherMessage) activeTeacherMessage = createVoiceMessage("teacher");
-            message = activeTeacherMessage;
-        } else {
-            if (!activeUserMessage) {
-                activeUserMessage = createVoiceMessage("user");
-                activeTeacherMessage = null;
-            }
-            message = activeUserMessage;
-        }
-        if (!message) return;
-        message.text += delta;
-        message.sentence.textContent = message.text;
-        const words = message.text.trim().split(/\s+/).filter(Boolean);
-        const chips = words.map((word) => {
-            const chip = document.createElement("span");
-            chip.className = "voice-word";
-            chip.textContent = word;
-            return chip;
-        });
-        message.words.replaceChildren(...chips);
-        voiceStageLog.scrollTop = voiceStageLog.scrollHeight;
     }
 
     async function resolveLearnerName() {
@@ -613,10 +518,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 startTime
             );
 
-            const teacherLevel = Math.min(1, outputRms * 5);
-            const visualDelay = Math.max(0, (startTime - audioContext.currentTime) * 1000);
-            setTimeout(() => updateVoiceVisualizer(teacherLevel, "teacher"), visualDelay);
-
             nextAudioTime =
                 startTime +
                 audioBuffer.duration;
@@ -639,7 +540,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
         console.log("🎤 START bosildi");
-        openVoiceStage();
 
         await resolveLearnerName();
         pendingVoiceUserText = "";
@@ -909,7 +809,6 @@ Siz Teacher Hasan AI English Platform tarkibidagi AI English Teacher'siz.
 
                     if (inputText) {
                         pendingVoiceUserText += (pendingVoiceUserText ? " " : "") + inputText;
-                        appendVoiceMessage("user", inputText);
                         addTranscript("👤 Siz: " + inputText);
                     }
 
@@ -922,7 +821,6 @@ Siz Teacher Hasan AI English Platform tarkibidagi AI English Teacher'siz.
 
                     if (outputText) {
                         pendingVoiceTeacherText += (pendingVoiceTeacherText ? " " : "") + outputText;
-                        appendVoiceMessage("teacher", outputText);
                         addTranscript("👨‍🏫 Teacher Hasan: " + outputText);
                     }
 
@@ -1206,7 +1104,6 @@ Siz Teacher Hasan AI English Platform tarkibidagi AI English Teacher'siz.
         if (teacherVoiceDecayTimer) clearTimeout(teacherVoiceDecayTimer);
         updateVoiceVisualizer(0, "user");
         updateVoiceVisualizer(0, "teacher");
-        if (voiceStageReopen && voiceStage?.hidden) voiceStageReopen.hidden = false;
 
         // ==================================
         // PROCESSOR
@@ -1317,14 +1214,6 @@ Siz Teacher Hasan AI English Platform tarkibidagi AI English Teacher'siz.
         stopTeacher
     );
 
-    voiceStageClose?.addEventListener("click", closeVoiceStage);
-    voiceStageReopen?.addEventListener("click", openVoiceStage);
-    voiceStage?.addEventListener("click", (event) => {
-        if (event.target === voiceStage) closeVoiceStage();
-    });
-    document.addEventListener("keydown", (event) => {
-        if (event.key === "Escape" && voiceStage && !voiceStage.hidden) closeVoiceStage();
-    });
 
     // ==========================================
     // GUEST SESSION - PAGE EXIT
