@@ -944,7 +944,10 @@ async function saveLearnerMemory(userId, memory = {}) {
         ]
     );
 
-    if (memory.session) {
+    if (
+        memory.session &&
+        (memory.session.topic || memory.session.summary)
+    ) {
         await pool.query(
             `
             INSERT INTO learning_sessions (
@@ -1177,8 +1180,8 @@ HECH QACHON:
 - taxminiy vocabulary qo‘shmang;
 - bo‘sh ma'lumotni uydirmang.
 
-Mavjud learner profile:
-${JSON.stringify(profile)}
+Mavjud learner xotirasi (profil, oxirgi darslar, progress, xatolar va vocabulary):
+${JSON.stringify(existingMemory || { profile })}
 
 Foydalanuvchi xabari:
 ${message}
@@ -1205,8 +1208,11 @@ JSON faqat quyidagi strukturada bo‘lsin:
 }
 
 Qoidalar:
-- Mavjud profile ma'lumotini yangi xabarda tasdiqlanmasa, uni takrorlash shart emas.
+- Mavjud learner xotirasini saqlang; yangi xabarda takrorlanmagan eski ma'lumotlarni yo'qotmang.
 - Faqat yangi yoki aniq tasdiqlangan ma'lumotni qaytaring.
+- Foydalanuvchi "davom etamiz" desa, oldingi current_topic va oxirgi dars xulosasini saqlang; yangi mavzu deb almashtirmang.
+- last_lesson_summary darsda aynan nimalar bajarilgani va keyingi mantiqiy qadamni qisqa qayd etsin.
+- Har bir yangi o'quv suhbati uchun session.summary mavzu, bajarilgan ish va keyingi qadamni aniq ifodalasin.
 - cefr_level faqat foydalanuvchi darajasini aniq aytsa yoki Teacher Hasan uni aniq baholagan bo‘lsa yozilsin.
 - learning_goal faqat aniq aytilgan maqsad bo‘lsa yozilsin.
 - current_topic suhbatning real o‘quv mavzusi bo‘lsa yozilsin.
@@ -3612,12 +3618,21 @@ ibora bilan murojaat qilsa:
                 "Javob olinmadi.";
 
             if (user?.id) {
-                await extractLearnerMemory(
+                const extractedMemory = await extractLearnerMemory(
                     user.id,
                     message,
                     reply,
                     memory
                 );
+
+                if (!extractedMemory) {
+                    await updateLearnerMemoryFromChat(
+                        user.id,
+                        message,
+                        reply,
+                        memory
+                    );
+                }
             }
 
             return res.json({
@@ -3675,12 +3690,21 @@ app.post(
             }
 
             const memory = await getLearnerMemory(user.id);
-            const saved = await extractLearnerMemory(
+            let saved = await extractLearnerMemory(
                 user.id,
                 message,
                 reply,
                 memory
             );
+
+            if (!saved) {
+                saved = await updateLearnerMemoryFromChat(
+                    user.id,
+                    message,
+                    reply,
+                    memory
+                );
+            }
 
             return res.json({
                 success: true,
