@@ -3349,6 +3349,11 @@ app.get(
                 "=========================================="
             );
 
+            const learner = await getAuthenticatedUser(req);
+            const learnerMemory = learner?.id
+                ? await getLearnerMemory(learner.id)
+                : null;
+
             return res.json({
 
                 success:
@@ -3359,6 +3364,19 @@ app.get(
 
                 model:
                     LIVE_MODEL,
+
+                learner: {
+                    fullName: learner?.fullName || "",
+                    memory: learnerMemory
+                        ? {
+                            profile: learnerMemory.profile,
+                            sessions: learnerMemory.sessions,
+                            progress: learnerMemory.progress,
+                            mistakes: learnerMemory.mistakes,
+                            vocabulary: learnerMemory.vocabulary
+                        }
+                        : null
+                },
                 access: {
                     mode:
                         access.mode,
