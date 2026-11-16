@@ -973,6 +973,19 @@ Siz Teacher Hasan AI English Platform tarkibidagi AI English Teacher'siz.
                 }
             });
 
+        if (attemptId !== startAttemptId) {
+            mediaStream?.getTracks().forEach(track => track.stop());
+            mediaStream = null;
+            try { await liveSession?.close(); } catch {}
+            liveSession = null;
+            if (audioContext) {
+                try { await audioContext.close(); } catch {}
+                audioContext = null;
+            }
+            if (guestMode) await stopGuestSession();
+            return;
+        }
+
         console.log(
             "🎤 Mikrofon ruxsati berildi"
         );
