@@ -33,6 +33,66 @@ document.addEventListener("DOMContentLoaded", () => {
     const status = document.getElementById("status");
     const transcript = document.getElementById("transcript");
 
+    const voiceAvatar = document.querySelector(".avatar");
+    let learnerDisplayName = "";
+    let learnerMemoryContext = "";
+    let pendingVoiceUserText = "";
+    let pendingVoiceTeacherText = "";
+
+    function updateVoiceVisualizer(level = 0) {
+        if (!voiceAvatar) return;
+        const normalized = Math.max(0, Math.min(1, Number(level) || 0));
+        voiceAvatar.style.setProperty("--voice-scale", String(1 + normalized * 0.22));
+        voiceAvatar.style.setProperty("--voice-glow", String(0.12 + normalized * 0.72));
+        voiceAvatar.classList.toggle("voice-active", normalized > 0.035);
+    }
+
+    async function resolveLearnerName() {
+        const token = localStorage.getItem("th_auth_token") || "";
+        learnerDisplayName = "";
+
+        if (!token) return "";
+
+        try {
+            const response = await fetch("/api/me", {
+                credentials: "same-origin",
+                headers: { Authorization: "Bearer " + token }
+            });
+            const data = await response.json().catch(() => ({}));
+            if (data.authenticated && data.user?.fullName) {
+                learnerDisplayName = String(data.user.fullName).trim().slice(0, 80);
+            }
+        } catch (error) {
+            console.warn("Learner profile lookup:", error);
+        }
+
+        return learnerDisplayName;
+    }
+
+    async function saveVoiceTurnMemory() {
+        const userText = pendingVoiceUserText.trim();
+        const teacherText = pendingVoiceTeacherText.trim();
+        pendingVoiceUserText = "";
+        pendingVoiceTeacherText = "";
+        if (!userText || !teacherText) return;
+        const token = localStorage.getItem("th_auth_token") || "";
+        if (!token) return;
+        try {
+            await fetch("/api/learner/voice-memory", {
+                method: "POST",
+                credentials: "same-origin",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: "Bearer " + token
+                },
+                body: JSON.stringify({ message: userText, reply: teacherText })
+            });
+        } catch (error) {
+            console.warn("Voice learner memory save:", error);
+        }
+    }
+
+
     if (!startBtn || !stopBtn || !status || !transcript) {
 
         console.error("❌ HTML elementlari topilmadi!");
@@ -483,6 +543,11 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
         console.log("🎤 START bosildi");
 
+        await resolveLearnerName();
+        pendingVoiceUserText = "";
+        pendingVoiceTeacherText = "";
+
+
         startBtn.disabled = true;
         stopBtn.disabled = false;
 
@@ -541,6 +606,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const tokenData = await tokenResponse.json();
 
+        if (tokenData.learner?.fullName) {
+            learnerDisplayName = String(tokenData.learner.fullName).trim();
+        }
+        learnerMemoryContext = tokenData.learner?.memory
+            ? JSON.stringify(tokenData.learner.memory)
+            : "";
+
+
         console.log("🔑 Ephemeral token olindi");
         console.log("🤖 Model:", tokenData.model);
 
@@ -580,6 +653,18 @@ document.addEventListener("DOMContentLoaded", () => {
                 },
 
                 systemInstruction: `
+O‘QUVCHI PROFILIDAGI ISM: ${learnerDisplayName || "profil ism ko‘rsatilmagan"}. Faqat profil ismi mavjud bo‘lsa, shu ism bilan tabiiy murojaat qiling. Profil ism bo‘sh bo‘lsa, ism so‘ramang va taxmin qilmang.
+
+O‘QUVCHINING AVVALGI O‘QUV XOTIRASI (JSON):
+${learnerMemoryContext || "Hozircha saqlangan dars tarixi yo‘q."}
+
+XOTIRADAN FOYDALANISH:
+- O‘quvchining darajasi, maqsadi, oxirgi mavzusi va xatolarini inobatga oling.
+- Foydalanuvchi "davom etamiz" desa, xotiradagi oxirgi mavzudan davom eting.
+- Oldin o‘rgatilgan so‘zlarni qayta so‘rab, mustahkamlash mashqlarini bering.
+- O‘quvchi avval bajargan mashqlarini qayta boshlamang; keyingi bosqichga o‘ting.
+- Xotirada yo‘q ma’lumotni to‘qib chiqarmang.
+
 Siz TEACHER HASANsiz.
 
 Siz ikki tilli AI Teacher bo'lib,
@@ -725,6 +810,7 @@ Siz Teacher Hasan AI English Platform tarkibidagi AI English Teacher'siz.
                             ?.text;
 
                     if (inputText) {
+                        pendingVoiceUserText += (pendingVoiceUserText ? "\n" : "") + inputText;
                         addTranscript(
                             "👤 Siz: " + inputText
                         );
@@ -738,6 +824,7 @@ Siz Teacher Hasan AI English Platform tarkibidagi AI English Teacher'siz.
                             ?.text;
 
                     if (outputText) {
+                        pendingVoiceTeacherText += (pendingVoiceTeacherText ? "\n" : "") + outputText;
                         addTranscript(
                             "👨‍🏫 Teacher Hasan: " +
                             outputText
@@ -772,6 +859,7 @@ Siz Teacher Hasan AI English Platform tarkibidagi AI English Teacher'siz.
                             ?.serverContent
                             ?.turnComplete
                     ) {
+                        void saveVoiceTurnMemory();
                         console.log(
                             "✅ Teacher Hasan javobi tugadi"
                         );
@@ -877,6 +965,8 @@ Siz Teacher Hasan AI English Platform tarkibidagi AI English Teacher'siz.
 
                 const rms =
                     Math.sqrt(sum / input.length);
+
+                updateVoiceVisualizer(Math.min(1, rms * 8));
 
                 const isSpeech =
                     rms >= SPEECH_THRESHOLD;
@@ -1014,6 +1104,7 @@ Siz Teacher Hasan AI English Platform tarkibidagi AI English Teacher'siz.
         }
 
         isRunning = false;
+        updateVoiceVisualizer(0);
 
         // ==================================
         // PROCESSOR
