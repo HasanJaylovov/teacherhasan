@@ -1091,6 +1091,48 @@
             .avatar, .avatar::before, .avatar::after { transition: none; }
         }
     </style>
+
+    <style id="voice-stage-window-styles">
+        .voice-stage[hidden],.voice-stage-reopen[hidden]{display:none!important}
+        .voice-stage{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;padding:18px;background:rgba(5,8,20,.88);backdrop-filter:blur(14px)}
+        .voice-stage-panel{width:min(100%,1040px);height:min(88vh,820px);display:flex;flex-direction:column;overflow:hidden;border:1px solid rgba(174,188,255,.2);border-radius:24px;background:linear-gradient(145deg,#111a31,#0b1224 70%);color:#eef2ff;box-shadow:0 28px 90px rgba(0,0,0,.5)}
+        .voice-stage-header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 22px;border-bottom:1px solid rgba(255,255,255,.09)}
+        .voice-stage-eyebrow{color:#91a4ff;font-size:10px;letter-spacing:.16em;font-weight:800}
+        .voice-stage-header h2{margin:5px 0 0;font-size:19px;font-weight:700}
+        .voice-stage-close{width:38px;height:38px;flex:0 0 38px;border:1px solid rgba(255,255,255,.14);border-radius:12px;color:#e8edff;background:rgba(255,255,255,.07);font-size:18px;cursor:pointer}
+        .voice-stage-body{display:grid;grid-template-columns:minmax(230px,.78fr) minmax(0,1.22fr);flex:1;min-height:0}
+        .voice-stage-visual{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px 22px;text-align:center;border-right:1px solid rgba(255,255,255,.08);background:radial-gradient(ellipse at 50% 38%,rgba(102,126,234,.16),transparent 68%)}
+        .voice-stage-avatar{width:116px;height:116px;margin:0 auto 24px;font-size:58px}
+        .voice-stage-wave{height:54px;display:flex;align-items:center;justify-content:center;gap:5px}
+        .voice-stage-wave span{display:block;width:5px;height:12px;border-radius:8px;background:#aab8ff;opacity:.55;transform:scaleY(.5);transition:transform 90ms ease,opacity 90ms ease}
+        .voice-stage-wave span:nth-child(3n){height:30px}.voice-stage-wave span:nth-child(3n + 1){height:20px}
+        .voice-stage-visual:has(.voice-stage-avatar.voice-active) .voice-stage-wave span{opacity:1;animation:voiceStageWave .62s ease-in-out infinite alternate}
+        .voice-stage-wave span:nth-child(2n){animation-delay:-.22s!important}.voice-stage-wave span:nth-child(3n){animation-delay:-.4s!important}
+        @keyframes voiceStageWave{from{transform:scaleY(.45)}to{transform:scaleY(1.8)}}
+        .voice-stage-caption{margin-top:8px;color:#aab5d2;font-size:12px}
+        .voice-stage-legend{display:grid;gap:9px;margin-top:24px;color:#c4cce0;font-size:12px;text-align:left}
+        .voice-stage-legend span{display:flex;align-items:center;gap:8px}
+        .voice-dot{width:8px;height:8px;display:inline-block;border-radius:50%}.voice-dot-user{background:#67d7bd}.voice-dot-teacher{background:#aab8ff}
+        .voice-stage-chat{min-width:0;min-height:0;display:flex;flex-direction:column;padding:18px}
+        .voice-stage-chat-title{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:2px 2px 14px;border-bottom:1px solid rgba(255,255,255,.08)}
+        .voice-stage-chat-title strong{display:block;font-size:15px}.voice-stage-chat-title small{display:block;margin-top:4px;color:#98a5c2;font-size:11px}
+        .voice-live-indicator{display:inline-flex;align-items:center;gap:6px;color:#7ce2be;font-size:10px;font-weight:800;letter-spacing:.1em}
+        .voice-live-indicator i{width:7px;height:7px;border-radius:50%;background:#65dfad;box-shadow:0 0 10px #65dfad}
+        .voice-stage-log{min-height:0;flex:1;overflow-y:auto;padding:14px 4px 4px 0;display:flex;flex-direction:column;gap:12px}
+        .voice-stage-empty{margin:auto;max-width:280px;color:#8996b2;font-size:13px;line-height:1.7;text-align:center}
+        .voice-message{padding:13px 14px;border:1px solid rgba(255,255,255,.08);border-radius:15px;background:rgba(255,255,255,.045)}
+        .voice-message-teacher{border-color:rgba(145,164,255,.22);background:rgba(102,126,234,.09)}
+        .voice-message-heading{margin-bottom:10px;color:#c4ceff;font-size:12px;font-weight:750}.voice-message-user .voice-message-heading{color:#8fe0c9}
+        .voice-message-label{margin:8px 0 5px;color:#8e9bb8;font-size:10px;text-transform:uppercase;letter-spacing:.09em;font-weight:750}
+        .voice-message-sentence{margin:0;color:#f0f3ff;font-size:14px;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere}
+        .voice-message-words{display:flex;flex-wrap:wrap;gap:6px}
+        .voice-word{padding:4px 8px;border-radius:7px;color:#dce3ff;background:rgba(145,164,255,.14);border:1px solid rgba(145,164,255,.14);font-size:11px;line-height:1.35}
+        .voice-message-user .voice-word{color:#c9f5e9;background:rgba(103,215,189,.1);border-color:rgba(103,215,189,.15)}
+        .voice-stage-reopen{position:fixed;right:20px;bottom:110px;z-index:9999;padding:12px 16px;border:1px solid rgba(170,184,255,.35);border-radius:14px;color:#eef2ff;background:#202d50;box-shadow:0 12px 32px rgba(0,0,0,.3);cursor:pointer}
+        @media(max-width:680px){.voice-stage{padding:8px}.voice-stage-panel{height:94vh;border-radius:18px}.voice-stage-header{padding:14px}.voice-stage-header h2{font-size:15px}.voice-stage-body{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}.voice-stage-visual{padding:12px 12px 14px;border-right:0;border-bottom:1px solid rgba(255,255,255,.08)}.voice-stage-avatar{width:70px;height:70px;margin-bottom:10px;font-size:36px}.voice-stage-wave{height:28px}.voice-stage-wave span{width:4px}.voice-stage-legend{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin-top:10px}.voice-stage-chat{padding:12px}.voice-stage-log{gap:9px}.voice-message{padding:10px 11px}.voice-message-sentence{font-size:13px}}
+        @media(prefers-reduced-motion:reduce){.voice-stage-wave span{animation:none!important;transition:none}}
+    </style>
+
 </head>
 
 <body>
@@ -1629,6 +1671,29 @@
                 </div>
 
             </section>
+
+
+                <div id="voiceStage" class="voice-stage" role="dialog" aria-modal="true" aria-labelledby="voiceStageTitle" hidden>
+                    <div class="voice-stage-panel">
+                        <div class="voice-stage-header">
+                            <div><div class="voice-stage-eyebrow">LIVE SPEAKING SESSION</div><h2 id="voiceStageTitle">Teacher Hasan AI — Ovozli suhbat</h2></div>
+                            <button id="voiceStageClose" class="voice-stage-close" type="button" aria-label="Oynani yopish">✕</button>
+                        </div>
+                        <div class="voice-stage-body">
+                            <section class="voice-stage-visual" aria-label="Ovoz vizualizatsiyasi">
+                                <div class="avatar voice-stage-avatar" aria-hidden="true">👨‍🏫</div>
+                                <div class="voice-stage-wave" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+                                <div class="voice-stage-caption">Ovoz darajasi real vaqtda ko‘rsatiladi</div>
+                                <div class="voice-stage-legend"><span><i class="voice-dot voice-dot-user"></i> Siz gapiryapsiz</span><span><i class="voice-dot voice-dot-teacher"></i> Teacher Hasan gapiryapti</span></div>
+                            </section>
+                            <section class="voice-stage-chat" aria-label="Jonli suhbat transkripti">
+                                <div class="voice-stage-chat-title"><div><strong>Suhbat matni</strong><small>Gaplar va aniqlangan so‘zlar</small></div><span class="voice-live-indicator"><i></i> LIVE</span></div>
+                                <div id="voiceStageLog" class="voice-stage-log" aria-live="polite"><div class="voice-stage-empty">Suhbat boshlanganda sizning va Teacher Hasan aytgan gaplaringiz shu yerda ko‘rinadi.</div></div>
+                            </section>
+                        </div>
+                    </div>
+                </div>
+                <button id="voiceStageReopen" class="voice-stage-reopen" type="button" hidden>🎙 Ovoz oynasini ochish</button>
 
 
             <!-- CONTROLS -->
