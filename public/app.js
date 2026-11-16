@@ -1249,7 +1249,8 @@ Siz Teacher Hasan AI English Platform tarkibidagi AI English Teacher'siz.
         }
 
         if (guestMode) {
-            guestMode = false;
+            // stopGuestSession() guestMode flagini o'zi yangilaydi va serverga
+            // /api/guest/stop so'rovini yuboradi. Oldindan false qilmang.
             void stopGuestSession().catch(error => {
                 console.warn("Guest sessiyani to'xtatishda xato:", error);
             });
