@@ -33,6 +33,68 @@ document.addEventListener("DOMContentLoaded", () => {
     const status = document.getElementById("status");
     const transcript = document.getElementById("transcript");
 
+    const voiceAvatar = document.querySelector(".avatar");
+    let learnerDisplayName = "";
+    let pendingVoiceUserText = "";
+    let pendingVoiceTeacherText = "";
+
+    function updateVoiceVisualizer(level = 0) {
+        if (!voiceAvatar) return;
+        const normalized = Math.max(0, Math.min(1, Number(level) || 0));
+        voiceAvatar.style.setProperty("--voice-scale", String(1 + normalized * 0.22));
+        voiceAvatar.style.setProperty("--voice-glow", String(0.12 + normalized * 0.72));
+        voiceAvatar.classList.toggle("voice-active", normalized > 0.035);
+    }
+
+    async function resolveLearnerName() {
+        const token = localStorage.getItem("th_auth_token") || "";
+        try {
+            const response = await fetch("/api/me", {
+                credentials: "same-origin",
+                headers: token ? { Authorization: "Bearer " + token } : {}
+            });
+            const data = await response.json().catch(() => ({}));
+            if (data.authenticated && data.user?.fullName) {
+                learnerDisplayName = String(data.user.fullName).trim();
+                return learnerDisplayName;
+            }
+        } catch (error) {
+            console.warn("Learner profile lookup:", error);
+        }
+
+        learnerDisplayName = localStorage.getItem("th_guest_name") || "";
+        if (!learnerDisplayName) {
+            const entered = window.prompt("Teacher Hasan sizni ismingiz bilan chaqirishi uchun ismingizni kiriting:");
+            learnerDisplayName = String(entered || "").trim().slice(0, 80);
+            if (learnerDisplayName) localStorage.setItem("th_guest_name", learnerDisplayName);
+        }
+        return learnerDisplayName || "o‘quvchi";
+    }
+
+    async function saveVoiceTurnMemory() {
+        const userText = pendingVoiceUserText.trim();
+        const teacherText = pendingVoiceTeacherText.trim();
+        pendingVoiceUserText = "";
+        pendingVoiceTeacherText = "";
+        if (!userText || !teacherText) return;
+        const token = localStorage.getItem("th_auth_token") || "";
+        if (!token) return;
+        try {
+            await fetch("/api/learner/voice-memory", {
+                method: "POST",
+                credentials: "same-origin",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: "Bearer " + token
+                },
+                body: JSON.stringify({ message: userText, reply: teacherText })
+            });
+        } catch (error) {
+            console.warn("Voice learner memory save:", error);
+        }
+    }
+
+
     if (!startBtn || !stopBtn || !status || !transcript) {
 
         console.error("❌ HTML elementlari topilmadi!");
@@ -483,6 +545,11 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
         console.log("🎤 START bosildi");
 
+        await resolveLearnerName();
+        pendingVoiceUserText = "";
+        pendingVoiceTeacherText = "";
+
+
         startBtn.disabled = true;
         stopBtn.disabled = false;
 
@@ -580,6 +647,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 },
 
                 systemInstruction: `
+O‘QUVCHI ISMI: ${learnerDisplayName || "hali aytilmagan"}. Agar ismi noma’lum bo‘lsa, suhbat boshida faqat ismini so‘rang. Ismini bilganingizdan keyin suhbat davomida shu ism bilan tabiiy murojaat qiling.
+
 Siz TEACHER HASANsiz.
 
 Siz ikki tilli AI Teacher bo'lib,
@@ -725,6 +794,7 @@ Siz Teacher Hasan AI English Platform tarkibidagi AI English Teacher'siz.
                             ?.text;
 
                     if (inputText) {
+                        pendingVoiceUserText += (pendingVoiceUserText ? "\n" : "") + inputText;
                         addTranscript(
                             "👤 Siz: " + inputText
                         );
@@ -738,6 +808,7 @@ Siz Teacher Hasan AI English Platform tarkibidagi AI English Teacher'siz.
                             ?.text;
 
                     if (outputText) {
+                        pendingVoiceTeacherText += (pendingVoiceTeacherText ? "\n" : "") + outputText;
                         addTranscript(
                             "👨‍🏫 Teacher Hasan: " +
                             outputText
@@ -772,6 +843,7 @@ Siz Teacher Hasan AI English Platform tarkibidagi AI English Teacher'siz.
                             ?.serverContent
                             ?.turnComplete
                     ) {
+                        void saveVoiceTurnMemory();
                         console.log(
                             "✅ Teacher Hasan javobi tugadi"
                         );
@@ -877,6 +949,8 @@ Siz Teacher Hasan AI English Platform tarkibidagi AI English Teacher'siz.
 
                 const rms =
                     Math.sqrt(sum / input.length);
+
+                updateVoiceVisualizer(Math.min(1, rms * 8));
 
                 const isSpeech =
                     rms >= SPEECH_THRESHOLD;
@@ -1014,6 +1088,7 @@ Siz Teacher Hasan AI English Platform tarkibidagi AI English Teacher'siz.
         }
 
         isRunning = false;
+        updateVoiceVisualizer(0);
 
         // ==================================
         // PROCESSOR
