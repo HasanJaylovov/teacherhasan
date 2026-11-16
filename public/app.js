@@ -11,6 +11,8 @@ let audioContext = null;
 let mediaStream = null;
 let sourceNode = null;
 let processorNode = null;
+let activeAudioSources = new Set();
+let startAttemptId = 0;
 
 let isRunning = false;
 
@@ -494,6 +496,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const audioSource =
                 audioContext.createBufferSource();
+            activeAudioSources.add(audioSource);
+            audioSource.onended = () => activeAudioSources.delete(audioSource);
 
             audioSource.buffer =
                 audioBuffer;
@@ -545,11 +549,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function startTeacher() {
     if (isRunning) return;
+    const attemptId = ++startAttemptId;
 
     try {
         console.log("🎤 START bosildi");
 
         await resolveLearnerName();
+        if (attemptId !== startAttemptId) return;
         pendingVoiceUserText = "";
         pendingVoiceTeacherText = "";
 
@@ -562,6 +568,10 @@ document.addEventListener("DOMContentLoaded", () => {
         // ACCESS / GUEST PREFLIGHT
         const accessData =
             await startGuestSession();
+        if (attemptId !== startAttemptId) {
+            if (guestMode) await stopGuestSession();
+            return;
+        }
 
         console.log(
             "🔐 Teacher access:",
@@ -579,6 +589,12 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         await audioContext.resume();
+        if (attemptId !== startAttemptId) {
+            if (audioContext) await audioContext.close().catch(() => {});
+            audioContext = null;
+            if (guestMode) await stopGuestSession();
+            return;
+        }
 
         nextAudioTime = audioContext.currentTime;
 
@@ -611,6 +627,10 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         const tokenData = await tokenResponse.json();
+        if (attemptId !== startAttemptId) {
+            if (guestMode) await stopGuestSession();
+            return;
+        }
 
         if (tokenData.learner?.fullName) {
             learnerDisplayName = String(tokenData.learner.fullName).trim();
@@ -1131,16 +1151,24 @@ Siz Teacher Hasan AI English Platform tarkibidagi AI English Teacher'siz.
         isRunning = false;
     }
 }
-      function stopTeacher() {
+      async function stopTeacher() {
         console.log(
             "🔴 Teacher Hasan STOP"
         );
+        startAttemptId++;
+        isRunning = false;
+
+        for (const audioSource of activeAudioSources) {
+            try { audioSource.stop(0); } catch {}
+            try { audioSource.disconnect(); } catch {}
+        }
+        activeAudioSources.clear();
+        nextAudioTime = audioContext?.currentTime || 0;
 
         if (guestMode) {
             void stopGuestSession();
         }
 
-        isRunning = false;
         voiceMicLevel = 0;
         voiceTeacherLevel = 0;
         if (teacherVoiceDecayTimer) clearTimeout(teacherVoiceDecayTimer);
@@ -1159,6 +1187,13 @@ Siz Teacher Hasan AI English Platform tarkibidagi AI English Teacher'siz.
                 null;
 
             processorNode = null;
+        }
+
+        if (attemptId !== startAttemptId) {
+            try { await liveSession?.close(); } catch {}
+            liveSession = null;
+            if (guestMode) await stopGuestSession();
+            return;
         }
 
         // ==================================
@@ -1196,7 +1231,7 @@ Siz Teacher Hasan AI English Platform tarkibidagi AI English Teacher'siz.
 
             try {
 
-                liveSession.close();
+                await Promise.resolve(liveSession.close());
 
             } catch (error) {
 
@@ -1217,7 +1252,7 @@ Siz Teacher Hasan AI English Platform tarkibidagi AI English Teacher'siz.
 
             try {
 
-                audioContext.close();
+                await audioContext.close();
 
             } catch (error) {
 
@@ -1253,7 +1288,7 @@ Siz Teacher Hasan AI English Platform tarkibidagi AI English Teacher'siz.
 
     stopBtn.addEventListener(
         "click",
-        stopTeacher
+        () => { void stopTeacher(); }
     );
 
 
