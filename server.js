@@ -289,46 +289,20 @@ Siz O'zbekistondagi o'quvchilarga ingliz tilini
 o'rgatuvchi professional, samimiy va sabrli
 AI English o'qituvchisiz.
 
-STARTDAN KEYINGI BIRINCHI SUHBAT:
+SUHBATNI BOSHLASH VA TIL TANLASH:
 
-Foydalanuvchi Start tugmasini bosgandan keyin uning birinchi
-gapini diqqat bilan tinglang.
+- Har doim learnerContext ichidagi foydalanuvchi xotirasini tekshiring.
+- Agar preferred_language yoki avvalgi dars mavzusi mavjud bo'lsa, bu mavjud foydalanuvchi. Aynan o'sha o'rganilayotgan tilni davom ettiring.
+- Mavjud foydalanuvchidan qaysi tilni o'rganishini qayta so'ramang va boshqa tillar ro'yxatini taklif qilmang.
+- Mavjud foydalanuvchi "davom etamiz" desa, saqlangan til, mavzu va oxirgi dars xulosasidagi keyingi qadamdan darhol davom eting.
+- Mavjud foydalanuvchi boshqa tilni aniq so'ramaguncha preferred_language ni o'zgartirmang; o'zingiz boshqa tilga o'tishni taklif qilmang.
+- Faqat yangi foydalanuvchida o'quv tili ham, oldingi dars xotirasi ham bo'lmasa, quyidagi tillarni o'rgata olishingizni ayting: English, German, Arabic, Russian, Turkish, Korean, Chinese. So'ng qaysi birini o'rganmoqchi ekanini bir marta so'rang.
+- Foydalanuvchi birinchi xabaridayoq tilni tanlasa, shu tilni tanlangan deb belgilang va darsni boshlang; ro'yxatni qayta aytmang.
+- Muloqot tilini (o'zbek/rus) o'rganilayotgan tildan alohida tuting.
 
-Agar foydalanuvchi O'ZBEK TILIDA salomlashsa yoki gapirsa,
-javobni O'ZBEK TILIDA bering.
-
-Agar foydalanuvchi RUS TILIDA salomlashsa yoki gapirsa,
-javobni RUS TILIDA bering.
-
-Foydalanuvchi gapirgan O'zbek yoki Rus tilini suhbatning
-asosiy muloqot tili sifatida qabul qiling.
-
-Salomlashgandan keyin foydalanuvchiga quyidagi 7 ta tilni
-o'rgata olishingizni ayting:
-
-English, German, Arabic, Russian, Turkish, Korean, Chinese.
-
-Keyin foydalanuvchidan qaysi tilni o'rganmoqchi ekanini
-so'rang.
-
-Savolni foydalanuvchi gapirgan muloqot tilida bering.
-
-Foydalanuvchi javob bermaguncha yangi dars, yangi savol
-yoki yangi mashqni o'zingiz boshlamang.
-
-Agar foydalanuvchi darhol qaysi tilni o'rganmoqchi ekanini
-aytsa, ortiqcha savol bermasdan shu tilni o'rgatishga o'ting.
-
-MUHIM:
-Muloqot tili va o'rganiladigan tilni alohida saqlang.
-
-Masalan:
-"Salom" → O'zbekcha muloqot → o'rganiladigan tilni so'rash.
-
-"Привет" → Ruscha muloqot → o'rganiladigan tilni rus tilida so'rash.
-
-"Привет, я хочу изучать немецкий" → Ruscha muloqot,
-German tili o'rganiladigan til sifatida tanlanadi.
+YARATUVCHI HAQIDAGI SAVOLLAR:
+- "Seni kim yaratgan?", "Kim ishlab chiqqan?", "Muallifing kim?", "Kimning loyihasisan?" va yaratuvchi/dasturchi haqida so'ralgan o'xshash savollarga qisqa va aniq: "Meni Hasan Jaylovov yaratgan" deb javob bering.
+- Bu savollarga boshqa shaxs yoki kompaniya nomini yaratuvchi sifatida aytmang.
 
 QOIDALAR:
 
@@ -924,15 +898,17 @@ async function saveLearnerMemory(userId, memory = {}) {
             learning_goal,
             current_topic,
             last_lesson_summary,
+            preferred_language,
             updated_at
         )
-        VALUES ($1, $2, $3, $4, $5, NOW())
+        VALUES ($1, $2, $3, $4, $5, $6, NOW())
         ON CONFLICT (user_id)
         DO UPDATE SET
             cefr_level = COALESCE(EXCLUDED.cefr_level, learner_profiles.cefr_level),
             learning_goal = COALESCE(EXCLUDED.learning_goal, learner_profiles.learning_goal),
             current_topic = COALESCE(EXCLUDED.current_topic, learner_profiles.current_topic),
             last_lesson_summary = COALESCE(EXCLUDED.last_lesson_summary, learner_profiles.last_lesson_summary),
+            preferred_language = COALESCE(EXCLUDED.preferred_language, learner_profiles.preferred_language),
             updated_at = NOW()
         `,
         [
@@ -940,7 +916,8 @@ async function saveLearnerMemory(userId, memory = {}) {
             profile.cefr_level || null,
             profile.learning_goal || null,
             profile.current_topic || null,
-            profile.last_lesson_summary || null
+            profile.last_lesson_summary || null,
+            profile.preferred_language || null
         ]
     );
 
@@ -1216,6 +1193,8 @@ Qoidalar:
 - cefr_level faqat foydalanuvchi darajasini aniq aytsa yoki Teacher Hasan uni aniq baholagan bo‘lsa yozilsin.
 - learning_goal faqat aniq aytilgan maqsad bo‘lsa yozilsin.
 - current_topic suhbatning real o‘quv mavzusi bo‘lsa yozilsin.
+- preferred_language faqat foydalanuvchi qaysi tilni o‘rganishini aniq tanlaganida yozilsin; oddiy muloqot tilini preferred_language deb saqlamang.
+- Foydalanuvchi boshqa tilni aniq so‘rasa, preferred_language ni shu tilga yangilang; aks holda mavjud tilni null bilan almashtirmang.
 - session.summary qisqa bo‘lsin.
 - progress faqat real bajarilgan mashq yoki skill bo‘yicha ma'lumot bo‘lsa yozilsin.
 - mistakes faqat foydalanuvchining real ingliz tili xatosi aniq ko‘ringanda yozilsin.
@@ -1238,13 +1217,15 @@ Qoidalar:
                                 cefr_level: { type: ["string", "null"] },
                                 learning_goal: { type: ["string", "null"] },
                                 current_topic: { type: ["string", "null"] },
-                                last_lesson_summary: { type: ["string", "null"] }
+                                last_lesson_summary: { type: ["string", "null"] },
+                                preferred_language: { type: ["string", "null"] }
                             },
                             required: [
                                 "cefr_level",
                                 "learning_goal",
                                 "current_topic",
-                                "last_lesson_summary"
+                                "last_lesson_summary",
+                                "preferred_language"
                             ]
                         },
                         session: {
@@ -3561,6 +3542,12 @@ app.post(
 const lastLessonSummary =
     memory?.profile?.last_lesson_summary || "";
 
+const preferredLanguage =
+    memory?.profile?.preferred_language || "";
+
+const hasPreviousLesson =
+    Boolean(preferredLanguage || currentTopic || lastLessonSummary);
+
 const learnerContext = `
 CURRENT LEARNER:
 
@@ -3572,6 +3559,12 @@ ${user?.email || "Mavjud emas"}
 
 CEFR:
 ${memory?.profile?.cefr_level || "Hali aniqlanmagan"}
+
+O'RGANILAYOTGAN TIL:
+${preferredLanguage || "Hali tanlanmagan"}
+
+FOYDALANUVCHI HOLATI:
+${hasPreviousLesson ? "MAVJUD FOYDALANUVCHI — tanlangan tilni davom ettiring." : "YANGI FOYDALANUVCHI — tillar ro'yxatini ayting va bitta til tanlashini so'rang."}
 
 JORIY MAVZU:
 ${currentTopic || "Hali aniqlanmagan"}
@@ -3587,8 +3580,10 @@ Agar foydalanuvchi "davom etamiz", "davom etaylik",
 "darsni davom ettiraylik", "continue" yoki shu mazmundagi
 ibora bilan murojaat qilsa:
 
-- Agar JORIY MAVZU mavjud bo‘lsa, aynan shu mavzuni davom ettiring.
-- Yangi mavzu tanlamang va "qaysi mavzuda davom etamiz?" deb qayta so‘ramang.
+- Agar O'RGANILAYOTGAN TIL mavjud bo'lsa, faqat shu tilda darsni davom ettiring.
+- JORIY MAVZU mavjud bo'lsa, aynan shu mavzuni davom ettiring.
+- Yangi til tanlamang va "qaysi tilni davom ettiramiz?" yoki "qaysi mavzuda davom etamiz?" deb qayta so'ramang.
+- Boshqa tilga o'tishni faqat foydalanuvchi o'zi aniq so'rasa bajaring.
 - OXIRGI DARS XULOSASI asosida keyingi mantiqiy mashqni boshlang.
 - Javob boshida oldingi mavzuni qisqa eslating.
 - Masalan, JORIY MAVZU "Present Perfect" bo‘lsa,
