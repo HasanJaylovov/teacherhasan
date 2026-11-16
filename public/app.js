@@ -36,6 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const voiceAvatars = Array.from(document.querySelectorAll(".avatar"));
     const voiceStage = document.getElementById("voiceStage");
     const voiceStageLog = document.getElementById("voiceStageLog");
+    const voiceStageSpeaker = document.getElementById("voiceStageSpeaker");
     const voiceStageClose = document.getElementById("voiceStageClose");
     const voiceStageReopen = document.getElementById("voiceStageReopen");
     let voiceMicLevel = 0;
@@ -66,6 +67,11 @@ document.addEventListener("DOMContentLoaded", () => {
     function renderVoiceVisualizer() {
         const normalized = Math.max(voiceMicLevel, voiceTeacherLevel);
         const speaker = voiceTeacherLevel >= voiceMicLevel && voiceTeacherLevel > 0.035 ? "teacher" : "user";
+        if (voiceStageSpeaker) {
+            voiceStageSpeaker.textContent = normalized <= 0.035
+                ? "Tinglashga tayyor"
+                : speaker === "teacher" ? "Teacher Hasan gapiryapti" : "Siz gapiryapsiz";
+        }
         voiceAvatars.forEach((avatar) => {
             avatar.style.setProperty("--voice-scale", String(1 + normalized * 0.22));
             avatar.style.setProperty("--voice-glow", String(0.12 + normalized * 0.72));
@@ -88,6 +94,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function createVoiceMessage(role) {
         if (!voiceStageLog) return null;
+        const emptyState = voiceStageLog.querySelector(".voice-stage-empty");
+        if (emptyState) emptyState.remove();
         const article = document.createElement("article");
         article.className = "voice-message voice-message-" + role;
         const heading = document.createElement("div");
