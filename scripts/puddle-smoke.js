@@ -12,4 +12,17 @@ for(const feature of ["th_auth_token","Authorization","data-prompt","serviceWork
 if(/Upper Intermediate.{0,30}75%|75%.{0,30}Upper Intermediate/.test(html))throw Error("Found demo learner progress in homepage");
 const manifest=JSON.parse(fs.readFileSync(path.join(root,"manifest.json"),"utf8"));
 if(!manifest.name||!manifest.start_url||!manifest.icons?.length)throw Error("PWA manifest incomplete");
+
+// Legacy Voice AI and Speaking Exam integration contracts.
+const legacyVoice=fs.readFileSync(path.join(process.cwd(),"public/app.js"),"utf8");
+const legacyServer=fs.readFileSync(path.join(process.cwd(),"server.js"),"utf8");
+const speaking=fs.readFileSync(path.join(process.cwd(),"public/speaking-exam.html"),"utf8");
+for(const feature of ['fetch("/api/live-token"','client.live.connect','function stopTeacher','startBtn.addEventListener','stopBtn.addEventListener']){
+ if(!legacyVoice.includes(feature))throw Error("Legacy Voice AI integration missing: "+feature);
+}
+if(!html.includes('href="/"')||!js.includes('location.href="/"'))throw Error("PWA Voice AI shortcut must open the legacy live voice app");
+if(!legacyServer.includes('"/api/live-token"')||!legacyServer.includes('token:')||!legacyServer.includes('model:'))throw Error("Live token API contract missing");
+if(!legacyServer.includes('"/api/speaking/upload"'))throw Error("Speaking audio upload API missing");
+if(!speaking.includes("AI baholash va CEFR score hozircha mavjud emas"))throw Error("Speaking Practice must disclose upload-only status until AI scoring exists");
+
 console.log("Smoke check passed: "+required.length+" assets, "+mustHaveIds.length+" UI hooks, API auth/chat, PWA manifest.");
