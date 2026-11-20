@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<html lang="uz"> <head>     <meta charset="UTF-8">     <meta name="viewport" content="width=device-width, initial-scale=1.0">     <title>Teacher Hasan — CEFR Speaking Exam</title>
+<html lang="uz"> <head>     <meta charset="UTF-8">     <meta name="viewport" content="width=device-width, initial-scale=1.0">     <title>Teacher Hasan — Speaking Practice</title>
 
 ```
 <link rel="stylesheet" href="/styles.css">
@@ -135,8 +135,9 @@
 <div class="exam-card">
 
     <div class="exam-title">
-        <h1>🎤 CEFR Speaking Exam</h1>
-        <p>Teacher Hasan — AI Speaking Assessment</p>
+        <h1>🎤 Speaking Practice</h1>
+        <p>Teacher Hasan — audio yozib olish mashqi</p>
+        <p style="margin-top:10px;color:#ffd98a;font-size:14px">Eslatma: hozircha audio serverga yuboriladi, lekin AI transkripsiya va CEFR score hisoblanmaydi.</p>
     </div>
 
     <!-- LEVEL -->
@@ -202,10 +203,10 @@
 
         <div class="question-box">
 
-            <h2>🎉 Speaking imtihoni tugadi</h2>
+            <h2>🎉 Speaking mashqi yakunlandi</h2>
 
             <p id="resultMessage">
-                Javoblaringiz AI tomonidan tahlil qilinadi.
+                Audio javoblaringiz serverga yuboriladi. Hozircha AI baholash mavjud emas.
             </p>
 
         </div>
@@ -270,6 +271,7 @@ let timerInterval = null;
 let mediaRecorder = null;
 let audioChunks = [];
 let recordings = [];
+let evaluations = [];
 
 const levelButtons =
     document.querySelectorAll(".level-btn");
@@ -334,6 +336,7 @@ startExamBtn.addEventListener("click", () => {
     currentQuestion = 0;
 
     recordings = [];
+    evaluations = [];
 
     levelSection.classList.add("hidden");
 
@@ -577,26 +580,30 @@ async function finishExam() {
                     .json()
                     .catch(() => ({}));
 
-            if (!response.ok) {
-                throw new Error(
-                    data.error ||
-                    `Audio ${i + 1} yuborilmadi.`
-                );
+            if (!response.ok || !data.success || !data.evaluated || !data.evaluation) {
+                throw new Error(data.error || "AI baholash natijasi olinmadi.");
             }
+            evaluations.push(data.evaluation);
+            examStatus.textContent = "AI tahlili: " + (i + 1) + "/" + recordings.length;
 
-            console.log(
-                "✅ Speaking audio uploaded:",
-                i + 1,
-                data
-            );
         }
 
         examSection.classList.add("hidden");
 
         resultSection.classList.remove("hidden");
 
-        resultMessage.textContent =
-            `${recordings.length} ta javob muvaffaqiyatli serverga yuborildi.`;
+        const fields = ["grammar", "vocabulary", "fluency", "pronunciation", "overall"];
+        const labels = { grammar: "Grammar", vocabulary: "Vocabulary", fluency: "Fluency", pronunciation: "Pronunciation", overall: "Overall" };
+        const average = key => Math.round(evaluations.reduce((sum, item) => sum + Number(item[key] || 0), 0) / Math.max(1, evaluations.length));
+        const lines = ["AI Speaking natijasi — " + selectedLevel];
+        fields.forEach(key => lines.push(labels[key] + ": " + average(key) + "/100"));
+        evaluations.forEach((item, index) => {
+            lines.push("", "Savol " + (index + 1) + ": " + item.feedback, "Transkript: " + (item.transcript || "Aniqlanmadi"));
+            if (item.strengths.length) lines.push("Kuchli tomonlar: " + item.strengths.join("; "));
+            if (item.improvements.length) lines.push("Yaxshilash: " + item.improvements.join("; "));
+            if (item.correctedVersion) lines.push("Tuzatilgan variant: " + item.correctedVersion);
+        });
+        resultMessage.textContent = lines.join("\n");
 
     } catch (error) {
 
