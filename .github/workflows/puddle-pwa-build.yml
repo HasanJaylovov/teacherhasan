@@ -1,0 +1,35 @@
+name: TeacherHasan PWA Build
+on:
+  push:
+    branches: [redesign/puddle-pwa]
+    paths: ["public/puddle/**", ".github/workflows/puddle-pwa-build.yml"]
+  pull_request:
+    paths: ["public/puddle/**", ".github/workflows/puddle-pwa-build.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate-and-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate PWA files
+        run: |
+          test -s public/puddle/index.html
+          test -s public/puddle/styles.css
+          test -s public/puddle/app.js
+          test -s public/puddle/manifest.json
+          test -s public/puddle/sw.js
+          node --check public/puddle/app.js
+          node -e "const m=require('./public/puddle/manifest.json'); if(!m.name || !m.start_url || !m.icons?.length) process.exit(1)"
+      - name: Package PWA artifact
+        run: |
+          mkdir -p build
+          cp -R public/puddle build/teacherhasan-puddle
+          cd build
+          zip -r teacherhasan-puddle-pwa.zip teacherhasan-puddle
+      - uses: actions/upload-artifact@v4
+        with:
+          name: teacherhasan-puddle-pwa
+          path: build/teacherhasan-puddle-pwa.zip
+          retention-days: 14
