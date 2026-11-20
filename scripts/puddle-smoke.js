@@ -7,6 +7,7 @@ const html=fs.readFileSync(path.join(root,"index.html"),"utf8"),js=fs.readFileSy
 const mustHaveIds=["homeView","chatView","practiceView","profileView","chatMessages","chatForm","chatInput","sendBtn","accountAccessCard","learnerName","profileName","profileEmail","accessTitle","accessBadge","accessProgress","menuToggle","themeToggle","menuLogout","clearChat","voiceShortcut"];
 for(const id of mustHaveIds){if(!html.includes('id="'+id+'"'))throw Error("Required UI id missing: "+id);}
 for(const route of ["/api/chat","/api/me","/api/auth/logout"]){if(!js.includes(route))throw Error("API integration missing: "+route);}
+for(const localPage of ["./english-practice.html","./cefr-assessment.html","./video-lessons.html","./reading.html","./listening.html"]){if(!html.includes(`href="${localPage}"`))throw Error("PWA local route missing: "+localPage);if(!fs.existsSync(path.join(root,localPage)))throw Error("PWA target file missing: "+localPage);}
 for(const feature of ["th_auth_token","Authorization","data-prompt","serviceWorker.register"]){if(!js.includes(feature))throw Error("App behavior missing: "+feature);}
 if(/Upper Intermediate.{0,30}75%|75%.{0,30}Upper Intermediate/.test(html))throw Error("Found demo learner progress in homepage");
 const manifest=JSON.parse(fs.readFileSync(path.join(root,"manifest.json"),"utf8"));
