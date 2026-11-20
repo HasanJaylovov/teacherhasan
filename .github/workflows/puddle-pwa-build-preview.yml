@@ -20,6 +20,7 @@ jobs:
             test -s "public/puddle-redesign/$file"
           done
           node --check public/puddle-redesign/app.js
+          node scripts/puddle-smoke.js
           node -e "const m=require('./public/puddle-redesign/manifest.json'); if(!m.name || !m.start_url || !m.icons?.length) process.exit(1)"
           grep -q 'fetch("/api/chat"' public/puddle-redesign/app.js
           grep -q 'fetch("/api/me"' public/puddle-redesign/app.js
