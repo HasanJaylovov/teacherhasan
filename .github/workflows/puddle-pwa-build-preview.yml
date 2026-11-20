@@ -4,7 +4,7 @@ on:
     branches: [redesign/puddle-pwa]
     paths: ["public/puddle-redesign/**", "public/app.js", "public/speaking-exam.html", "server.js", "scripts/puddle-smoke.js", ".github/workflows/puddle-pwa-build-preview.yml"]
   pull_request:
-    paths: ["public/puddle-redesign/**", ".github/workflows/puddle-pwa-build-preview.yml"]
+    paths: ["public/puddle-redesign/**", "public/speaking-exam.html", "server.js", ".github/workflows/puddle-pwa-build-preview.yml"]
   workflow_dispatch:
 permissions:
   contents: read
@@ -25,6 +25,10 @@ jobs:
           grep -q 'fetch("/api/chat"' public/puddle-redesign/app.js
           grep -q 'fetch("/api/me"' public/puddle-redesign/app.js
           grep -q 'th_auth_token' public/puddle-redesign/app.js
+          node --check server.js
+          grep -q 'evaluated: true' server.js
+          grep -q 'data.evaluated' public/speaking-exam.html
+          node -e "const fs=require('fs'); const h=fs.readFileSync('public/speaking-exam.html','utf8'); const a=h.lastIndexOf('<script>')+8; const b=h.lastIndexOf('</script>'); if(a<8 || b<a) throw Error('Speaking script missing'); new Function(h.slice(a,b));"
       - name: Package PWA
         run: |
           mkdir -p build
