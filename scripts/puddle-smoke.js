@@ -1,4 +1,5 @@
-const fs=require("fs"),path=require("path");
+import fs from 'node:fs';
+import path from 'node:path';
 const root=path.join(process.cwd(),"public/puddle-redesign");
 const required=["index.html","styles.css","app.js","manifest.json","sw.js","reading.html","listening.html","english-practice.html","cefr-assessment.html","video-lessons.html"];
 for(const f of required){if(!fs.existsSync(path.join(root,f))||!fs.statSync(path.join(root,f)).size)throw Error("Missing/empty: "+f);}
