@@ -23,6 +23,7 @@ for(const feature of ['fetch("/api/live-token"','client.live.connect','function 
 if(!html.includes('href="/"')||!js.includes('location.href="/"'))throw Error("PWA Voice AI shortcut must open the legacy live voice app");
 if(!legacyServer.includes('"/api/live-token"')||!legacyServer.includes('token:')||!legacyServer.includes('model:'))throw Error("Live token API contract missing");
 if(!legacyServer.includes('"/api/speaking/upload"'))throw Error("Speaking audio upload API missing");
-if(!speaking.includes("AI baholash va CEFR score hozircha mavjud emas"))throw Error("Speaking Practice must disclose upload-only status until AI scoring exists");
+if(!legacyServer.includes("evaluated: true")||!legacyServer.includes("responseMimeType"))throw Error("Gemini Speaking assessment response contract missing");
+if(!speaking.includes("data.evaluated")||!speaking.includes("AI Speaking natijasi"))throw Error("Speaking Exam UI must display real AI evaluation results");
 
 console.log("Smoke check passed: "+required.length+" assets, "+mustHaveIds.length+" UI hooks, API auth/chat, PWA manifest.");
