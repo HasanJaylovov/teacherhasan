@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<html lang="uz"> <head>     <meta charset="UTF-8">     <meta name="viewport" content="width=device-width, initial-scale=1.0">     <title>Teacher Hasan — CEFR Speaking Exam</title>
+<html lang="uz"> <head>     <meta charset="UTF-8">     <meta name="viewport" content="width=device-width, initial-scale=1.0">     <title>Teacher Hasan — Speaking Practice</title>
 
 ```
 <link rel="stylesheet" href="/styles.css">
@@ -135,8 +135,9 @@
 <div class="exam-card">
 
     <div class="exam-title">
-        <h1>🎤 CEFR Speaking Exam</h1>
-        <p>Teacher Hasan — AI Speaking Assessment</p>
+        <h1>🎤 Speaking Practice</h1>
+        <p>Teacher Hasan — audio yozib olish mashqi</p>
+        <p style="margin-top:10px;color:#ffd98a;font-size:14px">Eslatma: hozircha audio serverga yuboriladi, lekin AI transkripsiya va CEFR score hisoblanmaydi.</p>
     </div>
 
     <!-- LEVEL -->
@@ -202,10 +203,10 @@
 
         <div class="question-box">
 
-            <h2>🎉 Speaking imtihoni tugadi</h2>
+            <h2>🎉 Speaking mashqi yakunlandi</h2>
 
             <p id="resultMessage">
-                Javoblaringiz AI tomonidan tahlil qilinadi.
+                Audio javoblaringiz serverga yuboriladi. Hozircha AI baholash mavjud emas.
             </p>
 
         </div>
@@ -596,7 +597,7 @@ async function finishExam() {
         resultSection.classList.remove("hidden");
 
         resultMessage.textContent =
-            `${recordings.length} ta javob muvaffaqiyatli serverga yuborildi.`;
+            `${recordings.length} ta audio javob serverga yuborildi. AI baholash va CEFR score hozircha mavjud emas.`;
 
     } catch (error) {
 
