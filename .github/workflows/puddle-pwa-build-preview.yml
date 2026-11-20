@@ -2,7 +2,7 @@ name: TeacherHasan PWA Build
 on:
   push:
     branches: [redesign/puddle-pwa]
-    paths: ["public/puddle-redesign/**", ".github/workflows/puddle-pwa-build-preview.yml"]
+    paths: ["public/puddle-redesign/**", "public/app.js", "public/speaking-exam.html", "server.js", "scripts/puddle-smoke.js", ".github/workflows/puddle-pwa-build-preview.yml"]
   pull_request:
     paths: ["public/puddle-redesign/**", ".github/workflows/puddle-pwa-build-preview.yml"]
   workflow_dispatch:
