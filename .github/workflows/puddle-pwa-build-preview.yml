@@ -13,15 +13,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate PWA files
+      - name: Validate app files
         run: |
-          test -s public/puddle-redesign/index.html
-          test -s public/puddle-redesign/styles.css
-          test -s public/puddle-redesign/app.js
-          test -s public/puddle-redesign/manifest.json
-          test -s public/puddle-redesign/sw.js
+          set -e
+          for file in index.html styles.css app.js manifest.json sw.js reading.html listening.html english-practice.html cefr-assessment.html video-lessons.html; do
+            test -s "public/puddle-redesign/$file"
+          done
           node --check public/puddle-redesign/app.js
           node -e "const m=require('./public/puddle-redesign/manifest.json'); if(!m.name || !m.start_url || !m.icons?.length) process.exit(1)"
+          grep -q 'fetch("/api/chat"' public/puddle-redesign/app.js
+          grep -q 'fetch("/api/me"' public/puddle-redesign/app.js
+          grep -q 'th_auth_token' public/puddle-redesign/app.js
       - name: Package PWA
         run: |
           mkdir -p build
