@@ -3400,72 +3400,32 @@ app.post(
     upload.single("audio"),
     async (req, res) => {
         try {
-            const user =
-                await getAuthenticatedUser(req);
-
-            if (!user?.id) {
-                return res.status(401).json({
-                    error:
-                        "Speaking Exam uchun Login qiling."
-                });
-            }
-
-            if (!req.file) {
-                return res.status(400).json({
-                    error:
-                        "Audio fayl yuborilmadi."
-                });
-            }
-
-            const allowedMimeTypes = [
-                "audio/webm",
-                "audio/webm;codecs=opus",
-                "audio/ogg",
-                "audio/mp4",
-                "audio/mpeg",
-                "audio/wav"
-            ];
-
-            if (
-                !allowedMimeTypes.includes(
-                    req.file.mimetype
-                )
-            ) {
-                return res.status(400).json({
-                    error:
-                        "Audio formati qo‘llab-quvvatlanmaydi."
-                });
-            }
-
-            console.log(
-                "🎤 SPEAKING AUDIO RECEIVED:",
-                {
-                    userId: user.id,
-                    mimeType: req.file.mimetype,
-                    size: req.file.size
-                }
-            );
-
-            return res.json({
-                success: true,
-                received: true,
-                mimeType: req.file.mimetype,
-                size: req.file.size
+            const user = await getAuthenticatedUser(req);
+            if (!user?.id) return res.status(401).json({ success: false, error: "Speaking Exam uchun Login qiling." });
+            if (!ai || !GEMINI_API_KEY) return res.status(503).json({ success: false, error: "AI baholash xizmati hozir mavjud emas." });
+            if (!req.file || !req.file.size) return res.status(400).json({ success: false, error: "Audio fayl yuborilmadi." });
+            const allowed = ["audio/webm", "audio/ogg", "audio/mp4", "audio/mpeg", "audio/wav"];
+            const mimeType = String(req.file.mimetype || "").split(";")[0].toLowerCase();
+            if (!allowed.includes(mimeType)) return res.status(400).json({ success: false, error: "Audio formati qo‘llab-quvvatlanmaydi." });
+            const level = String(req.body?.level || "").toUpperCase();
+            const question = String(req.body?.question || "").trim().slice(0, 1000);
+            if (!["A1", "A2", "B1", "B2", "C1"].includes(level) || !question) return res.status(400).json({ success: false, error: "CEFR daraja yoki savol noto‘g‘ri." });
+            const prompt = "Assess this English speaking audio at CEFR " + level + ". Question: " + question + ". Return only JSON with keys transcript, grammar, vocabulary, fluency, pronunciation, overall, feedback, strengths, improvements, correctedVersion. Scores must be integers 0-100 relative to the selected level. Do not judge accent identity. If silent or unintelligible, return zero scores and say a clear recording is needed. This is practice feedback, not official CEFR certification.";
+            const result = await ai.models.generateContent({
+                model: CHAT_MODEL,
+                contents: [{ role: "user", parts: [{ text: prompt }, { inlineData: { mimeType, data: req.file.buffer.toString("base64") } }] }],
+                config: { responseMimeType: "application/json" }
             });
+            const parsed = JSON.parse(String(result.text || "").trim());
+            const score = value => Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
+            const evaluation = { transcript: String(parsed.transcript || ""), grammar: score(parsed.grammar), vocabulary: score(parsed.vocabulary), fluency: score(parsed.fluency), pronunciation: score(parsed.pronunciation), overall: score(parsed.overall), feedback: String(parsed.feedback || ""), strengths: Array.isArray(parsed.strengths) ? parsed.strengths.slice(0,4).map(String) : [], improvements: Array.isArray(parsed.improvements) ? parsed.improvements.slice(0,4).map(String) : [], correctedVersion: String(parsed.correctedVersion || "") };
+            return res.json({ success: true, evaluated: true, level, evaluation });
         } catch (error) {
-            console.error(
-                "❌ Speaking audio upload error:",
-                error?.message || error
-            );
-
-            return res.status(500).json({
-                error:
-                    "Audio qabul qilishda xatolik."
-            });
+            console.error("Speaking AI assessment error:", error?.message || error);
+            return res.status(502).json({ success: false, error: "Speaking javobini AI tahlil qila olmadi. Qayta urinib ko‘ring." });
         }
     }
 );
-
 // ==============================================
 // NORMAL CHAT
 // ==============================================
