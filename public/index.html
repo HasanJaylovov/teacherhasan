@@ -1087,6 +1087,16 @@
         .avatar.voice-active::before {
             border-color: rgba(205, 215, 255, .96);
         }
+        .voice-wave{height:42px;max-width:420px;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;gap:5px;--wave-level:.5}
+        .voice-wave span{width:5px;height:calc(8px + var(--wave-level)*22px);min-height:7px;border-radius:9px;background:linear-gradient(180deg,#a7b6ff,#657eea);opacity:.55;transform:scaleY(.55);transition:height 90ms ease,opacity 90ms ease,transform 90ms ease}
+        .voice-wave span:nth-child(3n){height:calc(12px + var(--wave-level)*30px)}.voice-wave span:nth-child(3n + 1){height:calc(9px + var(--wave-level)*20px)}
+        .voice-wave.user-active span{opacity:.95;animation:voiceWaveUser .48s ease-in-out infinite alternate}
+        .voice-wave.teacher-active span{opacity:1;background:linear-gradient(180deg,#b6f8e8,#59cbb4);animation:voiceWaveTeacher .38s ease-in-out infinite alternate}
+        .voice-wave span:nth-child(2n){animation-delay:-.18s!important}.voice-wave span:nth-child(3n){animation-delay:-.31s!important}
+        @keyframes voiceWaveUser{from{transform:scaleY(.35)}to{transform:scaleY(1.1)}}@keyframes voiceWaveTeacher{from{transform:scaleY(.4)}to{transform:scaleY(1.5)}}
+        .voice-activity-label{min-height:18px;margin:0 auto 10px;text-align:center;color:#aeb7d0;font-size:11px;letter-spacing:.04em}
+        @media(max-width:680px){.voice-wave{height:28px;gap:3px}.voice-wave span{width:4px}.voice-activity-label{font-size:10px}}
+        @media(prefers-reduced-motion:reduce){.voice-wave span{animation:none!important}}
         @media (prefers-reduced-motion: reduce) {
             .avatar, .avatar::before, .avatar::after { transition: none; }
         }
@@ -1792,6 +1802,10 @@
                     <div class="avatar">
                         👨‍🏫
                     </div>
+                    <div class="voice-wave" id="voiceWave" role="img" aria-label="Ovoz faolligi vizualizatsiyasi">
+                        <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+                    </div>
+                    <p class="voice-activity-label" id="voiceActivityLabel" aria-live="polite">Ovozli suhbatga tayyor</p>
 
                     <h1>
                         Teacher Hasan AI
