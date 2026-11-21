@@ -166,7 +166,7 @@ const legacyVoiceHtml = read("public/index.html");
 for (const id of ["startBtn", "stopBtn", "status", "transcript", "menuButton", "sideMenu", "menuOverlay", "closeMenu"]) {
     if (!legacyVoiceHtml.includes('id="' + id + '"')) throw Error("Legacy Voice AI DOM hook missing: " + id);
 }
-for (const visual of ["puddle-voice-redesign", "--voice-accent", ".teacher-hero", "#startBtn", "#stopBtn", "#transcript", "@media (max-width: 700px)"]) {
+for (const visual of ["puddle-voice-redesign", "--voice-accent", ".teacher-hero", "#startBtn", "#stopBtn", "#transcript", "@media (max-width: 700px)", "aria-label=\"Ovozli suhbat\"", "role=\"log\"", "aria-live=\"polite\"", "role=\"status\"", ":focus-visible"]) {
     if (!legacyVoiceHtml.includes(visual)) throw Error("Puddle Voice AI visual layer missing: " + visual);
 }
 for (const liveHook of ["startBtn.addEventListener", "stopBtn.addEventListener", "function startTeacher", "function stopTeacher", 'fetch("/api/live-token"', "client.live.connect", "getUserMedia", "createBufferSource"]) {
