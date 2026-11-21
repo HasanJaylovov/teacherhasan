@@ -1088,6 +1088,17 @@ body{min-height:100dvh;display:flex;align-items:stretch;justify-content:center}
 .controls{flex:0 0 auto;padding-bottom:max(14px,env(safe-area-inset-bottom))}
 @media(max-width:700px){.app{height:calc(100dvh - 12px);max-height:calc(100dvh - 12px);min-height:0}.conversation{padding-bottom:2px}.teacher-orb-wrap{min-height:clamp(170px,25vh,225px)}#transcript{max-height:none}.controls{padding-bottom:max(12px,env(safe-area-inset-bottom))}}
 @media(prefers-reduced-motion:reduce){#transcript{scroll-behavior:auto}}
+
+.teacher-hero.voice-assessment{grid-template-rows:64px 32px minmax(145px,1fr) minmax(116px,auto) 18px!important;min-height:0}
+.va-header{grid-template-columns:48px 1fr auto!important;gap:10px}
+.va-header-spacer:first-child{width:48px}
+.va-language-switcher{justify-self:end;gap:2px;padding:3px}
+.va-language-switcher .language-button{padding:7px 8px;font-size:11px}
+#transcript.va-chat-panel{display:flex!important;visibility:visible!important;opacity:1!important;position:relative;z-index:2;flex:0 1 auto;min-height:116px;height:clamp(116px,19vh,190px);max-height:190px;width:min(100%,540px);margin:0 auto 3px;overflow-y:auto;white-space:normal}
+.va-chat-panel .chat-bubble{flex:0 0 auto}
+.va-prompt{font-size:13px;min-height:18px}
+@media(max-width:520px){.teacher-hero.voice-assessment{grid-template-rows:60px 28px minmax(130px,1fr) minmax(110px,auto) 16px!important}.va-header{gap:6px}.va-language-switcher .language-button{padding:6px 7px;font-size:10px}#transcript.va-chat-panel{height:clamp(110px,18vh,155px);min-height:110px;max-height:155px}}
+
 </style>
     <style id="voice-reactive-visualizer">
         .avatar {
@@ -1432,7 +1443,7 @@ body{min-height:100dvh;display:flex;align-items:stretch;justify-content:center}
 html,body{width:100%;height:100%;min-height:100%;overflow:hidden}
 body{background:radial-gradient(ellipse at 50% 38%,#40205d 0%,#251137 43%,#160d27 100%)!important;color:#f8f3ff}
 body::before{content:"";position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at 84% 8%,rgba(177,68,197,.23),transparent 32%),radial-gradient(ellipse at 4% 78%,rgba(75,62,178,.18),transparent 35%);z-index:0}
-.menu-button{display:none!important}
+.menu-button{display:flex!important;position:fixed;top:14px;left:14px;width:48px;height:48px;border-radius:14px;z-index:2100;font-size:0}.menu-button svg{width:23px;height:23px;stroke:#f8edff;stroke-width:2;stroke-linecap:round;fill:none}.topbar{display:none!important}
 .app{position:relative;z-index:1;width:100%;height:100dvh;min-height:100dvh;margin:0;border:1px solid rgba(222,181,255,.3);border-radius:22px;background:linear-gradient(145deg,rgba(37,17,57,.82),rgba(25,13,42,.92));box-shadow:none;backdrop-filter:blur(24px);overflow:hidden}
 .main{min-height:0;height:100%;overflow:hidden}
 .conversation{position:relative;min-height:0;height:100%;padding:0 clamp(16px,4vw,34px) 0;overflow:hidden;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start}
@@ -1448,7 +1459,7 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;background:ra
 .va-caption{width:min(100%,460px);margin:0 auto 4px;padding:0 8px;color:#f4edf9;font-size:clamp(16px,4.5vw,22px);font-weight:550;line-height:1.25;letter-spacing:-.025em;text-align:center;text-wrap:balance}
 .va-transcript-slot{min-height:22px;width:100%;display:flex;justify-content:center;align-items:center}
 .voice-activity-label{min-height:18px;margin:0;color:#cbb5dc;font-size:11px;letter-spacing:.035em}
-#transcript{display:none;width:min(100%,540px);max-width:540px;min-height:0;max-height:22dvh;flex:0 1 auto;margin:8px auto;padding:10px 8px;overflow:auto;background:rgba(12,8,24,.55);border:1px solid rgba(211,160,255,.15);border-radius:14px}
+#transcript.va-chat-panel{display:flex!important;width:min(100%,540px);max-width:540px;min-height:0;max-height:22dvh;flex:0 1 auto;margin:8px auto;padding:10px 8px;overflow:auto;background:rgba(12,8,24,.55);border:1px solid rgba(211,160,255,.15);border-radius:14px}
 #transcript.va-visible{display:flex}
 .chat-bubble{font-size:13px;padding:9px 12px}
 .status-container{width:100%;margin:0 auto 2px;padding:0;flex:0 0 auto;min-height:20px;display:flex;justify-content:center}
@@ -1507,7 +1518,7 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;background:ra
         aria-label="Menu"
         aria-expanded="false"
     >
-        ☰
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
     </button>
 
 
@@ -1961,9 +1972,9 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;background:ra
 
                 <div class="teacher-hero voice-assessment">
                     <div class="va-header">
-                        <button class="va-back" id="voiceBack" type="button" aria-label="Orqaga">‹</button>
-                        <div class="va-title">Voice Assessment</div>
-                        <div class="va-header-spacer"></div>
+                        <span class="va-header-spacer"></span>
+                        <div class="va-title" data-voice-title>Ovozli suhbat</div>
+                        <div class="language-switcher va-language-switcher" aria-label="Interfeys tili"><button type="button" class="language-button" data-ui-lang="uz">UZ</button><button type="button" class="language-button" data-ui-lang="ru">RU</button><button type="button" class="language-button" data-ui-lang="en">EN</button></div>
                     </div>
                     <div class="va-prompt" id="vaPrompt">Go ahead, I'm listening...</div>
                     <div class="va-organic-wrap" id="teacherOrb" role="img" aria-label="Teacher Hasan AI ovoz vizualizatsiyasi">
