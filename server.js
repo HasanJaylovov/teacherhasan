@@ -1062,21 +1062,25 @@ async function updateLearnerMemoryFromChat(userId, message, reply, existingMemor
     if (!pool || !userId) return null;
 
     const profile = existingMemory?.profile || {};
-    const normalizedMessage = String(message || "").trim();
-    const normalizedReply = String(reply || "").trim();
+    const normalizedMessage = String(message || "").trim().slice(0, 12000);
+    const normalizedReply = String(reply || "").trim().slice(0, 12000);
     if (!normalizedMessage || !normalizedReply) return null;
 
+    // Save a deterministic checkpoint without another Gemini request. This
+    // protects the model quota needed for live tutoring and CEFR assessment.
     const topic = profile.current_topic || null;
     const level = profile.cefr_level || null;
     const preferredLanguage =
         detectExplicitLearningLanguage(normalizedMessage) ||
         profile.preferred_language ||
         null;
-    const summary = topic
-        ? `${topic} bo‘yicha dars davom ettirildi. O‘quvchi yangi mashq bajardi va Teacher Hasan javob berdi.`
-        : null;
-
-    if (!topic && !level && !preferredLanguage) return null;
+    const learnerExcerpt = normalizedMessage.replace(/\s+/g, " ").slice(0, 220);
+    const teacherExcerpt = normalizedReply.replace(/\s+/g, " ").slice(0, 260);
+    const summary = [
+        topic ? "Joriy mavzu: " + topic + "." : "Oxirgi mashq/suhbat saqlandi.",
+        "O‘quvchi: " + learnerExcerpt,
+        "Teacher Hasan: " + teacherExcerpt
+    ].join(" ").slice(0, 700);
 
     await pool.query(
         `
@@ -1089,27 +1093,24 @@ async function updateLearnerMemoryFromChat(userId, message, reply, existingMemor
         DO UPDATE SET
             cefr_level = COALESCE(EXCLUDED.cefr_level, learner_profiles.cefr_level),
             current_topic = COALESCE(EXCLUDED.current_topic, learner_profiles.current_topic),
-            last_lesson_summary = COALESCE(EXCLUDED.last_lesson_summary, learner_profiles.last_lesson_summary),
+            last_lesson_summary = EXCLUDED.last_lesson_summary,
             preferred_language = COALESCE(EXCLUDED.preferred_language, learner_profiles.preferred_language),
             updated_at = NOW()
         `,
         [userId, level, topic, summary, preferredLanguage]
     );
 
-    if (topic) {
-        await pool.query(
-            `
-            INSERT INTO learning_sessions (user_id, topic, level, summary)
-            VALUES ($1, $2, $3, $4)
-            `,
-            [userId, topic, level, summary]
-        );
-    }
+    await pool.query(
+        `
+        INSERT INTO learning_sessions (user_id, topic, level, summary)
+        VALUES ($1, $2, $3, $4)
+        `,
+        [userId, topic || "Chat / Voice practice", level, summary]
+    );
 
-    console.log("💾 LEARNER MEMORY SAVED:", {
-        userId, topic, level, preferredLanguage
+    console.log("💾 LEARNER CHECKPOINT SAVED:", {
+        userId, topic: topic || "Chat / Voice practice", level, preferredLanguage
     });
-
     return { topic, level, summary, preferredLanguage };
 }
 
@@ -3410,17 +3411,25 @@ app.post(
             const question = String(req.body?.question || "").trim().slice(0, 1000);
             if (!["A1", "A2", "B1", "B2", "C1"].includes(level) || !question) return res.status(400).json({ success: false, error: "CEFR daraja yoki savol noto‘g‘ri." });
             const prompt = "Assess this English speaking audio at CEFR " + level + ". Question: " + question + ". Return only JSON with keys transcript, grammar, vocabulary, fluency, pronunciation, overall, feedback, strengths, improvements, correctedVersion. Scores must be integers 0-100 relative to the selected level. Do not judge accent identity. If silent or unintelligible, return zero scores and say a clear recording is needed. This is practice feedback, not official CEFR certification.";
-            const result = await ai.models.generateContent({
+            const result = await generateGeminiWithRetry({
                 model: CHAT_MODEL,
                 contents: [{ role: "user", parts: [{ text: prompt }, { inlineData: { mimeType, data: req.file.buffer.toString("base64") } }] }],
                 config: { responseMimeType: "application/json" }
-            });
+            }, 2);
             const parsed = JSON.parse(String(result.text || "").trim());
             const score = value => Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
             const evaluation = { transcript: String(parsed.transcript || ""), grammar: score(parsed.grammar), vocabulary: score(parsed.vocabulary), fluency: score(parsed.fluency), pronunciation: score(parsed.pronunciation), overall: score(parsed.overall), feedback: String(parsed.feedback || ""), strengths: Array.isArray(parsed.strengths) ? parsed.strengths.slice(0,4).map(String) : [], improvements: Array.isArray(parsed.improvements) ? parsed.improvements.slice(0,4).map(String) : [], correctedVersion: String(parsed.correctedVersion || "") };
             return res.json({ success: true, evaluated: true, level, evaluation });
         } catch (error) {
-            console.error("Speaking AI assessment error:", error?.message || error);
+            const detail = String(error?.message || error || "");
+            const normalized = detail.toLowerCase();
+            console.error("Speaking AI assessment error:", detail);
+            if (normalized.includes("quota") || normalized.includes("resource_exhausted") || normalized.includes("generate_content_free_tier_requests")) {
+                return res.status(429).json({ success: false, error: "Gemini AI kunlik kvotasi vaqtincha tugagan. Javoblaringiz saqlangan; kvota tiklangach baholashni qayta yuboring." });
+            }
+            if (normalized.includes("503") || normalized.includes("unavailable") || normalized.includes("high demand")) {
+                return res.status(503).json({ success: false, error: "AI baholash xizmati vaqtincha band. Bir ozdan keyin qayta urinib ko‘ring." });
+            }
             return res.status(502).json({ success: false, error: "Speaking javobini AI tahlil qila olmadi. Qayta urinib ko‘ring." });
         }
     }
@@ -3641,21 +3650,7 @@ ibora bilan murojaat qilsa:
                 "Javob olinmadi.";
 
             if (user?.id) {
-                const extractedMemory = await extractLearnerMemory(
-                    user.id,
-                    message,
-                    reply,
-                    memory
-                );
-
-                if (!extractedMemory) {
-                    await updateLearnerMemoryFromChat(
-                        user.id,
-                        message,
-                        reply,
-                        memory
-                    );
-                }
+                await updateLearnerMemoryFromChat(user.id, message, reply, memory);
             }
 
             return res.json({
@@ -3713,21 +3708,12 @@ app.post(
             }
 
             const memory = await getLearnerMemory(user.id);
-            let saved = await extractLearnerMemory(
+            const saved = await updateLearnerMemoryFromChat(
                 user.id,
                 message,
                 reply,
                 memory
             );
-
-            if (!saved) {
-                saved = await updateLearnerMemoryFromChat(
-                    user.id,
-                    message,
-                    reply,
-                    memory
-                );
-            }
 
             return res.json({
                 success: true,
