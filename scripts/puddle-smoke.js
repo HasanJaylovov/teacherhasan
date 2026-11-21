@@ -155,8 +155,13 @@ for (const feature of ["new URLSearchParams", "selectedVideoLesson", "VIDEO LESS
 if (!videoLessons.includes("video fayllar mavjudligini anglatmaydi")) {
     throw Error("Video lesson page must disclose that the catalog is not video playback");
 }
-if (!voicePage.includes('src="/"') || !voicePage.includes('allow="microphone; autoplay"') || !voicePage.includes('./index.html')) {
-    throw Error("Voice AI wrapper must preserve the legacy same-origin live client and microphone permissions");
+if (!voicePage.includes('src="/"') || !voicePage.includes('title="Teacher Hasan AI jonli ovozli ustoz"') ||
+    !voicePage.includes('aria-label="Ovozli suhbat oynasi"') || !voicePage.includes('loading="eager"') ||
+    !voicePage.includes('allow="microphone; autoplay"') || !voicePage.includes('./index.html')) {
+    throw Error("Voice AI wrapper must preserve same-origin live client, accessible iframe naming and microphone permissions");
+}
+if (!voicePage.includes("100dvh - 56px") || !voicePage.includes("min-height:0")) {
+    throw Error("Voice AI wrapper must fit short mobile viewports using dynamic viewport units");
 }
 if ((html.match(/href="\.\/voice\.html"/g) || []).length < 3 || !sw.includes('"./voice.html"')) {
     throw Error("PWA Voice AI navigation or offline shell registration missing");
