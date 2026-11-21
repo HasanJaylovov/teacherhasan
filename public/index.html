@@ -1052,7 +1052,26 @@
                 font-size: 11px;
             }
         }
-    </style>
+    
+/* Focused voice-chat screen + transcript bubbles */
+.topbar,.status-container,.footer,.welcome{display:none!important}
+.app{width:min(1180px,calc(100% - 28px));min-height:calc(100dvh - 28px);margin:14px auto;border-radius:26px}
+.conversation{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;padding:clamp(12px,3vh,30px) clamp(12px,4vw,42px) 10px}
+.teacher-hero{width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;flex:0 0 auto}
+.teacher-orb-wrap{min-height:clamp(210px,36vh,370px);margin:0 auto}
+.teacher-orb{width:min(clamp(210px,30vw,320px),68vw)}
+#transcript{width:min(100%,850px);max-width:850px;min-height:0;max-height:none;flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:12px;margin:16px auto 8px;padding:12px 6px;white-space:normal;line-height:1.5;scrollbar-width:thin}
+.chat-bubble{width:fit-content;max-width:min(78%,650px);padding:12px 16px;border-radius:18px;font-size:14px;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere;animation:chatBubbleIn .22s ease-out}
+.chat-bubble.assistant{align-self:flex-start;background:linear-gradient(135deg,rgba(33,43,77,.94),rgba(24,29,53,.94));border:1px solid rgba(145,164,255,.17);border-bottom-left-radius:6px;color:#eef1ff;box-shadow:0 8px 24px rgba(0,0,0,.13)}
+.chat-bubble.user{align-self:flex-end;background:linear-gradient(135deg,rgba(100,120,238,.28),rgba(118,75,162,.25));border:1px solid rgba(146,156,255,.22);border-bottom-right-radius:6px;color:#fff}
+.chat-bubble-label{display:block;font-size:10px;letter-spacing:.04em;text-transform:uppercase;opacity:.66;margin-bottom:4px;font-weight:750}
+@keyframes chatBubbleIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.controls{padding:12px 18px 20px;display:flex;justify-content:center;gap:12px;flex:0 0 auto}
+.control-button{min-width:150px}
+@media(max-width:700px){.app{width:calc(100% - 12px);min-height:calc(100dvh - 12px);margin:6px auto;border-radius:20px}.conversation{padding:8px 8px 4px}.teacher-orb-wrap{min-height:clamp(180px,28vh,260px)}.teacher-orb{width:min(230px,64vw)}#transcript{padding:8px 2px;gap:9px;margin:10px auto 6px}.chat-bubble{max-width:88%;padding:10px 13px;font-size:13px}.controls{padding:10px 10px 14px;gap:8px}.control-button{min-width:0;flex:1;max-width:210px}}
+@media(prefers-reduced-motion:reduce){.chat-bubble{animation:none}}
+
+</style>
     <style id="voice-reactive-visualizer">
         .avatar {
             position: relative;
