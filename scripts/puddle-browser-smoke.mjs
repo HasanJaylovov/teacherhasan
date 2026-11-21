@@ -107,6 +107,7 @@ try {
     assert.equal(await page.locator("#lessonPlayer").isVisible(), true, "Lesson player should open from a catalog card");
     assert.ok((await page.locator("#playerExplain").innerText()).length > 60, "Lesson player should show a real lesson explanation");
 
+    await page.goto("http://127.0.0.1:4173/puddle-redesign/index.html", { waitUntil: "domcontentloaded" });
     assert.equal(await page.locator(".language-chip").count(), 8, "homepage should list all eight supported learning languages");
     assert.deepEqual(await page.locator(".language-chip b").allTextContents(), ["Uzbek", "English", "German", "Arabic", "Russian", "Turkish", "Korean", "Chinese"], "language cards should match the supported eight-language catalog");
     assert.match(await page.locator(".hero-card").innerText(), /8 ta tilni/, "hero should promote eight-language learning");
