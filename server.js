@@ -3490,6 +3490,29 @@ app.post("/api/speaking/results", async (req, res) => {
     }
 });
 
+
+app.get("/api/speaking/results", async (req, res) => {
+    try {
+        const user = await getAuthenticatedUser(req);
+        if (!user?.id) return res.status(401).json({ success: false, error: "Speaking tarixini ko‘rish uchun tizimga kiring." });
+        const result = await pool.query(
+            "SELECT id, result, created_at FROM speaking_results WHERE user_id = $1 ORDER BY created_at DESC LIMIT 10",
+            [user.id]
+        );
+        return res.json({
+            success: true,
+            results: result.rows.map(row => ({
+                id: row.id,
+                result: row.result,
+                createdAt: row.created_at
+            }))
+        });
+    } catch (error) {
+        console.error("Speaking result history error:", error?.message || error);
+        return res.status(500).json({ success: false, error: "Speaking tarixini yuklashda xatolik." });
+    }
+});
+
 // ==============================================
 // NORMAL CHAT
 // ==============================================
