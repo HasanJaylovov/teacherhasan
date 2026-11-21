@@ -171,9 +171,12 @@ if (!listening.includes("speechSynthesis") || !listening.includes("stopAudio") |
     throw Error("Listening playback/check missing");
 }
 
-// Chat history persistence and explicit clearing are wired.
-if (!js.includes("CHAT_STORAGE_KEY") || !js.includes("persistChat()") || !js.includes("restoreChat()") || !js.includes("localStorage.removeItem(CHAT_STORAGE_KEY)")) {
-    throw Error("Puddle chat persistence/clear hooks missing");
+// Chat history persistence is account-scoped and identity lookup failure fails closed.
+if (!js.includes("CHAT_STORAGE_PREFIX") || !js.includes("user_") || !js.includes("setChatIdentity") || !js.includes("chatIdentityReady") || !js.includes("persistChat()") || !js.includes("restoreChat()") || !js.includes("localStorage.removeItem(CHAT_STORAGE_KEY)") || !js.includes("chatIdentityReady=false;CHAT_STORAGE_KEY=null")) {
+    throw Error("Puddle account-scoped chat persistence/clear safety hooks missing");
+}
+if (!legacyServer.includes("user.id") || !legacyServer.includes("authenticated:")) {
+    throw Error("Puddle account chat key must use the actual /api/me identity field");
 }
 
 // Admin uses its own token and protected endpoints, separate from learner auth.
