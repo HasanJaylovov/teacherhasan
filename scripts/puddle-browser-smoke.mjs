@@ -131,7 +131,49 @@ try {
     const voiceOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
     assert.equal(voiceOverflow, false, "mobile Voice AI wrapper should not overflow horizontally");
 
-    console.log("Browser smoke passed: eight-language discovery and first-chat greeting, desktop/mobile navigation, chat API interaction and persistence, clear chat, theme persistence, responsive layout, Voice AI iframe, waveform visualizer and legacy controls.");
+    // Verify focused closed-eye orb conversation layout directly (legacy voice page).
+    await page.goto("http://127.0.0.1:4173/", { waitUntil: "domcontentloaded" });
+    assert.equal(await page.locator("#teacherOrb").isVisible(), true, "closed-eye orb should be visible on the focused voice page");
+    assert.equal(await page.locator("#startBtn").isVisible(), true, "Start control should remain visible");
+    assert.equal(await page.locator("#stopBtn").isVisible(), true, "Stop control should remain visible");
+    assert.equal(await page.locator(".topbar").isVisible(), false, "intro/header copy should be hidden");
+    assert.equal(await page.locator(".welcome").isVisible(), false, "welcome copy should be hidden");
+    const focusedLayout = await page.evaluate(() => {
+        const app = document.querySelector(".app");
+        const chat = document.querySelector("#transcript");
+        const controls = document.querySelector(".controls");
+        return {
+            appHeight: app.getBoundingClientRect().height,
+            viewportHeight: window.innerHeight,
+            chatOverflow: getComputedStyle(chat).overflowY,
+            chatHeight: chat.getBoundingClientRect().height,
+            controlsBottom: controls.getBoundingClientRect().bottom,
+            bodyScroll: document.documentElement.scrollHeight > window.innerHeight
+        };
+    });
+    assert.ok(focusedLayout.appHeight <= focusedLayout.viewportHeight, "voice app should fit the viewport");
+    assert.equal(focusedLayout.chatOverflow, "auto", "chat area should scroll independently");
+    assert.equal(focusedLayout.bodyScroll, false, "focused page should not create body scrolling");
+    await page.evaluate(() => {
+        const chat = document.querySelector("#transcript");
+        for (let i = 0; i < 12; i++) {
+            const bubble = document.createElement("div");
+            bubble.className = "chat-bubble " + (i % 2 ? "user" : "assistant");
+            bubble.innerHTML = "<span class='chat-bubble-label'>" + (i % 2 ? "Siz" : "Teacher Hasan") + "</span><div class='chat-bubble-text'>Test message " + i + " with overflow content.</div>";
+            chat.appendChild(bubble);
+        }
+    });
+    const transcriptAlignment = await page.evaluate(() => ({
+        ai: getComputedStyle(document.querySelector(".chat-bubble.assistant")).alignSelf,
+        user: getComputedStyle(document.querySelector(".chat-bubble.user")).alignSelf,
+        chatScrollHeight: document.querySelector("#transcript").scrollHeight,
+        chatClientHeight: document.querySelector("#transcript").clientHeight
+    }));
+    assert.equal(transcriptAlignment.ai, "flex-start", "AI messages should align left");
+    assert.equal(transcriptAlignment.user, "flex-end", "user messages should align right");
+    assert.ok(transcriptAlignment.chatScrollHeight > transcriptAlignment.chatClientHeight, "overflowing conversation should be scrollable");
+
+    console.log("Browser smoke passed: eight-language discovery and first-chat greeting, desktop/mobile navigation, chat API interaction and persistence, clear chat, theme persistence, responsive layout, Voice AI iframe, orb focus layout, independent transcript scrolling, left/right speaker bubbles, and legacy controls.");
     await context.close();
 } finally {
     if (browser) await browser.close();
