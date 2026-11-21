@@ -65,13 +65,13 @@ if (!manifest.name || !manifest.start_url || !manifest.icons?.length) throw Erro
 
 // Route compatibility with the existing site pages and Express route.
 const routes = [
-    { href: "/", file: "public/index.html", label: "Voice AI" },
-    { href: "/speaking-exam.html", file: "public/speaking-exam.html", label: "Speaking Exam" },
-    { href: "/profile.html", file: "public/profile.html", label: "Profile" },
-    { href: "/offer.html", file: "public/offer.html", label: "Premium" },
-    { href: "/login.html", file: "public/login.html", label: "Login" },
-    { href: "/register.html", file: "public/register.html", label: "Register" },
-    { href: "/admin", file: "public/admin.html", label: "Admin" }
+    { href: "/", file: "index.html", label: "Voice AI" },
+    { href: "/speaking-exam.html", file: "speaking-exam.html", label: "Speaking Exam" },
+    { href: "/profile.html", file: "profile.html", label: "Profile" },
+    { href: "/offer.html", file: "offer.html", label: "Premium" },
+    { href: "/login.html", file: "login.html", label: "Login" },
+    { href: "/register.html", file: "register.html", label: "Register" },
+    { href: "/admin", file: "admin.html", label: "Admin" }
 ];
 for (const route of routes) {
     if (!html.includes('href="' + route.href + '"')) throw Error("Homepage route link missing: " + route.label);
