@@ -8,7 +8,7 @@ const read = file => fs.readFileSync(path.join(process.cwd(), file), "utf8");
 const required = [
     "index.html", "styles.css", "app.js", "manifest.json", "sw.js",
     "reading.html", "listening.html", "english-practice.html",
-    "cefr-assessment.html", "video-lessons.html"
+    "cefr-assessment.html", "video-lessons.html", "voice.html"
 ];
 for (const file of required) {
     const fullPath = path.join(root, file);
@@ -21,6 +21,7 @@ const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const js = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const sw = fs.readFileSync(path.join(root, "sw.js"), "utf8");
 const videoLessons = fs.readFileSync(path.join(root, "video-lessons.html"), "utf8");
+const voicePage = fs.readFileSync(path.join(root, "voice.html"), "utf8");
 const reading = fs.readFileSync(path.join(root, "reading.html"), "utf8");
 const listening = fs.readFileSync(path.join(root, "listening.html"), "utf8");
 const practice = fs.readFileSync(path.join(root, "english-practice.html"), "utf8");
@@ -153,6 +154,12 @@ for (const feature of ["new URLSearchParams", "selectedVideoLesson", "VIDEO LESS
 }
 if (!videoLessons.includes("video fayllar mavjudligini anglatmaydi")) {
     throw Error("Video lesson page must disclose that the catalog is not video playback");
+}
+if (!voicePage.includes('src="/"') || !voicePage.includes('allow="microphone; autoplay"') || !voicePage.includes('./index.html')) {
+    throw Error("Voice AI wrapper must preserve the legacy same-origin live client and microphone permissions");
+}
+if ((html.match(/href="\\.\\/voice\\.html"/g) || []).length < 3 || !sw.includes('"./voice.html"')) {
+    throw Error("PWA Voice AI navigation or offline shell registration missing");
 }
 const videoBrandLink = videoLessons.match(/<a class="brand" href="([^"]+)"/);
 if (!videoBrandLink || videoBrandLink[1] !== "./index.html") throw Error("Video lesson brand must return to the redesigned PWA");
