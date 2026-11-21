@@ -1,5 +1,5 @@
 /* Modern unified learning library */
-.learning-shell{background:radial-gradient(ellipse at 85% 0%,#27245a 0,#10152d 30%,#0b1020 75%);color:#f5f4ff;min-height:100dvh;padding-bottom:36px}
+.learning-shell{display:block!important;background:radial-gradient(ellipse at 85% 0%,#27245a 0,#10152d 30%,#0b1020 75%);color:#f5f4ff;min-height:100dvh;padding-bottom:36px}
 .learning-shell .topbar{height:76px;border-bottom:1px solid #ffffff16;justify-content:flex-start;gap:16px}
 .learning-shell .brand{order:0;margin-right:auto}
 .learning-shell .brand-mark{background:linear-gradient(145deg,#8a68ff,#41d9cf);box-shadow:0 8px 25px #7653ef55}
