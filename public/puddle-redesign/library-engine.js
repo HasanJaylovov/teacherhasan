@@ -31,6 +31,53 @@ const grammar = Array.from({length:1200},(_,i)=>{
  }
  return {id:"g"+i,level:lv,topic,question:q,options:opts,answer:correct,explanation:why};
 });
+
+// B2–C1 challenge bank: advanced syntax, inversion, collocation and nuanced grammar.
+const advancedGrammar = Array.from({length:1200},(_,i)=>{
+ const person=names[i%names.length], topic=topics[Math.floor(i/12)%topics.length], place=places[Math.floor(i/12)%places.length];
+ const level=Math.floor(i/12)%2===0?"B2":"C1";
+ let question,options,answer,explanation,topicName;
+ switch(i%12){
+  case 0:
+   question=`Rarely ___ such a persuasive explanation of ${topic}.`;
+   options=["have I heard","I have heard","did I heard","I had hear"];answer=0;topicName="Inversion";explanation="Rarely gap boshida kelganda yordamchi fe’l egadan oldin keladi: Rarely + have + subject + V3.";break;
+  case 1:
+   question=`If ${person} had taken the earlier train, they ___ at ${place} now.`;
+   options=["would be","would have been","will be","had been"];answer=0;topicName="Mixed Conditionals";explanation="O‘tmishdagi shartning hozirgi natijasi: If + Past Perfect, would + infinitive.";break;
+  case 2:
+   question=`Had the committee reviewed the evidence earlier, it ___ the error.`;
+   options=["would detect","would have detected","will detect","had detected"];answer=1;topicName="Third Conditional";explanation="Had + subject + V3 — if the committee had reviewed shaklining inversiyasi; natija would have + V3.";break;
+  case 3:
+   question=`It was the detailed report ___ persuaded the panel to reconsider ${topic}.`;
+   options=["who","what","that","where"];answer=2;topicName="Cleft Sentences";explanation="It was ... that ... — urg‘u beruvchi cleft sentence tuzilmasi.";break;
+  case 4:
+   question=`The director insisted that every applicant ___ a written statement about ${topic}.`;
+   options=["submits","submit","submitted","will submit"];answer=1;topicName="Subjunctive";explanation="Insist that dan keyin formal subjunctive ishlatiladi: subject + base verb.";break;
+  case 5:
+   question=`___ by limited funding, ${person}’s team redesigned the ${topic} project.`;
+   options=["Restricting","Restricted","To restrict","Having restrict"];answer=1;topicName="Participle Clauses";explanation="Jamoa cheklangan mablag‘ ta’sirida bo‘lgan, shuning uchun past participle bilan qisqartirilgan passive clause ishlatiladi.";break;
+  case 6:
+   question=`The latest findings are consistent ___ the earlier research into ${topic}.`;
+   options=["to","with","for","at"];answer=1;topicName="Dependent Prepositions";explanation="Consistent with — barqaror birikma; undan keyin with predlogi ishlatiladi.";break;
+  case 7:
+   question=`The proposed changes are expected to ___ a significant impact on ${topic}.`;
+   options=["do","make","take","set"];answer=1;topicName="Advanced Collocations";explanation="Make an impact — to‘g‘ri collocation. Do/take/set an impact bu kontekstda ishlatilmaydi.";break;
+  case 8:
+   question=`The plan was rejected because it was financially ___.`;
+   options=["viable","viability","unviable","viably"];answer=2;topicName="Word Formation";explanation="Because it was dan keyin sifat kerak. Unviable — moliyaviy jihatdan amalga oshirib bo‘lmaydigan.";break;
+  case 9:
+   question=`${person} denied ___ the confidential documents about ${topic}.`;
+   options=["to access","access","having accessed","to have access"];answer=2;topicName="Reporting Verbs";explanation="Deny fe’lidan keyin gerund ishlatiladi; o‘tmishda sodir bo‘lgan ish uchun having + V3 mos.";break;
+  case 10:
+   question=`The archive, ___ dates back to 1890, contains valuable records about ${topic}.`;
+   options=["which","that","where","what"];answer=0;topicName="Non-defining Relative Clauses";explanation="Vergul bilan ajratilgan non-defining relative clause ichida which ishlatiladi; that bu vazifada kelmaydi.";break;
+  default:
+   question=`By December, ${person} ___ on the ${topic} project for five years.`;
+   options=["will work","will have been working","has worked","had worked"];answer=1;topicName="Future Perfect Continuous";explanation="Kelajakdagi vaqt nuqtasigacha davom etib keladigan ish: will have been + verb-ing.";
+ }
+ return {id:"adv"+i,level,topic:topicName,question,options,answer,explanation};
+});
+
 const reading=Array.from({length:1200},(_,i)=>{
  const person=names[i%names.length],place=places[Math.floor(i/3)%places.length],topic=topics[Math.floor(i/7)%topics.length],detail=details[Math.floor(i/11)%details.length],lv=levels[Math.floor(i/240)];
  const action=["Last month","Every weekend","This year","At the beginning of the term","On Friday afternoon"][i%5];
@@ -57,7 +104,7 @@ function saved(key){try{return JSON.parse(localStorage.getItem("th_library_"+key
 function save(key,data){try{localStorage.setItem("th_library_"+key,JSON.stringify(data))}catch{}}
 const module=document.body.dataset.module||"practice";
 const titles={practice:"English Practice",cefr:"CEFR Assessment",reading:"Reading Lab",listening:"Listening Lab",videos:"Video Lessons"};
-const banks={practice:grammar,cefr:[...grammar,...reading.map(x=>({...x,topic:"Reading comprehension"})),...listening.map(x=>({...x,topic:"Listening comprehension"}))],reading,listening,videos};
+const banks={practice:[...grammar,...advancedGrammar],cefr:[...grammar,...advancedGrammar,...reading.map(x=>({...x,topic:"Reading comprehension"})),...listening.map(x=>({...x,topic:"Listening comprehension"}))],reading,listening,videos};
 const bank=banks[module]||grammar;
 let filters={level:"all",topic:"all"},items=[],position=0,score=0,locked=false,answers=[],activeLesson=null,videoPage=0;
 const progress=saved(module);
