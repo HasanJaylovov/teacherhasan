@@ -492,26 +492,25 @@ document.addEventListener("DOMContentLoaded", () => {
     // ==========================================
 
     function addTranscript(text) {
-        if (!text) return;
-        const emptyHint = transcript?.querySelector(".va-chat-empty");
-        if (emptyHint) emptyHint.remove();
-        const raw = String(text).trim();
-        if (!raw) return;
+        const raw = String(text || "").trim();
+        if (!raw || !transcript) return null;
+        transcript.querySelector(".va-chat-empty")?.remove();
         const isUser = raw.startsWith("👤 Siz:");
         const role = isUser ? "user" : "assistant";
-        const display = raw.replace(/^👤 Siz:\s*/, "").replace(/^👨‍🏫 Teacher Hasan:\s*/, "");
+        const display = raw.replace("👤 Siz:", "").replace("👨‍🏫 Teacher Hasan:", "").trim();
         const bubble = document.createElement("div");
         bubble.className = "chat-bubble " + role;
-        bubble.setAttribute("data-speaker", role);
+        bubble.dataset.speaker = role;
         const label = document.createElement("span");
         label.className = "chat-bubble-label";
-        label.textContent = isUser ? "Siz" : "Teacher Hasan";
+        label.textContent = uiText(isUser ? "you" : "teacher", isUser ? "Siz" : "Teacher Hasan");
         const body = document.createElement("div");
         body.className = "chat-bubble-text";
         body.textContent = display;
         bubble.append(label, body);
         transcript.appendChild(bubble);
         transcript.scrollTop = transcript.scrollHeight;
+        return body;
     }
 
     // ==========================================
@@ -1057,7 +1056,9 @@ VIDEO LESSON MODE:
 
                     if (inputText) {
                         pendingVoiceUserText += (pendingVoiceUserText ? " " : "") + inputText;
-                        addTranscript("👤 Siz: " + inputText);
+                        if (!activeUserMessage) activeUserMessage = addTranscript("👤 Siz: " + inputText);
+                        else activeUserMessage.textContent += " " + inputText;
+                        transcript.scrollTop = transcript.scrollHeight;
                     }
 
                     // TEACHER TRANSCRIPT
@@ -1069,7 +1070,9 @@ VIDEO LESSON MODE:
 
                     if (outputText) {
                         pendingVoiceTeacherText += (pendingVoiceTeacherText ? " " : "") + outputText;
-                        addTranscript("👨‍🏫 Teacher Hasan: " + outputText);
+                        if (!activeTeacherMessage) activeTeacherMessage = addTranscript("👨‍🏫 Teacher Hasan: " + outputText);
+                        else activeTeacherMessage.textContent += " " + outputText;
+                        transcript.scrollTop = transcript.scrollHeight;
                     }
 
                     // AUDIO
