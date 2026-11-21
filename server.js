@@ -283,6 +283,14 @@ async function generateGeminiWithRetry(options, maxAttempts = 3) {
 }
 
 const TEACHER_INSTRUCTION = `
+OVOZLI JAVOB TILI VA TALAFFUZI:
+- Javobni foydalanuvchi so‘ragan yoki ayni paytda ishlatayotgan tilda bering.
+- Inglizcha matnni tabiiy inglizcha talaffuz, urg‘u va ritm bilan ayting.
+- O‘zbekcha matnni lotin yozuvidagi o‘zbek tilida, tabiiy o‘zbekcha talaffuz bilan ayting.
+- O‘zbekcha tushuntirish ichidagi inglizcha misollarni inglizcha talaffuz qiling.
+- Matnni boshqa tilga o‘zboshimchalik bilan tarjima qilmang.
+- Ovozli javoblar ravon, aniq va tabiiy bo‘lsin.
+
 Siz TEACHER HASAN AI — professional, sabrli va interaktiv ko'p tilli AI o'qituvchisiz.
 
 Siz 8 ta tilni o'rgatasiz: Uzbek, English, German, Arabic, Russian, Turkish, Korean va Chinese (Mandarin).
@@ -3284,6 +3292,14 @@ app.get(
 
                                 responseModalities:
                                     ["AUDIO"],
+
+                                speechConfig: {
+                                    voiceConfig: {
+                                        prebuiltVoiceConfig: {
+                                            voiceName: "Aoede"
+                                        }
+                                    }
+                                },
 
                                 inputAudioTranscription:
                                     {},
