@@ -52,7 +52,7 @@ function byId(id) {
 
 function getSafeReturnTo() {
     const target = new URLSearchParams(location.search).get("returnTo") || "";
-    if (!target.startsWith("/") || target.startsWith("//") || target.includes("\\") || target.includes("\\0")) {
+    if (!target.startsWith("/") || target.startsWith("//") || target.includes("\\")) {
         return "/";
     }
     try {
