@@ -19,3 +19,16 @@ body.dark{--surface:#171a2d;--ink:#f6f4ff;--muted:#b1aec5;--line:#282a40;backgro
 body.dark .language-showcase{background:#191b30;border-color:#2b2d47}
 body.dark .language-chip{background:#141629;border-color:#2b2d47}
 @media(max-width:600px){.language-showcase{padding:16px;margin-top:18px}.language-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.language-chip{padding:10px}.language-showcase-head h2{font-size:17px}.app-shell{padding-left:14px;padding-right:14px}}
+
+
+/* Full-width desktop workspace: stop constraining learning pages to a narrow column. */
+.app-shell{width:100%;max-width:none;min-height:100dvh}
+@media(min-width:1000px){
+ .app-shell{width:100%;max-width:none;min-height:100dvh;padding:0 clamp(18px,2.2vw,40px) 34px;grid-template-columns:clamp(210px,17vw,260px) minmax(0,1fr);column-gap:clamp(18px,2vw,32px)}
+ #mainContent,#mainContent>.view{width:100%;max-width:none;min-width:0}
+ #mainContent .hero-card{width:100%}
+ #mainContent .language-showcase,#mainContent .progress-card,#mainContent .feature-grid,#mainContent .list-card{width:100%;max-width:none}
+ #mainContent .chat-messages{max-height:min(62vh,720px);overflow-y:auto}
+ #mainContent .chat-compose{width:100%}
+}
+@media(max-width:999px){.app-shell{width:100%;max-width:none}}
