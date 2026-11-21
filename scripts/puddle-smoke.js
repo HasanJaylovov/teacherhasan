@@ -158,7 +158,7 @@ if (!videoLessons.includes("video fayllar mavjudligini anglatmaydi")) {
 if (!voicePage.includes('src="/"') || !voicePage.includes('allow="microphone; autoplay"') || !voicePage.includes('./index.html')) {
     throw Error("Voice AI wrapper must preserve the legacy same-origin live client and microphone permissions");
 }
-if ((html.match(/href="\\.\\/voice\\.html"/g) || []).length < 3 || !sw.includes('"./voice.html"')) {
+if ((html.match(/href="\.\/voice\.html"/g) || []).length < 3 || !sw.includes('"./voice.html"')) {
     throw Error("PWA Voice AI navigation or offline shell registration missing");
 }
 const videoBrandLink = videoLessons.match(/<a class="brand" href="([^"]+)"/);
