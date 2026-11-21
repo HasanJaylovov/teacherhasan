@@ -154,7 +154,7 @@ try {
     assert.match(await iframe.getAttribute("allow"), /microphone/);
     assert.equal(await iframe.getAttribute("title"), "Teacher Hasan AI jonli ovozli ustoz");
     const voice = page.frameLocator("iframe");
-    for (const selector of ["#startBtn", "#stopBtn", "#transcript", "#status", "#teacherOrb", "#orbMouth", "#voiceActivityLabel"]) {
+    for (const selector of ["#startBtn", "#stopBtn", "#transcript", "#status", "#teacherOrb", "#organicCanvas", "#bottomWaveCanvas", "#voiceActivityLabel"]) {
         assert.equal(await voice.locator(selector).count(), 1, "Voice AI hook missing: " + selector);
     }
 
