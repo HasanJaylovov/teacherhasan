@@ -73,6 +73,8 @@ try {
     assert.equal(await page.locator(".desktop-sidebar").isVisible(), true, "desktop sidebar should be visible");
     assert.equal(await page.locator(".bottom-nav").isVisible(), false, "desktop bottom navigation should be hidden");
     assert.equal(await page.locator(".hero-card").count(), 1, "home hero should render");
+    assert.equal(await page.locator(".language-chip").count(), 8, "homepage should list all eight supported learning languages");
+    assert.match(await page.locator(".hero-card").innerText(), /8 ta tilni/, "hero should promote eight-language learning");
 
     // Exercise the real client-side chat flow against a deterministic API stub.
     await page.locator('.nav-item[data-view="chat"]').click();
@@ -96,7 +98,7 @@ try {
     assert.equal(await page.evaluate(() => localStorage.getItem("th_theme")), "dark", "theme choice should persist");
 
     await page.locator("#clearChat").click();
-    await page.getByText("Assalomu alaykum! 😊 Men Teacher Hasan AI.", { exact: false }).waitFor();
+    await page.getByText("Men 8 ta tilni o‘rgata olaman", { exact: false }).waitFor();
     const afterClear = await page.evaluate(() => {
         const key = Object.keys(localStorage).find(k => k.startsWith("th_puddle_chat_v1_guest"));
         return key ? JSON.parse(localStorage.getItem(key)) : [];
@@ -116,7 +118,7 @@ try {
     assert.match(await iframe.getAttribute("allow"), /microphone/);
     assert.equal(await iframe.getAttribute("title"), "Teacher Hasan AI jonli ovozli ustoz");
     const voice = page.frameLocator("iframe");
-    for (const selector of ["#startBtn", "#stopBtn", "#transcript", "#status"]) {
+    for (const selector of ["#startBtn", "#stopBtn", "#transcript", "#status", "#voiceWave", "#voiceActivityLabel"]) {
         assert.equal(await voice.locator(selector).count(), 1, "Voice AI hook missing: " + selector);
     }
 
@@ -128,7 +130,7 @@ try {
     const voiceOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
     assert.equal(voiceOverflow, false, "mobile Voice AI wrapper should not overflow horizontally");
 
-    console.log("Browser smoke passed: desktop/mobile navigation, chat API interaction and persistence, clear chat, theme persistence, responsive layout, Voice AI iframe and legacy controls.");
+    console.log("Browser smoke passed: eight-language discovery and first-chat greeting, desktop/mobile navigation, chat API interaction and persistence, clear chat, theme persistence, responsive layout, Voice AI iframe, waveform visualizer and legacy controls.");
     await context.close();
 } finally {
     if (browser) await browser.close();
