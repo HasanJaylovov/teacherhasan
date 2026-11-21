@@ -923,7 +923,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 speechConfig: {
                     voiceConfig: {
                         prebuiltVoiceConfig: {
-                            voiceName: "Aoede"
+                            voiceName: "Charon"
                         }
                     }
                 },
