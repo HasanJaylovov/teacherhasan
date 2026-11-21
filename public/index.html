@@ -598,7 +598,7 @@
         ================================= */
 
         .app {
-            width: min(1100px, calc(100% - 40px));
+            width: min(1480px, calc(100% - 48px));
 
             min-height: calc(100vh - 40px);
 
@@ -1052,7 +1052,43 @@
                 font-size: 11px;
             }
         }
-    </style>
+    
+/* Focused voice-chat screen + transcript bubbles */
+.topbar,.footer,.welcome{display:none!important}
+/* Keep connection diagnostics visible: app.js writes Live Token/API errors here. */
+.status-container{display:flex!important;justify-content:center;flex:0 0 auto;width:100%;margin:4px auto 8px;padding:0 12px;opacity:1}
+.status{display:flex;align-items:center;justify-content:center;gap:9px;max-width:min(760px,100%);min-height:30px;padding:6px 12px;border:1px solid rgba(145,164,255,.18);border-radius:12px;background:rgba(20,27,48,.62);color:#cbd4e8;font-size:12px;line-height:1.45;text-align:center;overflow-wrap:anywhere}
+.status-dot{flex:0 0 8px}
+.app{width:min(1180px,calc(100% - 28px));min-height:calc(100dvh - 28px);margin:14px auto;border-radius:26px}
+.conversation{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;padding:clamp(12px,3vh,30px) clamp(12px,4vw,42px) 10px}
+.teacher-hero{width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;flex:0 0 auto}
+.teacher-orb-wrap{min-height:clamp(210px,36vh,370px);margin:0 auto}
+.teacher-orb{width:min(clamp(210px,30vw,320px),68vw)}
+#transcript{width:min(100%,850px);max-width:850px;min-height:0;max-height:none;flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:12px;margin:16px auto 8px;padding:12px 6px;white-space:normal;line-height:1.5;scrollbar-width:thin}
+.chat-bubble{width:fit-content;max-width:min(78%,650px);padding:12px 16px;border-radius:18px;font-size:14px;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere;animation:chatBubbleIn .22s ease-out}
+.chat-bubble.assistant{align-self:flex-start;background:linear-gradient(135deg,rgba(33,43,77,.94),rgba(24,29,53,.94));border:1px solid rgba(145,164,255,.17);border-bottom-left-radius:6px;color:#eef1ff;box-shadow:0 8px 24px rgba(0,0,0,.13)}
+.chat-bubble.user{align-self:flex-end;background:linear-gradient(135deg,rgba(100,120,238,.28),rgba(118,75,162,.25));border:1px solid rgba(146,156,255,.22);border-bottom-right-radius:6px;color:#fff}
+.chat-bubble-label{display:block;font-size:10px;letter-spacing:.04em;text-transform:uppercase;opacity:.66;margin-bottom:4px;font-weight:750}
+@keyframes chatBubbleIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.controls{padding:12px 18px 20px;display:flex;justify-content:center;gap:12px;flex:0 0 auto}
+.control-button{min-width:150px}
+@media(max-width:700px){.app{width:calc(100% - 12px);min-height:calc(100dvh - 12px);margin:6px auto;border-radius:20px}.conversation{padding:8px 8px 4px}.teacher-orb-wrap{min-height:clamp(180px,28vh,260px)}.teacher-orb{width:min(230px,64vw)}#transcript{padding:8px 2px;gap:9px;margin:10px auto 6px}.chat-bubble{max-width:88%;padding:10px 13px;font-size:13px}.controls{padding:10px 10px 14px;gap:8px}.control-button{min-width:0;flex:1;max-width:210px}}
+@media(prefers-reduced-motion:reduce){.chat-bubble{animation:none}}
+
+
+/* Focused voice conversation layout: keep orb and controls stable while chat scrolls */
+html,body{height:100%;min-height:100%;overflow:hidden}
+body{min-height:100dvh;display:flex;align-items:stretch;justify-content:center}
+.app{height:calc(100dvh - 28px);max-height:calc(100dvh - 28px);min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.conversation{width:100%;flex:1;min-height:0;overflow:hidden}
+.teacher-hero{flex:0 0 auto}
+.teacher-orb-wrap{flex:0 0 auto}
+#transcript{overscroll-behavior:contain;scroll-behavior:smooth;scrollbar-gutter:stable;flex:1 1 auto;min-height:64px}
+#transcript:empty{flex:0 1 0;min-height:0;margin:0;padding:0}
+.controls{flex:0 0 auto;padding-bottom:max(14px,env(safe-area-inset-bottom))}
+@media(max-width:700px){.app{height:calc(100dvh - 12px);max-height:calc(100dvh - 12px);min-height:0}.conversation{padding-bottom:2px}.teacher-orb-wrap{min-height:clamp(170px,25vh,225px)}#transcript{max-height:none}.controls{padding-bottom:max(12px,env(safe-area-inset-bottom))}}
+@media(prefers-reduced-motion:reduce){#transcript{scroll-behavior:auto}}
+</style>
     <style id="voice-reactive-visualizer">
         .avatar {
             position: relative;
@@ -1087,6 +1123,47 @@
         .avatar.voice-active::before {
             border-color: rgba(205, 215, 255, .96);
         }
+
+/* Replace the previous voice waveform hero with a closed-eye animated AI sphere */
+.teacher-orb-wrap{width:100%;min-height:340px;display:flex;align-items:center;justify-content:center;perspective:900px;margin:10px auto 2px}
+.teacher-orb{position:relative;width:min(280px,68vw);aspect-ratio:1;border-radius:50%;isolation:isolate;display:grid;place-items:center;background:radial-gradient(circle at 34% 26%,#e1e8ff 0,#9aabff 8%,#647be8 28%,#3c4da5 54%,#1b234c 76%,#11162f 100%);box-shadow:inset -28px -34px 55px rgba(5,9,35,.66),inset 15px 16px 32px rgba(255,255,255,.2),0 0 36px rgba(103,129,255,.25),0 0 90px rgba(111,132,255,.13);transition:transform .25s ease,filter .25s ease;animation:orbFloat 5s ease-in-out infinite}
+.teacher-orb::before{content:"";position:absolute;inset:9%;border-radius:50%;border:1px solid rgba(217,230,255,.2);background:radial-gradient(circle at 50% 60%,rgba(117,151,255,.15),transparent 63%);z-index:-1}
+.orb-aura{position:absolute;inset:-18%;border-radius:50%;background:radial-gradient(circle,rgba(118,146,255,.24),rgba(91,118,241,.08) 45%,transparent 70%);filter:blur(12px);animation:orbAura 4s ease-in-out infinite}
+.orb-ring{position:absolute;inset:-9%;border-radius:50%;border:1px solid rgba(153,179,255,.17);transform:rotateX(66deg) rotateZ(-20deg);pointer-events:none}
+.orb-ring-one{animation:orbRing 9s linear infinite}
+.orb-ring-two{inset:-14%;border-color:rgba(133,228,223,.12);transform:rotateX(72deg) rotateZ(22deg);animation:orbRing 13s linear infinite reverse}
+.orb-face{position:relative;width:55%;height:43%;transform:translateY(5%);filter:drop-shadow(0 5px 9px rgba(14,22,72,.3))}
+.orb-eye{position:absolute;width:27%;height:8px;top:47%;border-radius:0 0 100% 100%;border-bottom:4px solid #222d68;transform:rotate(-5deg);opacity:.9}
+.orb-eye-left{left:9%}.orb-eye-right{right:9%;transform:rotate(5deg)}
+.orb-brow{position:absolute;top:36%;width:26%;height:3px;border-radius:50%;background:rgba(40,53,115,.42)}
+.orb-brow-left{left:9%;transform:rotate(-9deg)}.orb-brow-right{right:9%;transform:rotate(9deg)}
+.orb-cheek{position:absolute;top:58%;width:18%;height:10%;border-radius:50%;background:rgba(157,179,255,.25);filter:blur(7px)}
+.orb-cheek-left{left:0}.orb-cheek-right{right:0}
+.orb-mouth{position:absolute;left:50%;top:66%;width:8px;height:3px;transform:translateX(-50%);border-radius:50%;background:#2b397e;opacity:.6;transition:width .1s,height .1s,border-radius .1s}
+.orb-glint{position:absolute;border-radius:50%;background:rgba(231,239,255,.7);filter:blur(1px)}
+.orb-glint-top{width:7px;height:7px;top:18%;left:26%;opacity:.55}.orb-glint-side{width:4px;height:4px;top:30%;right:20%;opacity:.4}
+@keyframes orbFloat{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-8px) scale(1.015)}}
+@keyframes orbAura{0%,100%{opacity:.5;transform:scale(.96)}50%{opacity:1;transform:scale(1.05)}}
+@keyframes orbRing{0%{transform:rotateX(66deg) rotateZ(0)}100%{transform:rotateX(66deg) rotateZ(360deg)}}
+#teacherOrb.listening{filter:brightness(1.07);box-shadow:inset -28px -34px 55px rgba(5,9,35,.56),inset 15px 16px 32px rgba(255,255,255,.25),0 0 45px rgba(104,146,255,.38),0 0 105px rgba(111,132,255,.2)}
+#teacherOrb.speaking{animation:orbTalk .9s ease-in-out infinite alternate,orbFloat 5s ease-in-out infinite;box-shadow:inset -24px -32px 52px rgba(5,9,35,.52),inset 15px 16px 32px rgba(255,255,255,.25),0 0 55px rgba(89,224,197,.4),0 0 120px rgba(89,224,197,.2)}
+#teacherOrb.speaking .orb-ring{border-color:rgba(113,235,212,.4)}
+#teacherOrb.speaking #orbMouth{width:14px;height:10px;border-radius:50%;background:#273b81;box-shadow:0 0 7px rgba(174,225,255,.45)}
+#teacherOrb.listening .orb-ring{border-color:rgba(164,192,255,.34)}
+@keyframes orbTalk{from{transform:scale(1)}to{transform:scale(1.045)}}
+@media(max-width:680px){.teacher-orb-wrap{min-height:240px}.teacher-orb{width:min(210px,62vw)}.orb-eye{height:6px;border-width:3px}}
+@media(prefers-reduced-motion:reduce){.teacher-orb,.orb-aura,.orb-ring{animation:none!important;transition:none!important}}
+
+        .voice-wave{height:42px;max-width:420px;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;gap:5px;--wave-level:.5}
+        .voice-wave span{width:5px;height:calc(8px + var(--wave-level)*22px);min-height:7px;border-radius:9px;background:linear-gradient(180deg,#a7b6ff,#657eea);opacity:.55;transform:scaleY(.55);transition:height 90ms ease,opacity 90ms ease,transform 90ms ease}
+        .voice-wave span:nth-child(3n){height:calc(12px + var(--wave-level)*30px)}.voice-wave span:nth-child(3n + 1){height:calc(9px + var(--wave-level)*20px)}
+        .voice-wave.user-active span{opacity:.95;animation:voiceWaveUser .48s ease-in-out infinite alternate}
+        .voice-wave.teacher-active span{opacity:1;background:linear-gradient(180deg,#b6f8e8,#59cbb4);animation:voiceWaveTeacher .38s ease-in-out infinite alternate}
+        .voice-wave span:nth-child(2n){animation-delay:-.18s!important}.voice-wave span:nth-child(3n){animation-delay:-.31s!important}
+        @keyframes voiceWaveUser{from{transform:scaleY(.35)}to{transform:scaleY(1.1)}}@keyframes voiceWaveTeacher{from{transform:scaleY(.4)}to{transform:scaleY(1.5)}}
+        .voice-activity-label{min-height:18px;margin:0 auto 10px;text-align:center;color:#aeb7d0;font-size:11px;letter-spacing:.04em}
+        @media(max-width:680px){.voice-wave{height:28px;gap:3px}.voice-wave span{width:4px}.voice-activity-label{font-size:10px}}
+        @media(prefers-reduced-motion:reduce){.voice-wave span{animation:none!important}}
         @media (prefers-reduced-motion: reduce) {
             .avatar, .avatar::before, .avatar::after { transition: none; }
         }
@@ -1134,6 +1211,204 @@
         @media(prefers-reduced-motion:reduce){.voice-stage-wave span{animation:none!important;transition:none}}
     </style>
 
+
+    <style id="puddle-voice-redesign">
+        :root {
+            --voice-bg: #080d12;
+            --voice-surface: #101820;
+            --voice-surface-raised: #15212b;
+            --voice-line: rgba(220,245,238,.10);
+            --voice-ink: #f3faf7;
+            --voice-muted: #91a49f;
+            --voice-accent: #b8f36b;
+            --voice-accent-ink: #14200d;
+        }
+        html, body {
+            background: var(--voice-bg);
+            color: var(--voice-ink);
+        }
+        body {
+            background:
+                radial-gradient(ellipse at 50% -18%, rgba(184,243,107,.12), transparent 42%),
+                radial-gradient(ellipse at 100% 70%, rgba(67,133,120,.10), transparent 36%),
+                var(--voice-bg);
+        }
+        .app {
+            width: min(1160px, calc(100% - 48px));
+            min-height: calc(100vh - 48px);
+            margin: 24px auto;
+            border: 1px solid var(--voice-line);
+            border-radius: 28px;
+            background: rgba(13,20,26,.94);
+            box-shadow: 0 28px 90px rgba(0,0,0,.42);
+            backdrop-filter: blur(24px);
+        }
+        .topbar {
+            min-height: 88px;
+            padding: 18px 30px 18px 96px;
+            border-bottom: 1px solid var(--voice-line);
+            background: rgba(16,24,32,.72);
+        }
+        .topbar-title { color: var(--voice-ink); font-size: 17px; letter-spacing: -.025em; }
+        .topbar-subtitle { color: var(--voice-muted); }
+        .language-switcher, .topbar-user-info, .topbar-account-link {
+            border-color: var(--voice-line);
+            border-radius: 13px;
+            background: rgba(255,255,255,.045);
+        }
+        .language-button { color: var(--voice-muted); }
+        .language-button:hover, .language-button.active {
+            color: var(--voice-accent);
+            background: rgba(184,243,107,.11);
+        }
+        .topbar-account-link { color: var(--voice-ink); }
+        .topbar-account-link.primary {
+            color: var(--voice-accent-ink);
+            border-color: transparent;
+            background: var(--voice-accent);
+        }
+        .topbar-account-link.profile { border-color: rgba(184,243,107,.3); }
+        .mode, .topbar-user-status {
+            color: var(--voice-accent);
+            background: rgba(184,243,107,.10);
+        }
+        .menu-button {
+            top: 42px; left: max(18px, calc((100vw - 1160px)/2 + 18px));
+            width: 48px; height: 48px;
+            border: 1px solid var(--voice-line);
+            border-radius: 15px;
+            color: var(--voice-ink);
+            background: #15212b;
+            box-shadow: 0 8px 28px rgba(0,0,0,.24);
+        }
+        .menu-button:hover { background: #20313b; }
+        .conversation {
+            width: min(900px, 100%);
+            margin: 0 auto;
+            padding: clamp(34px,6vw,76px) clamp(20px,5vw,64px) 34px;
+        }
+        .teacher-hero { margin: 0 auto 36px; }
+        .avatar {
+            width: 126px; height: 126px;
+            margin-bottom: 26px;
+            border: 1px solid rgba(184,243,107,.42);
+            background: radial-gradient(circle at 35% 25%, #304b3a, #172b26 70%);
+            box-shadow: 0 0 0 10px rgba(184,243,107,.035), 0 0 58px rgba(184,243,107,.14);
+        }
+        .teacher-hero h1 { color: var(--voice-ink); font-size: clamp(30px,4vw,42px); letter-spacing: -.045em; }
+        .teacher-hero .subtitle { color: var(--voice-muted); }
+        .ai-badge {
+            color: var(--voice-accent);
+            border: 1px solid rgba(184,243,107,.20);
+            background: rgba(184,243,107,.075);
+        }
+        .welcome {
+            padding: 24px 26px;
+            border: 1px solid var(--voice-line);
+            border-radius: 20px;
+            background: linear-gradient(135deg, rgba(184,243,107,.075), rgba(255,255,255,.025));
+        }
+        .welcome h2 { color: var(--voice-ink); font-size: 19px; }
+        .welcome p { color: #b4c2bd; }
+        #transcript {
+            min-height: 110px;
+            max-height: 300px;
+            margin-top: 18px;
+            padding: 18px 20px;
+            border: 1px solid var(--voice-line);
+            border-radius: 18px;
+            background: rgba(255,255,255,.025);
+            color: #dce9e3;
+            font-size: 14px;
+        }
+        .status-container { margin-top: 18px; }
+        .status {
+            min-height: 40px;
+            padding: 10px 16px;
+            border: 1px solid var(--voice-line);
+            background: #121d24;
+            color: #c3d0ca;
+        }
+        .status-dot { background: var(--voice-accent); box-shadow: 0 0 12px rgba(184,243,107,.5); }
+        .controls {
+            padding: 22px 30px 26px;
+            border-top: 1px solid var(--voice-line);
+            background: rgba(16,24,32,.58);
+        }
+        .control-button { min-height: 52px; border-radius: 15px; }
+        .control-button:focus-visible, .language-button:focus-visible, .menu-button:focus-visible, .topbar-account-link:focus-visible {
+            outline: 3px solid var(--voice-accent);
+            outline-offset: 3px;
+        }
+        #transcript:focus-visible { outline: 2px solid var(--voice-accent); outline-offset: 3px; }
+        #startBtn {
+            color: var(--voice-accent-ink);
+            background: var(--voice-accent);
+            box-shadow: 0 10px 30px rgba(184,243,107,.16);
+        }
+        #startBtn:hover { filter: brightness(1.06); }
+        #stopBtn {
+            color: #ffb7b7;
+            border: 1px solid rgba(255,112,112,.25);
+            background: rgba(255,90,90,.10);
+        }
+        .footer { color: #71827c; }
+        .side-menu {
+            border-color: var(--voice-line);
+            background: #101820;
+        }
+        .menu-brand-icon { color: var(--voice-accent-ink); background: var(--voice-accent); }
+        .menu-item:hover { border-color: rgba(184,243,107,.18); background: rgba(184,243,107,.07); }
+        .menu-icon { background: rgba(255,255,255,.055); }
+        @media (max-width: 700px) {
+            .app {
+                width: 100%;
+                min-height: 100vh;
+                margin: 0;
+                border: 0;
+                border-radius: 0;
+            }
+            .topbar {
+                padding: 76px 16px 16px;
+                gap: 14px;
+                background: rgba(16,24,32,.82);
+            }
+            .topbar-right { gap: 10px; }
+            .language-switcher { justify-content: center; }
+            .topbar-account { gap: 6px; }
+            .topbar-account-link { min-width: 0; padding: 8px 9px; font-size: 12px; }
+            .menu-button { top: 14px; left: 14px; }
+            .conversation { padding: 32px 16px 24px; }
+            .teacher-hero { margin-bottom: 28px; }
+            .avatar { width: 100px; height: 100px; margin-bottom: 22px; font-size: 50px; }
+            .welcome { padding: 20px; }
+            #transcript { padding: 15px; }
+            .controls { padding: 16px; gap: 9px; }
+            .control-button { min-height: 50px; }
+            .footer { padding: 12px 14px; }
+        }
+        @media (max-width: 400px) {
+            .topbar-account { flex-wrap: wrap; }
+            .topbar-account-link { flex: 1 1 42%; }
+            .teacher-hero h1 { font-size: 28px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .menu-button, .menu-item, .control-button, .language-button { transition: none !important; }
+        }
+    </style>
+
+
+    <style id="conversation-only-visual">
+      .teacher-hero{margin:0 auto 14px;max-width:none}
+      .teacher-hero h1,.teacher-hero .subtitle,.teacher-hero .ai-badge,.welcome{display:none!important}
+      .voice-activity-label{min-height:0;margin:0 auto 4px}
+      .conversation{padding:clamp(12px,3vw,34px);display:flex;flex-direction:column;min-height:0}
+      #transcript{margin:10px auto 0;min-height:0;max-height:min(38vh,360px);width:min(760px,100%);padding:0 2px;overflow:auto}
+      .status-container{margin:8px auto 0;opacity:.65}
+      .status{padding:6px 12px;font-size:11px}
+      .controls{padding:16px 20px}
+      @media(max-width:680px){.conversation{padding:10px 12px 4px}.teacher-hero{margin:0 auto 8px}#transcript{max-height:36vh}.controls{padding:12px 14px;gap:8px}.control-button{padding:12px 18px;font-size:13px}}
+    </style>
 </head>
 
 <body>
@@ -1598,43 +1873,19 @@
             <section
                 id="conversation"
                 class="conversation"
+                aria-label="Ovozli suhbat"
             >
 
                 <div class="teacher-hero">
 
-                    <div class="avatar">
-                        👨‍🏫
+                    <div class="teacher-orb-wrap" id="teacherOrbWrap">
+                        <div class="teacher-orb" id="teacherOrb" role="img" aria-label="Teacher Hasan AI — ko‘zlari yumilgan animatsion avatar">
+                            <div class="orb-aura"></div><div class="orb-ring orb-ring-one"></div><div class="orb-ring orb-ring-two"></div>
+                            <div class="orb-face"><div class="orb-brow orb-brow-left"></div><div class="orb-brow orb-brow-right"></div><div class="orb-eye orb-eye-left"></div><div class="orb-eye orb-eye-right"></div><div class="orb-cheek orb-cheek-left"></div><div class="orb-cheek orb-cheek-right"></div><div class="orb-mouth" id="orbMouth"></div></div>
+                            <div class="orb-glint orb-glint-top"></div><div class="orb-glint orb-glint-side"></div>
+                        </div>
                     </div>
-
-                    <h1>
-                        Teacher Hasan AI
-                    </h1>
-
-                    <p class="subtitle">
-                        Tillarni ovozli suhbat orqali
-                        tabiiy va interaktiv tarzda o‘rganing.
-                    </p>
-
-                    <div class="ai-badge">
-                        🟢 Natural AI Voice
-                    </div>
-
-                </div>
-
-
-                <div class="welcome">
-
-                    <h2>
-                        Assalomu alaykum! 👋
-                    </h2>
-
-                    <p>
-                        Men Teacher Hasanman.
-                        Tillarni birga o‘rganamiz.
-                        Speaking mashq qilish uchun
-                        <b>Start</b> tugmasini bosing
-                        va gapirishni boshlang.
-                    </p>
+                    <p class="voice-activity-label" id="voiceActivityLabel" aria-live="polite"></p>
 
                 </div>
 
@@ -1643,11 +1894,7 @@
                      app.js ushbu elementni ishlatadi.
                 -->
 
-                <div id="transcript">
-                    👨‍🏫 Teacher Hasan:
-                    Salom! Men Teacher Hasanman.
-                    Tillarni birga mashq qilamiz.
-                </div>
+                <div id="transcript" role="log" aria-live="polite" aria-relevant="additions text" aria-atomic="false"></div>
 
 
                 <!-- IMPORTANT:
@@ -1661,9 +1908,10 @@
                         <span
                             id="statusDot"
                             class="status-dot"
+                            aria-hidden="true"
                         ></span>
 
-                        <span id="status">
+                        <span id="status" role="status" aria-live="polite" aria-atomic="true">
                             Tayyor. Start tugmasini bosing.
                         </span>
 
@@ -2240,5 +2488,5 @@
         src="/app.js"
     ></script>
 
-<footer style="text-align:center;padding:28px 16px;font-size:13px;opacity:.85"><a href="/offer.html" style="margin:0 10px">Ommaviy oferta</a><a href="/privacy.html" style="margin:0 10px">Maxfiylik siyosati</a></footer></body>
+</body>
 </html>

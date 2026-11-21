@@ -283,11 +283,9 @@ async function generateGeminiWithRetry(options, maxAttempts = 3) {
 }
 
 const TEACHER_INSTRUCTION = `
-Siz TEACHER HASANsiz.
+Siz TEACHER HASAN AI — professional, sabrli va interaktiv ko'p tilli AI o'qituvchisiz.
 
-Siz O'zbekistondagi o'quvchilarga ingliz tilini
-o'rgatuvchi professional, samimiy va sabrli
-AI English o'qituvchisiz.
+Siz 8 ta tilni o'rgatasiz: Uzbek, English, German, Arabic, Russian, Turkish, Korean va Chinese (Mandarin).
 
 SUHBATNI BOSHLASH VA TIL TANLASH:
 
@@ -296,9 +294,12 @@ SUHBATNI BOSHLASH VA TIL TANLASH:
 - Mavjud foydalanuvchidan qaysi tilni o'rganishini qayta so'ramang va boshqa tillar ro'yxatini taklif qilmang.
 - Mavjud foydalanuvchi "davom etamiz" desa, saqlangan til, mavzu va oxirgi dars xulosasidagi keyingi qadamdan darhol davom eting.
 - Mavjud foydalanuvchi boshqa tilni aniq so'ramaguncha preferred_language ni o'zgartirmang; o'zingiz boshqa tilga o'tishni taklif qilmang.
-- Faqat yangi foydalanuvchida o'quv tili ham, oldingi dars xotirasi ham bo'lmasa, quyidagi tillarni o'rgata olishingizni ayting: English, German, Arabic, Russian, Turkish, Korean, Chinese. So'ng qaysi birini o'rganmoqchi ekanini bir marta so'rang.
+- Faqat yangi foydalanuvchida o'quv tili ham, oldingi dars xotirasi ham bo'lmasa, barcha 8 tilni sanang: Uzbek, English, German, Arabic, Russian, Turkish, Korean va Chinese. So'ng qaysi birini o'rganmoqchi ekanini bir marta so'rang.
 - Foydalanuvchi birinchi xabaridayoq tilni tanlasa, shu tilni tanlangan deb belgilang va darsni boshlang; ro'yxatni qayta aytmang.
 - Muloqot tilini (o'zbek/rus) o'rganilayotgan tildan alohida tuting.
+- Har bir tanlangan tilda talaffuz, yozuv, so'z boyligi, grammatika, tinglab tushunish, o'qish, yozish va kundalik suhbatni o'rgating.
+- Arabic uchun arab yozuvi va talaffuzini; Korean uchun Hangulni; Chinese uchun Mandarin, Pinyin va tonlarni tushuntiring.
+- Uzbek, English, German, Arabic, Russian, Turkish, Korean va Chinese tillarida foydalanuvchining darajasiga mos mashqlar tuzing.
 
 YARATUVCHI HAQIDAGI SAVOLLAR:
 - "Seni kim yaratgan?", "Kim ishlab chiqqan?", "Muallifing kim?", "Kimning loyihasisan?" va yaratuvchi/dasturchi haqida so'ralgan o'xshash savollarga qisqa va aniq: "Meni Hasan Jaylovov yaratgan" deb javob bering.
@@ -307,20 +308,17 @@ YARATUVCHI HAQIDAGI SAVOLLAR:
 QOIDALAR:
 
 1. Asosan ravon o'zbek tilida gapiring.
-2. Inglizcha misollarni aniq va sodda tushuntiring.
-3. O'quvchi inglizcha gapirsa, xatolarini muloyim tuzating.
-4. Grammatikani o'zbek tilida sodda tushuntiring.
+2. Tanlangan tilni o'rgatishda shu tildagi misollarni aniq va sodda tushuntiring.
+3. O'quvchi o'rganayotgan tilida gapirsa, xatolarini muloyim tuzating.
+4. Grammatikani o'zbek yoki foydalanuvchi tanlagan rus tilida sodda tushuntiring.
 5. O'quvchining A1-C1 darajasiga moslashing.
-6. Speaking mashqlarida inglizcha savollar bering.
-7. Grammar, Vocabulary, Fluency va Pronunciation bo'yicha
-   qisqa maslahat bering.
+6. Speaking mashqlarida tanlangan o'rganish tilida savollar bering.
+7. Grammar, Vocabulary, Fluency va Pronunciation bo'yicha qisqa maslahat bering.
 8. Javoblarni juda uzun qilmang.
 9. Tabiiy suhbat qiling.
-10. O'quvchi "o'zbekcha tushuntiring" desa,
-    o'zbek tilida tushuntiring.
-11. Ovozli suhbatda tabiiy, samimiy va o'qituvchiga
-    o'xshab gapiring.
-12. O'zingizni Teacher Hasan deb tanishtiring.
+10. O'quvchi "o'zbekcha tushuntiring" desa, o'zbek tilida tushuntiring.
+11. Ovozli suhbatda tabiiy, samimiy va o'qituvchiga o'xshab gapiring.
+12. O'zingizni Teacher Hasan AI deb tanishtiring.
 13. O'quvchini doimo rag'batlantiring.
 `;
 
@@ -1045,6 +1043,7 @@ function detectExplicitLearningLanguage(message) {
     const value = String(message || "").trim().toLowerCase();
     if (!value) return null;
     const languages = [
+        ["Uzbek", /(?:uzbek|o['’‘]?zbek(?:cha)?|o'zbek tili|uzbek tili)/i],
         ["English", /(?:english|ingliz(?:cha)?|ingliz tili)/i],
         ["German", /(?:german|nemis(?:cha)?|nemis tili)/i],
         ["Arabic", /(?:arabic|arab(?:cha)?|arab tili)/i],
@@ -1053,7 +1052,7 @@ function detectExplicitLearningLanguage(message) {
         ["Korean", /(?:korean|koreys(?:cha)?|koreys tili)/i],
         ["Chinese", /(?:chinese|xitoy(?:cha)?|xitoy tili)/i]
     ];
-    const bareChoice = /^(english|ingliz(cha)?|ingliz tili|german|nemis(cha)?|nemis tili|arabic|arab(cha)?|arab tili|russian|rus(cha)?|rus tili|turkish|turk(cha)?|turk tili|korean|koreys(cha)?|koreys tili|chinese|xitoy(cha)?|xitoy tili)[.! ]*$/i.test(value);
+    const bareChoice = /^(uzbek|o['’‘]?zbek(cha)?|o'zbek tili|uzbek tili|english|ingliz(cha)?|ingliz tili|german|nemis(cha)?|nemis tili|arabic|arab(cha)?|arab tili|russian|rus(cha)?|rus tili|turkish|turk(cha)?|turk tili|korean|koreys(cha)?|koreys tili|chinese|xitoy(cha)?|xitoy tili)[.! ]*$/i.test(value);
     const explicitLearning = /(?:o'rgan|organ|boshl|tanla|davom|teach me|learn|study|start learning)/i.test(value);
     if (!bareChoice && !explicitLearning) return null;
     return languages.find(([, pattern]) => pattern.test(value))?.[0] || null;
@@ -3400,71 +3399,119 @@ app.post(
     upload.single("audio"),
     async (req, res) => {
         try {
-            const user =
-                await getAuthenticatedUser(req);
-
-            if (!user?.id) {
-                return res.status(401).json({
-                    error:
-                        "Speaking Exam uchun Login qiling."
-                });
-            }
-
-            if (!req.file) {
-                return res.status(400).json({
-                    error:
-                        "Audio fayl yuborilmadi."
-                });
-            }
-
-            const allowedMimeTypes = [
-                "audio/webm",
-                "audio/webm;codecs=opus",
-                "audio/ogg",
-                "audio/mp4",
-                "audio/mpeg",
-                "audio/wav"
-            ];
-
-            if (
-                !allowedMimeTypes.includes(
-                    req.file.mimetype
-                )
-            ) {
-                return res.status(400).json({
-                    error:
-                        "Audio formati qo‘llab-quvvatlanmaydi."
-                });
-            }
-
-            console.log(
-                "🎤 SPEAKING AUDIO RECEIVED:",
-                {
-                    userId: user.id,
-                    mimeType: req.file.mimetype,
-                    size: req.file.size
-                }
-            );
-
-            return res.json({
-                success: true,
-                received: true,
-                mimeType: req.file.mimetype,
-                size: req.file.size
+            const user = await getAuthenticatedUser(req);
+            if (!user?.id) return res.status(401).json({ success: false, error: "Speaking Exam uchun Login qiling." });
+            if (!ai || !GEMINI_API_KEY) return res.status(503).json({ success: false, error: "AI baholash xizmati hozir mavjud emas." });
+            if (!req.file || !req.file.size) return res.status(400).json({ success: false, error: "Audio fayl yuborilmadi." });
+            const allowed = ["audio/webm", "audio/ogg", "audio/mp4", "audio/mpeg", "audio/wav"];
+            const mimeType = String(req.file.mimetype || "").split(";")[0].toLowerCase();
+            if (!allowed.includes(mimeType)) return res.status(400).json({ success: false, error: "Audio formati qo‘llab-quvvatlanmaydi." });
+            const level = String(req.body?.level || "").toUpperCase();
+            const question = String(req.body?.question || "").trim().slice(0, 1000);
+            if (!["A1", "A2", "B1", "B2", "C1"].includes(level) || !question) return res.status(400).json({ success: false, error: "CEFR daraja yoki savol noto‘g‘ri." });
+            const prompt = "Assess this English speaking audio at CEFR " + level + ". Question: " + question + ". Return only JSON with keys transcript, grammar, vocabulary, fluency, pronunciation, overall, feedback, strengths, improvements, correctedVersion. Scores must be integers 0-100 relative to the selected level. Do not judge accent identity. If silent or unintelligible, return zero scores and say a clear recording is needed. This is practice feedback, not official CEFR certification.";
+            const result = await ai.models.generateContent({
+                model: CHAT_MODEL,
+                contents: [{ role: "user", parts: [{ text: prompt }, { inlineData: { mimeType, data: req.file.buffer.toString("base64") } }] }],
+                config: { responseMimeType: "application/json" }
             });
+            const parsed = JSON.parse(String(result.text || "").trim());
+            const score = value => Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
+            const evaluation = { transcript: String(parsed.transcript || ""), grammar: score(parsed.grammar), vocabulary: score(parsed.vocabulary), fluency: score(parsed.fluency), pronunciation: score(parsed.pronunciation), overall: score(parsed.overall), feedback: String(parsed.feedback || ""), strengths: Array.isArray(parsed.strengths) ? parsed.strengths.slice(0,4).map(String) : [], improvements: Array.isArray(parsed.improvements) ? parsed.improvements.slice(0,4).map(String) : [], correctedVersion: String(parsed.correctedVersion || "") };
+            return res.json({ success: true, evaluated: true, level, evaluation });
         } catch (error) {
-            console.error(
-                "❌ Speaking audio upload error:",
-                error?.message || error
-            );
-
-            return res.status(500).json({
-                error:
-                    "Audio qabul qilishda xatolik."
-            });
+            console.error("Speaking AI assessment error:", error?.message || error);
+            return res.status(502).json({ success: false, error: "Speaking javobini AI tahlil qila olmadi. Qayta urinib ko‘ring." });
         }
     }
 );
+
+// ==============================================
+// SPEAKING EXAM — SAVE COMPLETED MOCK RESULT
+// ==============================================
+app.post("/api/speaking/results", async (req, res) => {
+    try {
+        const user = await getAuthenticatedUser(req);
+        if (!user?.id) return res.status(401).json({ success: false, error: "Natijani saqlash uchun tizimga kiring." });
+        const body = req.body || {};
+        const level = String(body.level || "").toUpperCase();
+        const estimatedLevel = String(body.estimatedLevel || "").toUpperCase();
+        const validLevels = ["A1", "A2", "B1", "B2", "C1"];
+        if (!validLevels.includes(level) || !validLevels.includes(estimatedLevel)) {
+            return res.status(400).json({ success: false, error: "CEFR darajasi noto‘g‘ri." });
+        }
+        const scoreKeys = ["grammar", "vocabulary", "fluency", "pronunciation", "overall"];
+        const scores = {};
+        for (const key of scoreKeys) {
+            const value = Number(body.scores?.[key]);
+            if (!Number.isFinite(value) || value < 0 || value > 100) {
+                return res.status(400).json({ success: false, error: "Speaking score qiymati noto‘g‘ri." });
+            }
+            scores[key] = Math.round(value);
+        }
+        if (!Array.isArray(body.answers) || body.answers.length < 1 || body.answers.length > 12) {
+            return res.status(400).json({ success: false, error: "Speaking javoblari topilmadi." });
+        }
+        const answers = body.answers.map((answer, index) => ({
+            part: Math.max(1, Math.min(3, Number(answer?.part) || 1)),
+            question: String(answer?.question || "").slice(0, 1000),
+            transcript: String(answer?.transcript || "").slice(0, 5000),
+            grammar: Math.max(0, Math.min(100, Math.round(Number(answer?.grammar) || 0))),
+            vocabulary: Math.max(0, Math.min(100, Math.round(Number(answer?.vocabulary) || 0))),
+            fluency: Math.max(0, Math.min(100, Math.round(Number(answer?.fluency) || 0))),
+            pronunciation: Math.max(0, Math.min(100, Math.round(Number(answer?.pronunciation) || 0))),
+            overall: Math.max(0, Math.min(100, Math.round(Number(answer?.overall) || 0))),
+            feedback: String(answer?.feedback || "").slice(0, 2500),
+            strengths: Array.isArray(answer?.strengths) ? answer.strengths.slice(0, 4).map(x => String(x).slice(0, 300)) : [],
+            improvements: Array.isArray(answer?.improvements) ? answer.improvements.slice(0, 4).map(x => String(x).slice(0, 300)) : [],
+            correctedVersion: String(answer?.correctedVersion || "").slice(0, 1500)
+        }));
+        const savedResult = {
+            type: "cefr-speaking-mock",
+            level,
+            estimatedLevel,
+            scores,
+            answers,
+            completedAt: new Date().toISOString()
+        };
+        const saved = await pool.query(
+            "INSERT INTO speaking_results (user_id, result) VALUES ($1, $2::jsonb) RETURNING id, created_at",
+            [user.id, JSON.stringify(savedResult)]
+        );
+        return res.status(201).json({
+            success: true,
+            saved: true,
+            resultId: saved.rows[0].id,
+            createdAt: saved.rows[0].created_at
+        });
+    } catch (error) {
+        console.error("Speaking result save error:", error?.message || error);
+        return res.status(500).json({ success: false, error: "Speaking natijasini saqlashda xatolik yuz berdi." });
+    }
+});
+
+
+app.get("/api/speaking/results", async (req, res) => {
+    try {
+        const user = await getAuthenticatedUser(req);
+        if (!user?.id) return res.status(401).json({ success: false, error: "Speaking tarixini ko‘rish uchun tizimga kiring." });
+        const result = await pool.query(
+            "SELECT id, result, created_at FROM speaking_results WHERE user_id = $1 ORDER BY created_at DESC LIMIT 10",
+            [user.id]
+        );
+        return res.json({
+            success: true,
+            results: result.rows.map(row => ({
+                id: row.id,
+                result: row.result,
+                createdAt: row.created_at
+            }))
+        });
+    } catch (error) {
+        console.error("Speaking result history error:", error?.message || error);
+        return res.status(500).json({ success: false, error: "Speaking tarixini yuklashda xatolik." });
+    }
+});
 
 // ==============================================
 // NORMAL CHAT

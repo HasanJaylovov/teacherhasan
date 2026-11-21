@@ -50,6 +50,19 @@ function byId(id) {
     return document.getElementById(id);
 }
 
+function getSafeReturnTo() {
+    const target = new URLSearchParams(location.search).get("returnTo") || "";
+    if (!target.startsWith("/") || target.startsWith("//") || target.includes("\\")) {
+        return "/";
+    }
+    try {
+        const url = new URL(target, location.origin);
+        return url.origin === location.origin ? url.pathname + url.search + url.hash : "/";
+    } catch {
+        return "/";
+    }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
     const loginForm = byId("loginForm");
 
@@ -70,7 +83,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 // The old version received the token but discarded it,
                 // so /profile.html immediately considered the user logged out.
                 setAuthToken(data.token);
-                location.href = "/";
+                location.href = getSafeReturnTo();
             } catch (error) {
                 showError(error.message);
             }
@@ -96,7 +109,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
 
                 setAuthToken(data.token);
-                location.href = "/";
+                location.href = getSafeReturnTo();
             } catch (error) {
                 showError(error.message);
             }
@@ -107,14 +120,14 @@ document.addEventListener("DOMContentLoaded", () => {
         (async () => {
             try {
                 if (!getAuthToken()) {
-                    return location.href = "/login.html";
+                    return location.href = "/login.html?returnTo=" + encodeURIComponent(getSafeReturnTo());
                 }
 
                 const data = await api("/api/me");
 
                 if (!data.authenticated) {
                     clearAuthToken();
-                    return location.href = "/login.html";
+                    return location.href = "/login.html?returnTo=" + encodeURIComponent(getSafeReturnTo());
                 }
 
                 const user = data.user;
@@ -172,7 +185,7 @@ document.addEventListener("DOMContentLoaded", () => {
             : "—";
             } catch (error) {
                 clearAuthToken();
-                location.href = "/login.html";
+                location.href = "/login.html?returnTo=" + encodeURIComponent(getSafeReturnTo());
             }
         })();
     }
@@ -187,7 +200,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 // Even if the server session has already expired, clear local auth.
             } finally {
                 clearAuthToken();
-                location.href = "/login.html";
+                location.href = "/login.html?returnTo=" + encodeURIComponent(getSafeReturnTo());
             }
         };
     }

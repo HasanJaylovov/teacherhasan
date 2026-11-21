@@ -1,0 +1,54 @@
+name: TeacherHasan PWA Build
+on:
+  push:
+    branches: [redesign/puddle-pwa]
+    paths: ["public/puddle-redesign/**", "public/index.html", "public/app.js", "public/speaking-exam.html", "server.js", "scripts/puddle-smoke.js", "scripts/puddle-browser-smoke.mjs", ".github/workflows/puddle-pwa-build-preview.yml"]
+  pull_request:
+    paths: ["public/puddle-redesign/**", "public/index.html", "public/app.js", "public/speaking-exam.html", "server.js", "scripts/puddle-smoke.js", "scripts/puddle-browser-smoke.mjs", ".github/workflows/puddle-pwa-build-preview.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate-and-package:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate app files
+        run: |
+          set -e
+          for file in index.html styles.css app.js manifest.json sw.js voice.html reading.html listening.html english-practice.html cefr-assessment.html video-lessons.html; do
+            test -s "public/puddle-redesign/$file"
+          done
+          node --check public/puddle-redesign/app.js
+          node --check public/puddle-redesign/sw.js
+          node --check public/app.js
+          node --check scripts/puddle-browser-smoke.mjs
+          node --check public/auth.js
+          node --check public/admin.js
+          node scripts/puddle-smoke.js
+          node -e "const fs=require('fs'); for (const f of ['english-practice.html','cefr-assessment.html','reading.html','listening.html']) { const h=fs.readFileSync('public/puddle-redesign/'+f,'utf8'); for (const m of h.matchAll(/<script>([\\s\\S]*?)<\\/script>/g)) new Function(m[1]); }"
+          node -e "const m=require('./public/puddle-redesign/manifest.json'); if(!m.name || !m.start_url || !m.icons?.length) process.exit(1)"
+          grep -q 'fetch("/api/chat"' public/puddle-redesign/app.js
+          grep -q 'fetch("/api/me"' public/puddle-redesign/app.js
+          grep -q 'th_auth_token' public/puddle-redesign/app.js
+          node --check server.js
+          grep -q 'evaluated: true' server.js
+          grep -q 'data.evaluated' public/speaking-exam.html
+          node -e "const fs=require('fs'); const h=fs.readFileSync('public/speaking-exam.html','utf8'); const a=h.lastIndexOf('<script>')+8; const b=h.lastIndexOf('</script>'); if(a<8 || b<a) throw Error('Speaking script missing'); new Function(h.slice(a,b));"
+      - name: Install browser test runtime
+        run: |
+          npm install --no-save --package-lock=false playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Run desktop and mobile browser smoke
+        run: node scripts/puddle-browser-smoke.mjs
+      - name: Package PWA
+        run: |
+          mkdir -p build
+          cp -R public/puddle-redesign build/teacherhasan-puddle-pwa
+          cd build
+          zip -r teacherhasan-puddle-pwa.zip teacherhasan-puddle-pwa
+      - uses: actions/upload-artifact@v4
+        with:
+          name: teacherhasan-puddle-pwa
+          path: build/teacherhasan-puddle-pwa.zip
+          retention-days: 14

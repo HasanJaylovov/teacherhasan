@@ -1,5 +1,26 @@
 
 import { GoogleGenAI } from "https://esm.sh/@google/genai";
+
+const VIDEO_LESSON_CATALOG = Object.freeze({
+    "present-simple": {
+        title: "Present Simple",
+        focus: "habits, routines, facts, subject–verb agreement, affirmative, negative and question forms"
+    },
+    "past-simple": {
+        title: "Past Simple",
+        focus: "completed past actions, regular and irregular verbs, did/didn't questions"
+    },
+    "present-continuous": {
+        title: "Present Continuous",
+        focus: "actions happening now, am/is/are plus verb-ing, and contrast with Present Simple"
+    },
+    "present-perfect": {
+        title: "Present Perfect",
+        focus: "life experiences and unfinished time, have/has plus past participle, and contrast with Past Simple"
+    }
+});
+const selectedVideoLesson =
+    VIDEO_LESSON_CATALOG[new URLSearchParams(window.location.search).get("lesson") || ""] || null;
 // ==========================================
 // 👨‍🏫 TEACHER HASAN - GEMINI LIVE
 // ==========================================
@@ -35,19 +56,40 @@ document.addEventListener("DOMContentLoaded", () => {
     const status = document.getElementById("status");
     const transcript = document.getElementById("transcript");
 
-    const voiceAvatars = Array.from(document.querySelectorAll(".avatar"));
+    const teacherOrb = document.getElementById("teacherOrb");
+    const orbMouth = document.getElementById("orbMouth");
+    const voiceActivityLabel = document.getElementById("voiceActivityLabel");
     let learnerDisplayName = "";
     let learnerMemoryContext = "";
     let pendingVoiceUserText = "";
     let pendingVoiceTeacherText = "";
 
+    function setOrbState(state, level = 0) {
+        if (!teacherOrb) return;
+        teacherOrb.classList.remove("idle", "listening", "speaking");
+        teacherOrb.classList.add(state);
+        const intensity = Math.max(0, Math.min(1, Number(level) || 0));
+        teacherOrb.style.setProperty("--orb-intensity", intensity.toFixed(2));
+        if (orbMouth) orbMouth.style.transform = "translateX(-50%) scale(" + (1 + intensity * 1.8) + ")";
+        if (voiceActivityLabel) {
+            const labels = {
+                idle: "Teacher Hasan AI suhbatga tayyor",
+                listening: intensity > .035 ? "Siz gapiryapsiz · AI tinglamoqda" : "Teacher Hasan sizni tinglamoqda",
+                speaking: "Teacher Hasan javob bermoqda"
+            };
+            voiceActivityLabel.textContent = labels[state] || labels.idle;
+        }
+    }
     function updateVoiceVisualizer(level = 0) {
         const normalized = Math.max(0, Math.min(1, Number(level) || 0));
-        voiceAvatars.forEach((avatar) => {
-            avatar.style.setProperty("--voice-scale", String(1 + normalized * 0.22));
-            avatar.style.setProperty("--voice-glow", String(0.12 + normalized * 0.72));
-            avatar.classList.toggle("voice-active", normalized > 0.035);
-        });
+        if (isRunning) setOrbState("listening", normalized);
+        else setOrbState("idle", 0);
+    }
+    function updateTeacherVisualizer(level = 0) {
+        const normalized = Math.max(0, Math.min(1, Number(level) || 0));
+        if (isRunning && normalized > 0.025) setOrbState("speaking", normalized);
+        else if (isRunning) setOrbState("listening", 0);
+        else setOrbState("idle", 0);
     }
 
     async function resolveLearnerName() {
@@ -330,18 +372,24 @@ document.addEventListener("DOMContentLoaded", () => {
     // ==========================================
 
     function addTranscript(text) {
-
         if (!text) return;
-
-        const oldText = transcript.textContent.trim();
-
-        transcript.textContent =
-            oldText
-                ? oldText + "\n" + text
-                : text;
-
-        transcript.scrollTop =
-            transcript.scrollHeight;
+        const raw = String(text).trim();
+        if (!raw) return;
+        const isUser = raw.startsWith("👤 Siz:");
+        const role = isUser ? "user" : "assistant";
+        const display = raw.replace(/^👤 Siz:\s*/, "").replace(/^👨‍🏫 Teacher Hasan:\s*/, "");
+        const bubble = document.createElement("div");
+        bubble.className = "chat-bubble " + role;
+        bubble.setAttribute("data-speaker", role);
+        const label = document.createElement("span");
+        label.className = "chat-bubble-label";
+        label.textContent = isUser ? "Siz" : "Teacher Hasan";
+        const body = document.createElement("div");
+        body.className = "chat-bubble-text";
+        body.textContent = display;
+        bubble.append(label, body);
+        transcript.appendChild(bubble);
+        transcript.scrollTop = transcript.scrollHeight;
     }
 
     // ==========================================
@@ -493,11 +541,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 outputSquareSum += channel[i] * channel[i];
             }
             const outputRms = samples.length ? Math.sqrt(outputSquareSum / samples.length) : 0;
+            updateTeacherVisualizer(Math.min(1, outputRms * 7));
 
             const audioSource =
                 audioContext.createBufferSource();
             activeAudioSources.add(audioSource);
-            audioSource.onended = () => activeAudioSources.delete(audioSource);
+            audioSource.onended = () => {
+                activeAudioSources.delete(audioSource);
+                if (!activeAudioSources.size) updateTeacherVisualizer(0);
+            };
 
             audioSource.buffer =
                 audioBuffer;
@@ -708,14 +760,14 @@ XOTIRADAN FOYDALANISH:
 - Foydalanuvchi "davom etamiz" desa, saqlangan til, current_topic va last_lesson_summary dagi keyingi qadamni darhol bajaring.
 - Mavjud foydalanuvchiga boshqa tillar ro‘yxatini aytmang, boshqa tilni taklif qilmang yoki unga o‘tmang.
 - Faqat foydalanuvchi boshqa tilni aniq so‘raganda preferred_language ni yangilang va yangi tilni o‘rgatishni boshlang.
-- Agar foydalanuvchi yangi bo‘lsa va xotirada til ham, dars tarixi ham bo‘lmasa, faqat shunda quyidagi tillarni taklif qiling: English, German, Arabic, Russian, Turkish, Korean, Chinese. Qaysi birini o‘rganmoqchiligini bir marta so‘rang.
+- Agar foydalanuvchi yangi bo‘lsa va xotirada til ham, dars tarixi ham bo‘lmasa, faqat shunda quyidagi tillarni taklif qiling: Uzbek, English, German, Arabic, Russian, Turkish, Korean, Chinese. Qaysi birini o‘rganmoqchiligini bir marta so‘rang.
 - Foydalanuvchi birinchi xabaridayoq tilni tanlasa, ro‘yxatni takrorlamasdan o‘sha tilni o‘rgating.
 - Oldin o‘rgatilgan so‘zlarni yangi kontekstda mustahkamlang va takroriy xatolarni mashqlarga qo‘shing.
 - O‘quvchi avval bajargan mashqlarini qayta bermang; keyingi mantiqiy bosqichga o‘ting.
 - Xotirada yo‘q ma’lumotni to‘qib chiqarmang.
 
 FOYDALANUVCHI HOLATI:
-${hasPreviousLearning ? "MAVJUD — o‘rganilayotgan til: " + (learnerPreferredLanguage || "xotiradagi joriy mavzudan aniqlang") + ". Shu tilda davom eting." : "YANGI — barcha 7 tilni sanab, qaysi tilni tanlashini so‘rang."}
+${hasPreviousLearning ? "MAVJUD — o‘rganilayotgan til: " + (learnerPreferredLanguage || "xotiradagi joriy mavzudan aniqlang") + ". Shu tilda davom eting." : "YANGI — barcha 8 tilni sanab, qaysi tilni tanlashini so‘rang."}
 
 YARATUVCHI HAQIDAGI SAVOLLAR:
 - "Seni kim yaratgan?", "Kim ishlab chiqqan?", "Muallifing kim?", "Kimning loyihasisan?" kabi yaratuvchi/dasturchi haqidagi savollarga "Meni Hasan Jaylovov yaratgan" deb qisqa javob bering.
@@ -723,7 +775,7 @@ YARATUVCHI HAQIDAGI SAVOLLAR:
 
 Siz TEACHER HASANsiz.
 
-Siz O'ZBEK TILI va RUS TILIDA ravon muloqot qilasiz. O'rganiladigan tilni foydalanuvchining saqlangan tanloviga qarab belgilang. Faqat yangi foydalanuvchiga 7 ta til ro'yxatini ayting.
+Siz O'ZBEK TILI va RUS TILIDA ravon muloqot qilasiz. O'rganiladigan tilni foydalanuvchining saqlangan tanloviga qarab belgilang. Faqat yangi foydalanuvchiga 8 ta til ro'yxatini ayting.
 
 Har bir til uchun:
 
@@ -810,8 +862,16 @@ O'zingizni Teacher Hasan deb tanishtiring.
 
 Sizni Moxir dasturchi Hasan Jaylovov yaratgan.
 Siz Teacher Hasan AI English Platform tarkibidagi AI English Teacher'siz.
-`,
+` + (selectedVideoLesson ? `
 
+VIDEO LESSON MODE:
+- The user explicitly selected an English lesson: ${selectedVideoLesson.title}.
+- Focus on: ${selectedVideoLesson.focus}.
+- This is an AI-guided lesson, not video playback. Never claim a video is playing.
+- Treat this selection as a request to study English; skip the language-choice list.
+- On the learner's first spoken turn, begin with a short explanation in English with Uzbek support, one example, and one focused practice question. Keep turns short and interactive.
+` : ""),
+ 
                 thinkingConfig: {
                     thinkingLevel: "minimal"
                 }
@@ -833,7 +893,9 @@ Siz Teacher Hasan AI English Platform tarkibidagi AI English Teacher'siz.
                         remembered.current_topic ||
                         remembered.last_lesson_summary
                     );
-                    const opening = hasHistory
+                    const opening = selectedVideoLesson
+                        ? "🎬 AI dars tanlandi: " + selectedVideoLesson.title + ". Bu video playback emas, AI bilan interaktiv dars. Ulanish tayyor; darsni boshlash uchun gapiring."
+                        : hasHistory
                         ? "👨‍🏫 Teacher Hasan: Xush kelibsiz" +
                           (learnerDisplayName ? ", " + learnerDisplayName : "") +
                           "! " +
@@ -843,7 +905,7 @@ Siz Teacher Hasan AI English Platform tarkibidagi AI English Teacher'siz.
                               : "oldingi darsimizni ") +
                           "davom ettiramiz. " +
                           (remembered.last_lesson_summary || "Oxirgi darsimizdagi keyingi qadamdan boshlaymiz.")
-                        : "👨‍🏫 Teacher Hasan: Salom! Men Teacher Hasanman. English, German, Arabic, Russian, Turkish, Korean va Chinese tillarini o‘rgata olaman. Qaysi tilni o‘rganmoqchisiz?";
+                        : "👨‍🏫 Teacher Hasan: Salom! Men Teacher Hasanman. Uzbek, English, German, Arabic, Russian, Turkish, Korean va Chinese tillarini o‘rgata olaman. Qaysi tilni o‘rganmoqchisiz?";
                     addTranscript(opening);
                 },
 
@@ -1132,6 +1194,7 @@ Siz Teacher Hasan AI English Platform tarkibidagi AI English Teacher'siz.
         );
 
         isRunning = true;
+        setOrbState("listening", 0);
 
         if (guestMode) {
             startGuestHeartbeat();
@@ -1258,8 +1321,8 @@ Siz Teacher Hasan AI English Platform tarkibidagi AI English Teacher'siz.
 
         voiceMicLevel = 0;
         voiceTeacherLevel = 0;
-        updateVoiceVisualizer(0, "user");
-        updateVoiceVisualizer(0, "teacher");
+        updateVoiceVisualizer(0);
+        updateTeacherVisualizer(0);
 
         setStatus("⚪ Suhbat to'xtatildi. Start tugmasini bosing.");
         console.log("✅ Teacher Hasan lokal audio va mikrofon resurslari uzildi");
