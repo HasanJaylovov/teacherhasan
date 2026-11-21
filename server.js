@@ -3600,7 +3600,10 @@ app.post("/api/tts", async (req, res) => {
             throw new Error("Gemini TTS audio qaytarmadi.");
         }
 
-        const audioBuffer = Buffer.from(audioPart.inlineData.data);
+        const rawAudio = audioPart.inlineData.data;
+        const audioBuffer = typeof rawAudio === "string"
+            ? Buffer.from(rawAudio, "base64")
+            : Buffer.from(rawAudio);
         const audio = audioBuffer.toString("base64");
         if (ttsAudioCache.size >= 100) {
             const firstKey = ttsAudioCache.keys().next().value;
