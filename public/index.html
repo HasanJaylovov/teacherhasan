@@ -1071,6 +1071,19 @@
 @media(max-width:700px){.app{width:calc(100% - 12px);min-height:calc(100dvh - 12px);margin:6px auto;border-radius:20px}.conversation{padding:8px 8px 4px}.teacher-orb-wrap{min-height:clamp(180px,28vh,260px)}.teacher-orb{width:min(230px,64vw)}#transcript{padding:8px 2px;gap:9px;margin:10px auto 6px}.chat-bubble{max-width:88%;padding:10px 13px;font-size:13px}.controls{padding:10px 10px 14px;gap:8px}.control-button{min-width:0;flex:1;max-width:210px}}
 @media(prefers-reduced-motion:reduce){.chat-bubble{animation:none}}
 
+
+/* Focused voice conversation layout: keep orb and controls stable while chat scrolls */
+html,body{height:100%;min-height:100%;overflow:hidden}
+body{min-height:100dvh;display:flex;align-items:stretch;justify-content:center}
+.app{height:calc(100dvh - 28px);max-height:calc(100dvh - 28px);min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.conversation{width:100%;flex:1;min-height:0;overflow:hidden}
+.teacher-hero{flex:0 0 auto}
+.teacher-orb-wrap{flex:0 0 auto}
+#transcript{overscroll-behavior:contain;scroll-behavior:smooth;scrollbar-gutter:stable;flex:1 1 auto;min-height:64px}
+#transcript:empty{flex:0 1 0;min-height:0;margin:0;padding:0}
+.controls{flex:0 0 auto;padding-bottom:max(14px,env(safe-area-inset-bottom))}
+@media(max-width:700px){.app{height:calc(100dvh - 12px);max-height:calc(100dvh - 12px);min-height:0}.conversation{padding-bottom:2px}.teacher-orb-wrap{min-height:clamp(170px,25vh,225px)}#transcript{max-height:none}.controls{padding-bottom:max(12px,env(safe-area-inset-bottom))}}
+@media(prefers-reduced-motion:reduce){#transcript{scroll-behavior:auto}}
 </style>
     <style id="voice-reactive-visualizer">
         .avatar {
