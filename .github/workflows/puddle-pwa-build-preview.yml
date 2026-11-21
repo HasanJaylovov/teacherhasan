@@ -4,7 +4,7 @@ on:
     branches: [redesign/puddle-pwa]
     paths: ["public/puddle-redesign/**", "public/index.html", "public/app.js", "public/speaking-exam.html", "server.js", "scripts/puddle-smoke.js", "scripts/puddle-browser-smoke.mjs", ".github/workflows/puddle-pwa-build-preview.yml"]
   pull_request:
-    paths: ["public/puddle-redesign/**", "public/speaking-exam.html", "server.js", "scripts/puddle-smoke.js", ".github/workflows/puddle-pwa-build-preview.yml"]
+    paths: ["public/puddle-redesign/**", "public/index.html", "public/app.js", "public/speaking-exam.html", "server.js", "scripts/puddle-smoke.js", "scripts/puddle-browser-smoke.mjs", ".github/workflows/puddle-pwa-build-preview.yml"]
   workflow_dispatch:
 permissions:
   contents: read
@@ -21,6 +21,8 @@ jobs:
           done
           node --check public/puddle-redesign/app.js
           node --check public/puddle-redesign/sw.js
+          node --check public/app.js
+          node --check scripts/puddle-browser-smoke.mjs
           node --check public/auth.js
           node --check public/admin.js
           node scripts/puddle-smoke.js
