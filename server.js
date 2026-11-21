@@ -3572,7 +3572,7 @@ app.post("/api/tts", async (req, res) => {
         const cacheKey = crypto.createHash("sha256").update(language + "\n" + text).digest("hex");
         const cached = ttsAudioCache.get(cacheKey);
         if (cached && cached.expiresAt > now) {
-            return res.json({ success: true, audio: cached.audio, mimeType: "audio/wav", cached: true });
+            return res.json({ success: true, audio: cached.audio, mimeType: cached.mimeType || "audio/wav", cached: true });
         }
 
         const style = language === "uz"
@@ -3619,6 +3619,7 @@ app.post("/api/tts", async (req, res) => {
         }
 
         const rawAudio = audioPart.inlineData.data;
+        const mimeType = String(audioPart.inlineData.mimeType || "audio/wav");
         const audio = typeof rawAudio === "string"
             ? rawAudio
             : Buffer.from(rawAudio).toString("base64");
@@ -3626,9 +3627,9 @@ app.post("/api/tts", async (req, res) => {
             const firstKey = ttsAudioCache.keys().next().value;
             if (firstKey) ttsAudioCache.delete(firstKey);
         }
-        ttsAudioCache.set(cacheKey, { audio, expiresAt: now + 60 * 60 * 1000 });
+        ttsAudioCache.set(cacheKey, { audio, mimeType, expiresAt: now + 60 * 60 * 1000 });
 
-        return res.json({ success: true, audio, mimeType: "audio/wav", cached: false });
+        return res.json({ success: true, audio, mimeType, cached: false });
     } catch (error) {
         console.error("Gemini TTS error:", error?.message || error);
         return res.status(502).json({ success: false, error: "Gemini ovozini yaratib bo‘lmadi. Qayta urinib ko‘ring." });
