@@ -71,82 +71,143 @@ document.addEventListener("DOMContentLoaded", () => {
     let visualRaf = 0;
 
     function setupVoiceCanvases() {
-        const organicCtx = organicCanvas?.getContext("2d");
-        const bottomCtx = bottomWaveCanvas?.getContext("2d");
-        if (!organicCtx || !bottomCtx) return;
+        const organicCtx = organicCanvas?.getContext("2d", { alpha: true });
+        const bottomCtx = bottomWaveCanvas?.getContext("2d", { alpha: true });
+        if (!organicCtx || !bottomCtx) {
+            console.warn("Voice visualizer canvases are unavailable");
+            return;
+        }
+
+        let lastFrameAt = 0;
+        let destroyed = false;
+        const frameInterval = 1000 / 30;
+        const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+
         const resize = (canvas, ctx) => {
             const rect = canvas.getBoundingClientRect();
-            const dpr = Math.min(window.devicePixelRatio || 1, 2);
-            canvas.width = Math.max(1, Math.round(rect.width * dpr));
-            canvas.height = Math.max(1, Math.round(rect.height * dpr));
+            if (!rect.width || !rect.height) return;
+            const width = Math.max(1, Math.round(rect.width * dpr));
+            const height = Math.max(1, Math.round(rect.height * dpr));
+            if (canvas.width !== width || canvas.height !== height) {
+                canvas.width = width;
+                canvas.height = height;
+            }
             ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         };
-        const draw = () => {
-            visualFrame += .012 + visualLevel * .025;
-            const a = organicCanvas.getBoundingClientRect();
-            const w = a.width, h = a.height;
-            if (w && h) {
-                organicCtx.clearRect(0, 0, w, h);
-                const cx = w / 2, cy = h / 2, base = Math.min(w, h) * (.315 + visualLevel * .025);
-                const pulse = visualState === "speaking" ? 1.35 : visualState === "listening" ? 1 : .68;
-                for (let layer = 0; layer < 34; layer++) {
-                    const t = layer / 34;
-                    organicCtx.beginPath();
-                    for (let k = 0; k <= 240; k++) {
-                        const angle = k / 240 * Math.PI * 2;
-                        const wave = Math.sin(angle * 3 + visualFrame * 1.1 + t * 5) * (.12 + visualLevel * .11)
-                            + Math.cos(angle * 5 - visualFrame * .8 + t * 7) * (.075 + visualLevel * .08)
-                            + Math.sin(angle * 2 + visualFrame * .55) * .045;
-                        const radius = base * (1 + wave * pulse) * (.76 + t * .43);
-                        const x = cx + Math.cos(angle) * radius * (1 + .10 * Math.sin(visualFrame * .35));
-                        const y = cy + Math.sin(angle) * radius * (.92 + .08 * Math.cos(visualFrame * .42));
-                        if (k === 0) organicCtx.moveTo(x, y); else organicCtx.lineTo(x, y);
-                    }
-                    organicCtx.closePath();
-                    const hue = (275 + layer * 2.1 + Math.sin(visualFrame + t * 6) * 32) % 360;
-                    organicCtx.strokeStyle = `hsla(${hue}, 100%, ${62 + 12 * Math.sin(t * 8)}%, ${.13 + t * .48})`;
-                    organicCtx.lineWidth = .65 + t * .45;
-                    organicCtx.shadowColor = `hsla(${hue},100%,65%,.72)`;
-                    organicCtx.shadowBlur = visualState === "idle" ? 4 : 8 + visualLevel * 13;
-                    organicCtx.stroke();
-                }
-                organicCtx.shadowBlur = 0;
-                const glow = organicCtx.createRadialGradient(cx,cy,base*.12,cx,cy,base*.85);
-                glow.addColorStop(0,"rgba(1,5,8,.98)");
-                glow.addColorStop(.58,"rgba(2,7,12,.92)");
-                glow.addColorStop(1,"rgba(2,7,12,0)");
-                organicCtx.fillStyle=glow; organicCtx.beginPath(); organicCtx.arc(cx,cy,base*.9,0,Math.PI*2); organicCtx.fill();
+        const resizeAll = () => {
+            resize(organicCanvas, organicCtx);
+            resize(bottomWaveCanvas, bottomCtx);
+        };
+
+        const draw = (now = 0) => {
+            if (destroyed) return;
+            if (document.hidden) {
+                visualRaf = 0;
+                return;
             }
-            const b = bottomWaveCanvas.getBoundingClientRect(), bw=b.width,bh=b.height;
-            if (bw && bh) {
-                bottomCtx.clearRect(0,0,bw,bh);
-                const centerX=bw/2, centerY=bh*.68;
-                for(let ring=0;ring<7;ring++){
-                    const radius=22+ring*13;
-                    for(let dot=0;dot<76;dot++){
-                        const angle=dot/76*Math.PI*2;
-                        const wobble=Math.sin(angle*5+visualFrame*2+ring)*3*visualLevel;
-                        const x=centerX+Math.cos(angle)*(radius+wobble);
-                        const y=centerY+Math.sin(angle)*(radius+wobble)*.58;
-                        bottomCtx.fillStyle=`rgba(197,145,246,${.12+(1-ring/8)*.36})`;
-                        bottomCtx.beginPath();bottomCtx.arc(x,y,1.05,0,Math.PI*2);bottomCtx.fill();
+            if (now - lastFrameAt >= frameInterval) {
+                lastFrameAt = now;
+                try {
+                    visualFrame += 0.035 + visualLevel * 0.045;
+                    const a = organicCanvas.getBoundingClientRect();
+                    const w = a.width, h = a.height;
+                    if (w > 0 && h > 0) {
+                        organicCtx.clearRect(0, 0, w, h);
+                        const cx = w / 2, cy = h / 2;
+                        const base = Math.min(w, h) * (0.315 + visualLevel * 0.025);
+                        const pulse = visualState === "speaking" ? 1.35 : visualState === "listening" ? 1 : 0.72;
+                        for (let layer = 0; layer < 20; layer++) {
+                            const t = layer / 20;
+                            organicCtx.beginPath();
+                            for (let k = 0; k <= 144; k++) {
+                                const angle = k / 144 * Math.PI * 2;
+                                const wave =
+                                    Math.sin(angle * 3 + visualFrame * 1.1 + t * 5) * (0.12 + visualLevel * 0.11) +
+                                    Math.cos(angle * 5 - visualFrame * 0.8 + t * 7) * (0.075 + visualLevel * 0.08) +
+                                    Math.sin(angle * 2 + visualFrame * 0.55) * 0.045;
+                                const radius = base * (1 + wave * pulse) * (0.76 + t * 0.43);
+                                const x = cx + Math.cos(angle) * radius * (1 + 0.10 * Math.sin(visualFrame * 0.35));
+                                const y = cy + Math.sin(angle) * radius * (0.92 + 0.08 * Math.cos(visualFrame * 0.42));
+                                if (k === 0) organicCtx.moveTo(x, y); else organicCtx.lineTo(x, y);
+                            }
+                            organicCtx.closePath();
+                            const hue = (275 + layer * 3.1 + Math.sin(visualFrame + t * 6) * 32) % 360;
+                            organicCtx.strokeStyle = `hsla(${hue},100%,${62 + 12 * Math.sin(t * 8)}%,${0.16 + t * 0.48})`;
+                            organicCtx.lineWidth = 0.75 + t * 0.45;
+                            organicCtx.shadowColor = `hsla(${hue},100%,65%,.65)`;
+                            organicCtx.shadowBlur = visualState === "idle" ? 3 : 6 + visualLevel * 10;
+                            organicCtx.stroke();
+                        }
+                        organicCtx.shadowBlur = 0;
+                        const glow = organicCtx.createRadialGradient(cx, cy, base * 0.12, cx, cy, base * 0.9);
+                        glow.addColorStop(0, "rgba(1,5,8,.98)");
+                        glow.addColorStop(0.58, "rgba(2,7,12,.92)");
+                        glow.addColorStop(1, "rgba(2,7,12,0)");
+                        organicCtx.fillStyle = glow;
+                        organicCtx.beginPath();
+                        organicCtx.arc(cx, cy, base * 0.9, 0, Math.PI * 2);
+                        organicCtx.fill();
                     }
-                }
-                for(let i=0;i<54;i++){
-                    const x=centerX+(i-26.5)*5.3;
-                    const envelope=Math.exp(-Math.pow((i-26.5)/16,2));
-                    const wave=(.18+Math.abs(Math.sin(i*.7+visualFrame*5))*(visualState==="idle"?.13:.35+visualLevel*.65))*envelope;
-                    const barH=5+wave*68;
-                    bottomCtx.fillStyle=`rgba(205,126,244,${.18+envelope*.62})`;
-                    bottomCtx.fillRect(x,centerY-barH/2,2.1,barH);
+
+                    const b = bottomWaveCanvas.getBoundingClientRect();
+                    const bw = b.width, bh = b.height;
+                    if (bw > 0 && bh > 0) {
+                        bottomCtx.clearRect(0, 0, bw, bh);
+                        const centerX = bw / 2, centerY = bh * 0.68;
+                        for (let ring = 0; ring < 5; ring++) {
+                            const radius = 22 + ring * 13;
+                            for (let dot = 0; dot < 52; dot++) {
+                                const angle = dot / 52 * Math.PI * 2;
+                                const wobble = Math.sin(angle * 5 + visualFrame * 2 + ring) * (2 + visualLevel * 3);
+                                const x = centerX + Math.cos(angle) * (radius + wobble);
+                                const y = centerY + Math.sin(angle) * (radius + wobble) * 0.58;
+                                bottomCtx.fillStyle = `rgba(197,145,246,${0.12 + (1 - ring / 6) * 0.36})`;
+                                bottomCtx.beginPath();
+                                bottomCtx.arc(x, y, 1.05, 0, Math.PI * 2);
+                                bottomCtx.fill();
+                            }
+                        }
+                        for (let i = 0; i < 42; i++) {
+                            const x = centerX + (i - 20.5) * 5.3;
+                            const envelope = Math.exp(-Math.pow((i - 20.5) / 13, 2));
+                            const wave = (0.18 + Math.abs(Math.sin(i * 0.7 + visualFrame * 5)) *
+                                (visualState === "idle" ? 0.13 : 0.35 + visualLevel * 0.65)) * envelope;
+                            const barH = 5 + wave * 68;
+                            bottomCtx.fillStyle = `rgba(205,126,244,${0.18 + envelope * 0.62})`;
+                            bottomCtx.fillRect(x, centerY - barH / 2, 2.1, barH);
+                        }
+                    }
+                } catch (error) {
+                    console.warn("Voice visualizer frame recovered:", error);
                 }
             }
             visualRaf = requestAnimationFrame(draw);
         };
-        const onResize=()=>{resize(organicCanvas,organicCtx);resize(bottomWaveCanvas,bottomCtx);};
-        onResize();
-        window.addEventListener("resize",onResize,{passive:true});
-        if(!visualRaf) visualRaf=requestAnimationFrame(draw);
+
+        const pause = () => {
+            if (visualRaf) cancelAnimationFrame(visualRaf);
+            visualRaf = 0;
+        };
+        const resume = () => {
+            resizeAll();
+            lastFrameAt = 0;
+            if (!destroyed && !document.hidden && !visualRaf) {
+                visualRaf = requestAnimationFrame(draw);
+            }
+        };
+
+        resizeAll();
+        window.addEventListener("resize", resizeAll, { passive: true });
+        document.addEventListener("visibilitychange", () => {
+            if (document.hidden) pause();
+            else resume();
+        });
+        if ("ResizeObserver" in window) {
+            const observer = new ResizeObserver(resizeAll);
+            observer.observe(organicCanvas);
+            observer.observe(bottomWaveCanvas);
+        }
+        resume();
     }
     setupVoiceCanvases();
 
