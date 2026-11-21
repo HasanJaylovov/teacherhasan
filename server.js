@@ -3581,30 +3581,47 @@ app.post("/api/tts", async (req, res) => {
                 ? "Read the exact transcript in natural native English with a clear, neutral British accent, natural rhythm and stress. Do not translate or paraphrase."
                 : "Read the exact transcript verbatim. Detect the language of each passage and use natural native-like pronunciation, rhythm and stress for that language. Preserve language changes; do not translate or paraphrase.";
 
-        const generated = await generateGeminiWithRetry({
-            model: "gemini-3.8-flash-tts",
-            contents: [{
-                role: "user",
-                parts: [{ text, speechMetadata: { style } }]
-            }],
-            config: {
-                responseModalities: ["AUDIO"],
-                speechConfig: {
-                    voiceConfig: { voice: "Charon" }
-                }
-            }
-        });
+        let ttsResponse;
+        for (let attempt = 1; attempt <= 2; attempt++) {
+            ttsResponse = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash-tts:generateContent", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-goog-api-key": GEMINI_API_KEY
+                },
+                body: JSON.stringify({
+                    contents: [{
+                        role: "user",
+                        parts: [{ text, speechMetadata: { style } }]
+                    }],
+                    generationConfig: {
+                        responseModalities: ["AUDIO"],
+                        speechConfig: {
+                            voiceConfig: { voice: "Charon" }
+                        }
+                    }
+                })
+            });
 
+            if (ttsResponse.ok) break;
+            if (attempt === 2 || ![429, 500, 502, 503, 504].includes(ttsResponse.status)) {
+                const failure = await ttsResponse.text().catch(() => "");
+                console.error("Gemini TTS API response:", ttsResponse.status, failure.slice(0, 500));
+                throw new Error("Gemini TTS API status " + ttsResponse.status);
+            }
+            await new Promise(resolve => setTimeout(resolve, 600 * attempt));
+        }
+
+        const generated = await ttsResponse.json();
         const audioPart = generated?.candidates?.[0]?.content?.parts?.find(part => part?.inlineData?.data);
         if (!audioPart?.inlineData?.data) {
             throw new Error("Gemini TTS audio qaytarmadi.");
         }
 
         const rawAudio = audioPart.inlineData.data;
-        const audioBuffer = typeof rawAudio === "string"
-            ? Buffer.from(rawAudio, "base64")
-            : Buffer.from(rawAudio);
-        const audio = audioBuffer.toString("base64");
+        const audio = typeof rawAudio === "string"
+            ? rawAudio
+            : Buffer.from(rawAudio).toString("base64");
         if (ttsAudioCache.size >= 100) {
             const firstKey = ttsAudioCache.keys().next().value;
             if (firstKey) ttsAudioCache.delete(firstKey);
