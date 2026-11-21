@@ -1099,6 +1099,18 @@ body{min-height:100dvh;display:flex;align-items:stretch;justify-content:center}
 .va-prompt{font-size:13px;min-height:18px}
 @media(max-width:520px){.teacher-hero.voice-assessment{grid-template-rows:60px 28px minmax(130px,1fr) minmax(110px,auto) 16px!important}.va-header{gap:6px}.va-language-switcher .language-button{padding:6px 7px;font-size:10px}#transcript.va-chat-panel{height:clamp(110px,18vh,155px);min-height:110px;max-height:155px}}
 
+
+/* Conversation header: brand and return action live together at the top-right. */
+#menuButton{display:none!important}
+.topbar-brand{display:none!important}
+.topbar{min-height:54px;padding:8px 24px 0;justify-content:flex-end;border-bottom:0}
+.va-header{display:flex!important;align-items:center!important;justify-content:flex-end!important;width:100%;min-height:54px;margin:0 0 8px;padding:0 4px}
+.va-header-actions{display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-left:auto}
+.va-brand-title{font-size:14px;font-weight:850;letter-spacing:-.25px;color:#f8efff;white-space:nowrap}
+.va-brand-title em{font-style:normal;color:#c69aff}
+.va-back-link{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:8px 13px;border:1px solid rgba(205,157,246,.28);border-radius:12px;background:rgba(255,255,255,.07);color:#f8efff;font-size:12px;font-weight:750;text-decoration:none;white-space:nowrap;transition:background .2s ease,border-color .2s ease}
+.va-back-link:hover{background:rgba(170,113,220,.2);border-color:rgba(205,157,246,.55)}
+@media(max-width:520px){.topbar{padding:5px 14px 0}.va-header{min-height:46px}.va-brand-title{font-size:12px}.va-back-link{min-height:33px;padding:7px 10px;font-size:11px}}
 </style>
     <style id="voice-reactive-visualizer">
         .avatar {
@@ -1972,9 +1984,10 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;background:ra
 
                 <div class="teacher-hero voice-assessment">
                     <div class="va-header">
-                        <span class="va-header-spacer"></span>
-                        <div class="va-title" data-voice-title>Ovozli suhbat</div>
-                        <div class="language-switcher va-language-switcher" aria-label="Interfeys tili"><button type="button" class="language-button" data-ui-lang="uz">UZ</button><button type="button" class="language-button" data-ui-lang="ru">RU</button><button type="button" class="language-button" data-ui-lang="en">EN</button></div>
+                        <div class="va-header-actions">
+                            <span class="va-brand-title">Teacher Hasan <em>AI</em></span>
+                            <a class="va-back-link" id="voiceBack" href="/puddle-redesign/" aria-label="Bosh sahifaga qaytish">← Qaytish</a>
+                        </div>
                     </div>
                     <div class="va-prompt" id="vaPrompt">Go ahead, I'm listening...</div>
                     <div class="va-organic-wrap" id="teacherOrb" role="img" aria-label="Teacher Hasan AI ovoz vizualizatsiyasi">
