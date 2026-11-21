@@ -144,6 +144,8 @@ for (const feature of ["new URLSearchParams", "selectedVideoLesson", "VIDEO LESS
 if (!videoLessons.includes("video fayllar mavjudligini anglatmaydi")) {
     throw Error("Video lesson page must disclose that the catalog is not video playback");
 }
+const videoBrandLink = videoLessons.match(/<a class="brand" href="([^"]+)"/);
+if (!videoBrandLink || videoBrandLink[1] !== "./index.html") throw Error("Video lesson brand must return to the redesigned PWA");
 
 // Static/local modules are checked for their actual client-side behavior and disclaimers.
 if (!practice.includes("const qs=") || !practice.includes("Your score:") || !practice.includes("Rasmiy CEFR")) {
