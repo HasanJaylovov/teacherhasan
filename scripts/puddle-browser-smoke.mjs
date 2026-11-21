@@ -182,6 +182,21 @@ try {
     assert.equal(transcriptAlignment.user, "flex-end", "user messages should align right");
     assert.ok(transcriptAlignment.chatScrollHeight > transcriptAlignment.chatClientHeight, "overflowing conversation should be scrollable");
 
+
+    await page.evaluate(() => localStorage.setItem("th_auth_token", "smoke-test-token"));
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("http://127.0.0.1:4173/speaking-exam.html", { waitUntil: "domcontentloaded" });
+    assert.equal(await page.locator("#welcomePanel").isVisible(), true, "Speaking Exam start screen should render");
+    assert.equal(await page.locator(".exam-layout").evaluate(el => getComputedStyle(el).width), "1440px", "Speaking Exam should use the full desktop viewport");
+    await page.locator('[data-level="B2"]').click();
+    await page.locator("#startExamBtn").click();
+    assert.equal(await page.locator("#examPanel").isVisible(), true, "Speaking Exam should enter the exam flow");
+    assert.match(await page.locator("#partBadge").innerText(), /PART 1/);
+    assert.match(await page.locator("#questionText").innerText(), /recent development/i);
+    assert.equal(await page.locator("#prepBtn").isVisible(), false, "Part 1 should not show preparation timer");
+    await page.goto("http://127.0.0.1:4173/puddle-redesign/index.html", { waitUntil: "domcontentloaded" });
+    assert.equal(await page.locator("#speakingHistory").count(), 1, "learner profile should include saved Speaking Exam history");
+
     console.log("Browser smoke passed: eight-language discovery and first-chat greeting, desktop/mobile navigation, chat API interaction and persistence, clear chat, theme persistence, responsive layout, Voice AI iframe, orb focus layout, independent transcript scrolling, left/right speaker bubbles, and legacy controls.");
     await context.close();
 } finally {
