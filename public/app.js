@@ -36,6 +36,7 @@ let activeAudioSources = new Set();
 let startAttemptId = 0;
 
 let isRunning = false;
+let isStarting = false;
 
 let nextAudioTime = 0;
 
@@ -63,7 +64,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const organicCanvas = document.getElementById("organicCanvas");
     const bottomWaveCanvas = document.getElementById("bottomWaveCanvas");
     const vaPrompt = document.getElementById("vaPrompt");
-    const toggleTranscript = document.getElementById("toggleTranscript");
+
     let visualState = "idle";
     let visualLevel = 0;
     let visualFrame = 0;
@@ -472,6 +473,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function addTranscript(text) {
         if (!text) return;
+        const emptyHint = transcript?.querySelector(".va-chat-empty");
+        if (emptyHint) emptyHint.remove();
         const raw = String(text).trim();
         if (!raw) return;
         const isUser = raw.startsWith("👤 Siz:");
@@ -699,7 +702,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // ==========================================
 
     async function startTeacher() {
-    if (isRunning) return;
+    if (isStarting || isRunning || liveSession) return;
+    isStarting = true;
     const attemptId = ++startAttemptId;
 
     // Stop tugmasi startup jarayonining boshidanoq faol bo'lishi shart.
@@ -1293,6 +1297,7 @@ VIDEO LESSON MODE:
         );
 
         isRunning = true;
+        isStarting = false;
         setOrbState("listening", 0);
 
         if (guestMode) {
@@ -1311,6 +1316,7 @@ VIDEO LESSON MODE:
         // STOP bosilgandan keyin eski start urinishining xatosi UI'ni qayta
         // ishga tushirmasligi yoki statusni buzmasligi kerak.
         if (attemptId !== startAttemptId) {
+            isStarting = false;
             console.info("Start urinish bekor qilindi:", error?.message || error);
             return;
         }
@@ -1325,6 +1331,7 @@ VIDEO LESSON MODE:
         }
 
         isRunning = false;
+        isStarting = false;
         startBtn.disabled = false;
         stopBtn.disabled = true;
     }
@@ -1336,6 +1343,7 @@ VIDEO LESSON MODE:
     function stopTeacher() {
         console.log("🔴 Teacher Hasan STOP bosildi");
         startAttemptId++;
+        isStarting = false;
         isRunning = false;
 
         // Tugma va holatni darhol yangilash.
@@ -1444,25 +1452,7 @@ VIDEO LESSON MODE:
     document.getElementById("voiceBack")?.addEventListener("click", () => {
         document.getElementById("menuButton")?.click();
     });
-    toggleTranscript?.addEventListener("click", () => {
-        transcript?.classList.toggle("va-visible");
-        if (transcript?.classList.contains("va-visible")) transcript.scrollIntoView({behavior:"smooth",block:"nearest"});
-    });
-    document.getElementById("saveVoiceNote")?.addEventListener("click", () => {
-        const text = transcript?.innerText?.trim() || "";
-        if (!text) {
-            if (vaPrompt) vaPrompt.textContent = "Your conversation will appear here after you start speaking.";
-            return;
-        }
-        try {
-            const notes = JSON.parse(localStorage.getItem("th_voice_saved_notes") || "[]");
-            notes.unshift({savedAt:new Date().toISOString(),text});
-            localStorage.setItem("th_voice_saved_notes",JSON.stringify(notes.slice(0,30)));
-            if (vaPrompt) vaPrompt.textContent = "Conversation saved on this device.";
-        } catch (error) {
-            console.warn("Voice note save failed:",error);
-        }
-    });
+
 
 
     // ==========================================
