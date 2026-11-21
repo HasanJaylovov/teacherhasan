@@ -32,3 +32,10 @@ body.dark .language-chip{background:#141629;border-color:#2b2d47}
  #mainContent .chat-compose{width:100%}
 }
 @media(max-width:999px){.app-shell{width:100%;max-width:none}}
+
+/* Keep Teacher Hasan AI wordmark anchored at the upper-left. */
+.app-shell:not(.learning-shell) .topbar .brand{order:0;margin-right:auto}
+.app-shell:not(.learning-shell) .topbar .menu-toggle{order:2}
+.app-shell:not(.learning-shell) .topbar #themeToggle{order:3}
+.library-pagination{display:flex;justify-content:space-between;gap:12px;margin-top:16px}
+.library-pagination button{min-width:120px}
