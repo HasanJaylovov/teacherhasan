@@ -74,6 +74,7 @@ try {
     assert.equal(await page.locator(".bottom-nav").isVisible(), false, "desktop bottom navigation should be hidden");
     assert.equal(await page.locator(".hero-card").count(), 1, "home hero should render");
     assert.equal(await page.locator(".language-chip").count(), 8, "homepage should list all eight supported learning languages");
+    assert.deepEqual(await page.locator(".language-chip b").allTextContents(), ["Uzbek", "English", "German", "Arabic", "Russian", "Turkish", "Korean", "Chinese"], "language cards should match the supported eight-language catalog");
     assert.match(await page.locator(".hero-card").innerText(), /8 ta tilni/, "hero should promote eight-language learning");
 
     // Exercise the real client-side chat flow against a deterministic API stub.
