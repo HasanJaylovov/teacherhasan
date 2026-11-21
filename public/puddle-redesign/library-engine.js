@@ -31,6 +31,53 @@ const grammar = Array.from({length:1200},(_,i)=>{
  }
  return {id:"g"+i,level:lv,topic,question:q,options:opts,answer:correct,explanation:why};
 });
+
+// B2–C1 challenge bank: advanced syntax, inversion, collocation and nuanced grammar.
+const advancedGrammar = Array.from({length:1200},(_,i)=>{
+ const person=names[i%names.length], topic=topics[Math.floor(i/12)%topics.length], place=places[Math.floor(i/12)%places.length];
+ const level=Math.floor(i/12)%2===0?"B2":"C1";
+ let question,options,answer,explanation,topicName;
+ switch(i%12){
+  case 0:
+   question=`Rarely ___ such a persuasive explanation of ${topic}.`;
+   options=["have I heard","I have heard","did I heard","I had hear"];answer=0;topicName="Inversion";explanation="Rarely gap boshida kelganda yordamchi fe’l egadan oldin keladi: Rarely + have + subject + V3.";break;
+  case 1:
+   question=`If ${person} had taken the earlier train, they ___ at ${place} now.`;
+   options=["would be","would have been","will be","had been"];answer=0;topicName="Mixed Conditionals";explanation="O‘tmishdagi shartning hozirgi natijasi: If + Past Perfect, would + infinitive.";break;
+  case 2:
+   question=`Had the committee reviewed the evidence earlier, it ___ the error.`;
+   options=["would detect","would have detected","will detect","had detected"];answer=1;topicName="Third Conditional";explanation="Had + subject + V3 — if the committee had reviewed shaklining inversiyasi; natija would have + V3.";break;
+  case 3:
+   question=`It was the detailed report ___ persuaded the panel to reconsider ${topic}.`;
+   options=["who","what","that","where"];answer=2;topicName="Cleft Sentences";explanation="It was ... that ... — urg‘u beruvchi cleft sentence tuzilmasi.";break;
+  case 4:
+   question=`The director insisted that every applicant ___ a written statement about ${topic}.`;
+   options=["submits","submit","submitted","will submit"];answer=1;topicName="Subjunctive";explanation="Insist that dan keyin formal subjunctive ishlatiladi: subject + base verb.";break;
+  case 5:
+   question=`___ by limited funding, ${person}’s team redesigned the ${topic} project.`;
+   options=["Restricting","Restricted","To restrict","Having restrict"];answer=1;topicName="Participle Clauses";explanation="Jamoa cheklangan mablag‘ ta’sirida bo‘lgan, shuning uchun past participle bilan qisqartirilgan passive clause ishlatiladi.";break;
+  case 6:
+   question=`The latest findings are consistent ___ the earlier research into ${topic}.`;
+   options=["to","with","for","at"];answer=1;topicName="Dependent Prepositions";explanation="Consistent with — barqaror birikma; undan keyin with predlogi ishlatiladi.";break;
+  case 7:
+   question=`The proposed changes are expected to ___ a significant impact on ${topic}.`;
+   options=["do","make","take","set"];answer=1;topicName="Advanced Collocations";explanation="Make an impact — to‘g‘ri collocation. Do/take/set an impact bu kontekstda ishlatilmaydi.";break;
+  case 8:
+   question=`The plan was rejected because it was financially ___.`;
+   options=["viable","viability","unviable","viably"];answer=2;topicName="Word Formation";explanation="Because it was dan keyin sifat kerak. Unviable — moliyaviy jihatdan amalga oshirib bo‘lmaydigan.";break;
+  case 9:
+   question=`${person} denied ___ the confidential documents about ${topic}.`;
+   options=["to access","access","having accessed","to have access"];answer=2;topicName="Reporting Verbs";explanation="Deny fe’lidan keyin gerund ishlatiladi; o‘tmishda sodir bo‘lgan ish uchun having + V3 mos.";break;
+  case 10:
+   question=`The archive, ___ dates back to 1890, contains valuable records about ${topic}.`;
+   options=["which","that","where","what"];answer=0;topicName="Non-defining Relative Clauses";explanation="Vergul bilan ajratilgan non-defining relative clause ichida which ishlatiladi; that bu vazifada kelmaydi.";break;
+  default:
+   question=`By December, ${person} ___ on the ${topic} project for five years.`;
+   options=["will work","will have been working","has worked","had worked"];answer=1;topicName="Future Perfect Continuous";explanation="Kelajakdagi vaqt nuqtasigacha davom etib keladigan ish: will have been + verb-ing.";
+ }
+ return {id:"adv"+i,level,topic:topicName,question,options,answer,explanation};
+});
+
 const reading=Array.from({length:1200},(_,i)=>{
  const person=names[i%names.length],place=places[Math.floor(i/3)%places.length],topic=topics[Math.floor(i/7)%topics.length],detail=details[Math.floor(i/11)%details.length],lv=levels[Math.floor(i/240)];
  const action=["Last month","Every weekend","This year","At the beginning of the term","On Friday afternoon"][i%5];
@@ -57,7 +104,7 @@ function saved(key){try{return JSON.parse(localStorage.getItem("th_library_"+key
 function save(key,data){try{localStorage.setItem("th_library_"+key,JSON.stringify(data))}catch{}}
 const module=document.body.dataset.module||"practice";
 const titles={practice:"English Practice",cefr:"CEFR Assessment",reading:"Reading Lab",listening:"Listening Lab",videos:"Video Lessons"};
-const banks={practice:grammar,cefr:[...grammar,...reading.map(x=>({...x,topic:"Reading comprehension"})),...listening.map(x=>({...x,topic:"Listening comprehension"}))],reading,listening,videos};
+const banks={practice:[...grammar,...advancedGrammar],cefr:[...grammar,...advancedGrammar,...reading.map(x=>({...x,topic:"Reading comprehension"})),...listening.map(x=>({...x,topic:"Listening comprehension"}))],reading,listening,videos};
 const bank=banks[module]||grammar;
 let filters={level:"all",topic:"all"},items=[],position=0,score=0,locked=false,answers=[],activeLesson=null,videoPage=0;
 const progress=saved(module);
@@ -71,9 +118,25 @@ function render(){setHeader();if(!items.length){$("questionCard").hidden=true;$(
 function finish(){const percent=items.length?Math.round(score/items.length*100):0;progress.completed=(progress.completed||0)+answers.length;progress.lastScore=percent;progress.lastAt=new Date().toISOString();save(module,progress);$("questionCard").hidden=true;$("resultCard").hidden=false;$("resultScore").textContent=score+" / "+items.length;$("resultPercent").textContent=percent+"%";$("resultMessage").textContent=percent>=85?"Ajoyib natija! Keyingi darajaga tayyorlaning.":percent>=60?"Yaxshi! Xatolarni ko‘rib, yana mashq qiling.":"Mavzularni takrorlang va qayta urinib ko‘ring.";$("completedCount").textContent=progress.completed.toLocaleString("en-US");}
 function next(){if(!locked)return;if(position<items.length-1){position++;render()}else finish();}
 function populateFilters(){const lv=$("levelFilter");levels.forEach(x=>{const o=document.createElement("option");o.value=x;o.textContent=x;lv.append(o)});const topicsList=[...new Set(bank.map(x=>x.topic).filter(Boolean))].sort();topicsList.forEach(x=>{const o=document.createElement("option");o.value=x;o.textContent=x; $("topicFilter").append(o)});}
-function speak(text,lang="en-US"){if(!("speechSynthesis"in window)){alert("Brauzeringiz ovozli o‘qishni qo‘llab-quvvatlamaydi.");return;}speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang=lang;u.rate=.88;speechSynthesis.speak(u);}
+let activeGeminiSpeech=null;
+async function speak(text,lang="auto"){
+ const transcript=String(text||"").trim();if(!transcript)return;
+ stopSpeaking();
+ const requested=String(lang||"auto").toLowerCase();
+ const language=requested.startsWith("uz")?"uz":requested.startsWith("en")?"en":"auto";
+ try{
+  const response=await fetch("/api/tts",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:transcript,language})});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok||!data.success||!data.audio)throw new Error(data.error||"Gemini ovozini olishda xatolik.");
+  const audio=new Audio("data:"+(data.mimeType||"audio/wav")+";base64,"+data.audio);
+  activeGeminiSpeech=audio;
+  audio.addEventListener("ended",()=>{if(activeGeminiSpeech===audio)activeGeminiSpeech=null;},{once:true});
+  await audio.play();
+ }catch(error){console.error("Gemini TTS playback:",error);alert(error.message||"Gemini ovozini ijro etib bo‘lmadi.");}
+}
+function stopSpeaking(){if(activeGeminiSpeech){activeGeminiSpeech.pause();activeGeminiSpeech.currentTime=0;activeGeminiSpeech=null;}if("speechSynthesis"in window)speechSynthesis.cancel();}
 function renderVideos(){const list=$("lessonGrid");list.innerHTML="";const filteredVideos=bank.filter(x=>(filters.level==="all"||x.level===filters.level)&&(filters.topic==="all"||x.topic===filters.topic));const pageSize=60;videoPage=Math.min(videoPage,Math.max(0,Math.ceil(filteredVideos.length/pageSize)-1));$("lessonCount").textContent=filteredVideos.length.toLocaleString("en-US")+" ta dars";filteredVideos.slice(videoPage*pageSize,(videoPage+1)*pageSize).forEach(item=>{const card=document.createElement("button");card.className="lesson-card";card.innerHTML=`<span class="lesson-thumb"><i>▶</i><small>${item.duration} min</small></span><span class="lesson-info"><b>${esc(item.title)}</b><small>${item.level} · ${esc(item.topic)}</small></span>`;card.onclick=()=>openLesson(item);list.append(card)});$("lessonPager").textContent="Sahifa "+(videoPage+1)+" / "+Math.max(1,Math.ceil(filteredVideos.length/pageSize))+" · Jami "+filteredVideos.length.toLocaleString("en-US")+" ta dars.";$("lessonPrev").disabled=videoPage===0;$("lessonNext").disabled=(videoPage+1)*pageSize>=filteredVideos.length;}
 function openLesson(item){activeLesson=item;$("lessonPlayer").hidden=false;$("playerTitle").textContent=item.title;$("playerLevel").textContent=item.level+" · "+item.duration+" daqiqa";$("playerExplain").textContent=item.explain;$("playerExample").textContent=item.example;$("playerTask").textContent=item.task;window.scrollTo({top:0,behavior:"smooth"});}
-function init(){populateFilters();$("levelFilter").addEventListener("change",e=>{filters.level=e.target.value;if(module==="videos")renderVideos();else setItems()});$("topicFilter").addEventListener("change",e=>{filters.topic=e.target.value;if(module==="videos")renderVideos();else setItems()});$("nextButton").addEventListener("click",next);$("restartButton").addEventListener("click",()=>{ $("resultCard").hidden=true;setItems()});$("playScript").addEventListener("click",()=>speak($("passageText").textContent));$("stopScript").addEventListener("click",()=>speechSynthesis?.cancel());$("playLesson").addEventListener("click",()=>speak([$ ("playerTitle").textContent,$("playerExplain").textContent,$("playerExample").textContent,$("playerTask").textContent].join(". "),"uz-UZ"));$("stopLesson").addEventListener("click",()=>speechSynthesis?.cancel());$("closeLesson").addEventListener("click",()=>{$("lessonPlayer").hidden=true;speechSynthesis?.cancel()});if(module==="videos"){ $("questionCard").hidden=true;$("lessonLibrary").hidden=false;renderVideos();$("lessonPrev").addEventListener("click",()=>{videoPage=Math.max(0,videoPage-1);renderVideos()});$("lessonNext").addEventListener("click",()=>{videoPage++;renderVideos()})}else setItems();}
+function init(){populateFilters();$("levelFilter").addEventListener("change",e=>{filters.level=e.target.value;if(module==="videos")renderVideos();else setItems()});$("topicFilter").addEventListener("change",e=>{filters.topic=e.target.value;if(module==="videos")renderVideos();else setItems()});$("nextButton").addEventListener("click",next);$("restartButton").addEventListener("click",()=>{ $("resultCard").hidden=true;setItems()});$("playScript").addEventListener("click",()=>speak($("passageText").textContent));$("stopScript").addEventListener("click",()=>stopSpeaking());$("playLesson").addEventListener("click",()=>speak([$ ("playerTitle").textContent,$("playerExplain").textContent,$("playerExample").textContent,$("playerTask").textContent].join(". "),"uz-UZ"));$("stopLesson").addEventListener("click",()=>stopSpeaking());$("closeLesson").addEventListener("click",()=>{$("lessonPlayer").hidden=true;speechSynthesis?.cancel()});if(module==="videos"){ $("questionCard").hidden=true;$("lessonLibrary").hidden=false;renderVideos();$("lessonPrev").addEventListener("click",()=>{videoPage=Math.max(0,videoPage-1);renderVideos()});$("lessonNext").addEventListener("click",()=>{videoPage++;renderVideos()})}else setItems();}
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init);else init();
 })();
