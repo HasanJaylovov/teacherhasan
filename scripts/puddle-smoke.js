@@ -1,29 +1,187 @@
 import fs from 'node:fs';
 import path from 'node:path';
-const root=path.join(process.cwd(),"public/puddle-redesign");
-const required=["index.html","styles.css","app.js","manifest.json","sw.js","reading.html","listening.html","english-practice.html","cefr-assessment.html","video-lessons.html"];
-for(const f of required){if(!fs.existsSync(path.join(root,f))||!fs.statSync(path.join(root,f)).size)throw Error("Missing/empty: "+f);}
-const html=fs.readFileSync(path.join(root,"index.html"),"utf8"),js=fs.readFileSync(path.join(root,"app.js"),"utf8");
-const mustHaveIds=["homeView","chatView","practiceView","profileView","chatMessages","chatForm","chatInput","sendBtn","accountAccessCard","learnerName","profileName","profileEmail","accessTitle","accessBadge","accessProgress","menuToggle","themeToggle","menuLogout","clearChat","voiceShortcut"];
-for(const id of mustHaveIds){if(!html.includes('id="'+id+'"'))throw Error("Required UI id missing: "+id);}
-for(const route of ["/api/chat","/api/me","/api/auth/logout"]){if(!js.includes(route))throw Error("API integration missing: "+route);}
-for(const localPage of ["./english-practice.html","./cefr-assessment.html","./video-lessons.html","./reading.html","./listening.html"]){if(!html.includes(`href="${localPage}"`))throw Error("PWA local route missing: "+localPage);if(!fs.existsSync(path.join(root,localPage)))throw Error("PWA target file missing: "+localPage);}
-for(const feature of ["th_auth_token","Authorization","data-prompt","serviceWorker.register"]){if(!js.includes(feature))throw Error("App behavior missing: "+feature);}
-if(/Upper Intermediate.{0,30}75%|75%.{0,30}Upper Intermediate/.test(html))throw Error("Found demo learner progress in homepage");
-const manifest=JSON.parse(fs.readFileSync(path.join(root,"manifest.json"),"utf8"));
-if(!manifest.name||!manifest.start_url||!manifest.icons?.length)throw Error("PWA manifest incomplete");
 
-// Legacy Voice AI and Speaking Exam integration contracts.
-const legacyVoice=fs.readFileSync(path.join(process.cwd(),"public/app.js"),"utf8");
-const legacyServer=fs.readFileSync(path.join(process.cwd(),"server.js"),"utf8");
-const speaking=fs.readFileSync(path.join(process.cwd(),"public/speaking-exam.html"),"utf8");
-for(const feature of ['fetch("/api/live-token"','client.live.connect','function stopTeacher','startBtn.addEventListener','stopBtn.addEventListener']){
- if(!legacyVoice.includes(feature))throw Error("Legacy Voice AI integration missing: "+feature);
+const root = path.join(process.cwd(), "public/puddle-redesign");
+const publicRoot = path.join(process.cwd(), "public");
+const read = file => fs.readFileSync(path.join(process.cwd(), file), "utf8");
+
+const required = [
+    "index.html", "styles.css", "app.js", "manifest.json", "sw.js",
+    "reading.html", "listening.html", "english-practice.html",
+    "cefr-assessment.html", "video-lessons.html"
+];
+for (const file of required) {
+    const fullPath = path.join(root, file);
+    if (!fs.existsSync(fullPath) || !fs.statSync(fullPath).size) {
+        throw Error("Missing/empty PWA asset: " + file);
+    }
 }
-if(!html.includes('href="/"')||!js.includes('location.href="/"'))throw Error("PWA Voice AI shortcut must open the legacy live voice app");
-if(!legacyServer.includes('"/api/live-token"')||!legacyServer.includes('token:')||!legacyServer.includes('model:'))throw Error("Live token API contract missing");
-if(!legacyServer.includes('"/api/speaking/upload"'))throw Error("Speaking audio upload API missing");
-if(!legacyServer.includes("evaluated: true")||!legacyServer.includes("responseMimeType"))throw Error("Gemini Speaking assessment response contract missing");
-if(!speaking.includes("data.evaluated")||!speaking.includes("AI Speaking natijasi"))throw Error("Speaking Exam UI must display real AI evaluation results");
 
-console.log("Smoke check passed: "+required.length+" assets, "+mustHaveIds.length+" UI hooks, API auth/chat, PWA manifest.");
+const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
+const js = fs.readFileSync(path.join(root, "app.js"), "utf8");
+const videoLessons = fs.readFileSync(path.join(root, "video-lessons.html"), "utf8");
+const reading = fs.readFileSync(path.join(root, "reading.html"), "utf8");
+const listening = fs.readFileSync(path.join(root, "listening.html"), "utf8");
+const practice = fs.readFileSync(path.join(root, "english-practice.html"), "utf8");
+const cefr = fs.readFileSync(path.join(root, "cefr-assessment.html"), "utf8");
+const legacyVoice = read("public/app.js");
+const legacyServer = read("server.js");
+const legacyAuth = read("public/auth.js");
+const legacyAdmin = read("public/admin.js");
+const legacyAdminHtml = read("public/admin.html");
+const legacyProfile = read("public/profile.html");
+const legacyLogin = read("public/login.html");
+const legacyRegister = read("public/register.html");
+const speaking = read("public/speaking-exam.html");
+
+const mustHaveIds = [
+    "homeView", "chatView", "practiceView", "profileView",
+    "chatMessages", "chatForm", "chatInput", "sendBtn",
+    "accountAccessCard", "learnerName", "profileName", "profileEmail",
+    "accessTitle", "accessBadge", "accessProgress", "menuToggle",
+    "themeToggle", "menuLogout", "clearChat", "voiceShortcut"
+];
+for (const id of mustHaveIds) {
+    if (!html.includes('id="' + id + '"')) throw Error("Required PWA UI id missing: " + id);
+}
+for (const route of ["/api/chat", "/api/me", "/api/auth/logout"]) {
+    if (!js.includes(route)) throw Error("PWA API integration missing: " + route);
+}
+for (const localPage of [
+    "./english-practice.html", "./cefr-assessment.html", "./video-lessons.html",
+    "./reading.html", "./listening.html"
+]) {
+    if (!html.includes('href="' + localPage + '"')) throw Error("PWA local link missing: " + localPage);
+    if (!fs.existsSync(path.join(root, localPage))) throw Error("PWA local target missing: " + localPage);
+}
+for (const feature of ["th_auth_token", "Authorization", "data-prompt", "serviceWorker.register"]) {
+    if (!js.includes(feature)) throw Error("PWA behavior missing: " + feature);
+}
+if (/Upper Intermediate.{0,30}75%|75%.{0,30}Upper Intermediate/.test(html)) {
+    throw Error("Found demo learner progress on the homepage");
+}
+const manifest = JSON.parse(fs.readFileSync(path.join(root, "manifest.json"), "utf8"));
+if (!manifest.name || !manifest.start_url || !manifest.icons?.length) throw Error("PWA manifest incomplete");
+
+// Route compatibility with the existing site pages and Express route.
+const routes = [
+    { href: "/", file: "public/index.html", label: "Voice AI" },
+    { href: "/speaking-exam.html", file: "public/speaking-exam.html", label: "Speaking Exam" },
+    { href: "/profile.html", file: "public/profile.html", label: "Profile" },
+    { href: "/offer.html", file: "public/offer.html", label: "Premium" },
+    { href: "/login.html", file: "public/login.html", label: "Login" },
+    { href: "/register.html", file: "public/register.html", label: "Register" },
+    { href: "/admin", file: "public/admin.html", label: "Admin" }
+];
+for (const route of routes) {
+    if (!html.includes('href="' + route.href + '"')) throw Error("Homepage route link missing: " + route.label);
+    if (!fs.existsSync(path.join(publicRoot, route.file))) throw Error("Legacy route file missing: " + route.file);
+}
+if (!legacyServer.includes('"/admin"') || !legacyServer.includes('"admin.html"')) {
+    throw Error("Express admin route does not point to admin.html");
+}
+
+// Login/register response contract: both endpoints return success, token, user and access.
+for (const endpoint of ["/api/auth/register", "/api/auth/login"]) {
+    const start = legacyServer.indexOf('"' + endpoint + '"');
+    if (start < 0) throw Error("Legacy auth endpoint missing: " + endpoint);
+    const next = legacyServer.indexOf("app.post(", start + endpoint.length);
+    const section = legacyServer.slice(start, next < 0 ? start + 5000 : next);
+    for (const key of ["success:", "token", "user:", "access:"]) {
+        if (!section.includes(key)) throw Error(endpoint + " response missing " + key);
+    }
+}
+for (const endpoint of ["/api/auth/login", "/api/auth/register", "/api/me", "/api/auth/logout"]) {
+    if (!legacyAuth.includes(endpoint)) throw Error("Auth client route missing: " + endpoint);
+}
+if (!legacyAuth.includes('const AUTH_TOKEN_KEY = "th_auth_token"') ||
+    !legacyAuth.includes("setAuthToken(data.token)") ||
+    !legacyAuth.includes("clearAuthToken()") ||
+    !legacyAuth.includes("Authorization")) {
+    throw Error("Login/register/profile/logout token behavior incomplete");
+}
+if (!legacyProfile.includes('id="profile"') || !legacyProfile.includes('id="logout"')) {
+    throw Error("Profile page auth hooks missing");
+}
+if (!legacyLogin.includes('id="loginForm"') || !legacyRegister.includes('id="registerForm"') ||
+    !legacyRegister.includes('id="legalConsent"')) {
+    throw Error("Login/register page form hooks missing");
+}
+
+// Live Voice AI: verify the client consumes the actual ephemeral-token response.
+const liveTokenStart = legacyServer.indexOf('"/api/live-token"');
+const speakingApiStart = legacyServer.indexOf('"/api/speaking/upload"');
+const liveTokenSection = legacyServer.slice(liveTokenStart, speakingApiStart);
+for (const feature of [
+    'fetch("/api/live-token"', "client.live.connect", "tokenData.token", "tokenData.model"
+]) {
+    if (!legacyVoice.includes(feature)) throw Error("Voice AI client integration missing: " + feature);
+}
+for (const field of ["token:", "model:", "learner:", "access:"]) {
+    if (!liveTokenSection.includes(field)) throw Error("Live-token API response missing: " + field);
+}
+
+// Speaking Exam is a real upload/evaluation integration, not a static mock.
+const chatEndpointStart = legacyServer.indexOf('"/api/chat"', speakingApiStart);
+const speakingApiSection = legacyServer.slice(speakingApiStart, chatEndpointStart);
+if (!speaking.includes("/api/speaking/upload") || !speaking.includes("data.evaluated") ||
+    !speaking.includes("data.evaluation") || !speaking.includes("evaluations.push")) {
+    throw Error("Speaking Exam client must require real evaluation data");
+}
+if (!speakingApiSection.includes("evaluated: true") || !speakingApiSection.includes("evaluation")) {
+    throw Error("Speaking Exam server response contract missing");
+}
+
+// Video catalog selections now pass a whitelisted lesson context to the live AI room.
+const lessonIds = ["present-simple", "past-simple", "present-continuous", "present-perfect"];
+for (const lesson of lessonIds) {
+    if (!videoLessons.includes("lesson=" + lesson)) throw Error("Video lesson catalog link missing: " + lesson);
+    if (!legacyVoice.includes('"' + lesson + '"')) throw Error("Voice AI lesson map missing: " + lesson);
+}
+for (const feature of ["new URLSearchParams", "selectedVideoLesson", "VIDEO LESSON MODE"]) {
+    if (!legacyVoice.includes(feature)) throw Error("Video lesson query integration missing: " + feature);
+}
+if (!videoLessons.includes("video fayllar mavjudligini anglatmaydi")) {
+    throw Error("Video lesson page must disclose that the catalog is not video playback");
+}
+
+// Static/local modules are checked for their actual client-side behavior and disclaimers.
+if (!practice.includes("const qs=") || !practice.includes("Your score:") || !practice.includes("Rasmiy CEFR")) {
+    throw Error("English Practice module behavior/disclaimer missing");
+}
+if (!cefr.includes("const qs=") || !cefr.includes("Preliminary result") || !cefr.includes("Rasmiy CEFR")) {
+    throw Error("CEFR Assessment disclaimer/quiz missing");
+}
+if (!reading.includes("quizChoices") || !reading.includes("quizFeedback")) {
+    throw Error("Reading comprehension quiz missing");
+}
+if (!listening.includes("speechSynthesis") || !listening.includes("stopAudio") || !listening.includes("Listening check")) {
+    throw Error("Listening playback/check missing");
+}
+
+// Admin uses its own token and protected endpoints, separate from learner auth.
+if (!legacyAdmin.includes("th_admin_token") || !legacyAdmin.includes("Authorization") ||
+    !legacyAdminHtml.includes('id="loginForm"') || !legacyAdminHtml.includes('id="app"')) {
+    throw Error("Admin login/session hooks missing");
+}
+for (const endpoint of [
+    "/api/admin/login", "/api/admin/logout", "/api/admin/dashboard",
+    "/api/admin/users", "/api/admin/payments", "/api/admin/speaking-results", "/api/admin/settings"
+]) {
+    if (!legacyAdmin.includes(endpoint) || !legacyServer.includes('"' + endpoint + '"')) {
+        throw Error("Admin endpoint compatibility missing: " + endpoint);
+}
+for (const endpoint of [
+    "/api/admin/logout", "/api/admin/dashboard", "/api/admin/users",
+    "/api/admin/users/:id", "/api/admin/users/:id/premium",
+    "/api/admin/payments", "/api/admin/speaking-results", "/api/admin/settings"
+]) {
+    const start = legacyServer.indexOf('"' + endpoint + '"');
+    const section = legacyServer.slice(start, start + 260);
+    if (!section.includes("requireAdmin")) throw Error("Admin route is not guarded: " + endpoint);
+}
+
+console.log(
+    "Puddle smoke passed: " + required.length + " assets, " + mustHaveIds.length +
+    " UI hooks, legacy routes, auth tokens, Voice AI, Speaking Exam, lesson query, local modules and admin API guards."
+);
