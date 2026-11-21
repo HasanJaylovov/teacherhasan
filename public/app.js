@@ -60,6 +60,95 @@ document.addEventListener("DOMContentLoaded", () => {
     const orbMouth = document.getElementById("orbMouth");
     const voiceActivityLabel = document.getElementById("voiceActivityLabel");
     const voiceWave = document.getElementById("voiceWave");
+    const organicCanvas = document.getElementById("organicCanvas");
+    const bottomWaveCanvas = document.getElementById("bottomWaveCanvas");
+    const vaPrompt = document.getElementById("vaPrompt");
+    const toggleTranscript = document.getElementById("toggleTranscript");
+    let visualState = "idle";
+    let visualLevel = 0;
+    let visualFrame = 0;
+    let visualRaf = 0;
+
+    function setupVoiceCanvases() {
+        const organicCtx = organicCanvas?.getContext("2d");
+        const bottomCtx = bottomWaveCanvas?.getContext("2d");
+        if (!organicCtx || !bottomCtx) return;
+        const resize = (canvas, ctx) => {
+            const rect = canvas.getBoundingClientRect();
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            canvas.width = Math.max(1, Math.round(rect.width * dpr));
+            canvas.height = Math.max(1, Math.round(rect.height * dpr));
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        };
+        const draw = () => {
+            visualFrame += .012 + visualLevel * .025;
+            const a = organicCanvas.getBoundingClientRect();
+            const w = a.width, h = a.height;
+            if (w && h) {
+                organicCtx.clearRect(0, 0, w, h);
+                const cx = w / 2, cy = h / 2, base = Math.min(w, h) * (.315 + visualLevel * .025);
+                const pulse = visualState === "speaking" ? 1.35 : visualState === "listening" ? 1 : .68;
+                for (let layer = 0; layer < 34; layer++) {
+                    const t = layer / 34;
+                    organicCtx.beginPath();
+                    for (let k = 0; k <= 240; k++) {
+                        const angle = k / 240 * Math.PI * 2;
+                        const wave = Math.sin(angle * 3 + visualFrame * 1.1 + t * 5) * (.12 + visualLevel * .11)
+                            + Math.cos(angle * 5 - visualFrame * .8 + t * 7) * (.075 + visualLevel * .08)
+                            + Math.sin(angle * 2 + visualFrame * .55) * .045;
+                        const radius = base * (1 + wave * pulse) * (.76 + t * .43);
+                        const x = cx + Math.cos(angle) * radius * (1 + .10 * Math.sin(visualFrame * .35));
+                        const y = cy + Math.sin(angle) * radius * (.92 + .08 * Math.cos(visualFrame * .42));
+                        if (k === 0) organicCtx.moveTo(x, y); else organicCtx.lineTo(x, y);
+                    }
+                    organicCtx.closePath();
+                    const hue = (275 + layer * 2.1 + Math.sin(visualFrame + t * 6) * 32) % 360;
+                    organicCtx.strokeStyle = `hsla(${hue}, 100%, ${62 + 12 * Math.sin(t * 8)}%, ${.13 + t * .48})`;
+                    organicCtx.lineWidth = .65 + t * .45;
+                    organicCtx.shadowColor = `hsla(${hue},100%,65%,.72)`;
+                    organicCtx.shadowBlur = visualState === "idle" ? 4 : 8 + visualLevel * 13;
+                    organicCtx.stroke();
+                }
+                organicCtx.shadowBlur = 0;
+                const glow = organicCtx.createRadialGradient(cx,cy,base*.12,cx,cy,base*.85);
+                glow.addColorStop(0,"rgba(1,5,8,.98)");
+                glow.addColorStop(.58,"rgba(2,7,12,.92)");
+                glow.addColorStop(1,"rgba(2,7,12,0)");
+                organicCtx.fillStyle=glow; organicCtx.beginPath(); organicCtx.arc(cx,cy,base*.9,0,Math.PI*2); organicCtx.fill();
+            }
+            const b = bottomWaveCanvas.getBoundingClientRect(), bw=b.width,bh=b.height;
+            if (bw && bh) {
+                bottomCtx.clearRect(0,0,bw,bh);
+                const centerX=bw/2, centerY=bh*.68;
+                for(let ring=0;ring<7;ring++){
+                    const radius=22+ring*13;
+                    for(let dot=0;dot<76;dot++){
+                        const angle=dot/76*Math.PI*2;
+                        const wobble=Math.sin(angle*5+visualFrame*2+ring)*3*visualLevel;
+                        const x=centerX+Math.cos(angle)*(radius+wobble);
+                        const y=centerY+Math.sin(angle)*(radius+wobble)*.58;
+                        bottomCtx.fillStyle=`rgba(197,145,246,${.12+(1-ring/8)*.36})`;
+                        bottomCtx.beginPath();bottomCtx.arc(x,y,1.05,0,Math.PI*2);bottomCtx.fill();
+                    }
+                }
+                for(let i=0;i<54;i++){
+                    const x=centerX+(i-26.5)*5.3;
+                    const envelope=Math.exp(-Math.pow((i-26.5)/16,2));
+                    const wave=(.18+Math.abs(Math.sin(i*.7+visualFrame*5))*(visualState==="idle"?.13:.35+visualLevel*.65))*envelope;
+                    const barH=5+wave*68;
+                    bottomCtx.fillStyle=`rgba(205,126,244,${.18+envelope*.62})`;
+                    bottomCtx.fillRect(x,centerY-barH/2,2.1,barH);
+                }
+            }
+            visualRaf = requestAnimationFrame(draw);
+        };
+        const onResize=()=>{resize(organicCanvas,organicCtx);resize(bottomWaveCanvas,bottomCtx);};
+        onResize();
+        window.addEventListener("resize",onResize,{passive:true});
+        if(!visualRaf) visualRaf=requestAnimationFrame(draw);
+    }
+    setupVoiceCanvases();
+
     let learnerDisplayName = "";
     let learnerMemoryContext = "";
     let pendingVoiceUserText = "";
@@ -70,6 +159,9 @@ document.addEventListener("DOMContentLoaded", () => {
         teacherOrb.classList.remove("idle", "listening", "speaking");
         teacherOrb.classList.add(state);
         const intensity = Math.max(0, Math.min(1, Number(level) || 0));
+        visualState = state;
+        visualLevel = intensity;
+        if (vaPrompt) vaPrompt.textContent = state === "speaking" ? "Teacher Hasan is speaking..." : state === "listening" ? "Go ahead, I'm listening..." : "Tap the microphone to start speaking";
         teacherOrb.style.setProperty("--orb-intensity", intensity.toFixed(2));
         if (voiceWave) {
             voiceWave.classList.remove("idle", "listening", "speaking");
@@ -1348,6 +1440,29 @@ VIDEO LESSON MODE:
         "click",
         () => { void stopTeacher(); }
     );
+
+    document.getElementById("voiceBack")?.addEventListener("click", () => {
+        document.getElementById("menuButton")?.click();
+    });
+    toggleTranscript?.addEventListener("click", () => {
+        transcript?.classList.toggle("va-visible");
+        if (transcript?.classList.contains("va-visible")) transcript.scrollIntoView({behavior:"smooth",block:"nearest"});
+    });
+    document.getElementById("saveVoiceNote")?.addEventListener("click", () => {
+        const text = transcript?.innerText?.trim() || "";
+        if (!text) {
+            if (vaPrompt) vaPrompt.textContent = "Your conversation will appear here after you start speaking.";
+            return;
+        }
+        try {
+            const notes = JSON.parse(localStorage.getItem("th_voice_saved_notes") || "[]");
+            notes.unshift({savedAt:new Date().toISOString(),text});
+            localStorage.setItem("th_voice_saved_notes",JSON.stringify(notes.slice(0,30)));
+            if (vaPrompt) vaPrompt.textContent = "Conversation saved on this device.";
+        } catch (error) {
+            console.warn("Voice note save failed:",error);
+        }
+    });
 
 
     // ==========================================
