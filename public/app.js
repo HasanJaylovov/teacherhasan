@@ -62,6 +62,8 @@ document.addEventListener("DOMContentLoaded", () => {
     let pendingVoiceUserText = "";
     let pendingVoiceTeacherText = "";
 
+    const voiceWave = document.getElementById("voiceWave");
+    const voiceActivityLabel = document.getElementById("voiceActivityLabel");
     function updateVoiceVisualizer(level = 0) {
         const normalized = Math.max(0, Math.min(1, Number(level) || 0));
         voiceAvatars.forEach((avatar) => {
@@ -69,6 +71,20 @@ document.addEventListener("DOMContentLoaded", () => {
             avatar.style.setProperty("--voice-glow", String(0.12 + normalized * 0.72));
             avatar.classList.toggle("voice-active", normalized > 0.035);
         });
+        if (voiceWave) {
+            voiceWave.style.setProperty("--wave-level", String(normalized));
+            voiceWave.classList.toggle("user-active", normalized > 0.035);
+        }
+        if (voiceActivityLabel && !voiceWave?.classList.contains("teacher-active")) {
+            voiceActivityLabel.textContent = normalized > 0.035 ? "Siz gapiryapsiz · Teacher Hasan tinglamoqda" : (isRunning ? "Teacher Hasan sizni tinglamoqda" : "Ovozli suhbatga tayyor");
+        }
+    }
+    function updateTeacherVisualizer(level = 0) {
+        const normalized = Math.max(0, Math.min(1, Number(level) || 0));
+        if (!voiceWave) return;
+        voiceWave.style.setProperty("--wave-level", String(normalized));
+        voiceWave.classList.toggle("teacher-active", normalized > 0.025);
+        if (voiceActivityLabel) voiceActivityLabel.textContent = normalized > 0.025 ? "Teacher Hasan javob bermoqda" : (isRunning ? "Teacher Hasan sizni tinglamoqda" : "Ovozli suhbatga tayyor");
     }
 
     async function resolveLearnerName() {
@@ -514,11 +530,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 outputSquareSum += channel[i] * channel[i];
             }
             const outputRms = samples.length ? Math.sqrt(outputSquareSum / samples.length) : 0;
+            updateTeacherVisualizer(Math.min(1, outputRms * 7));
 
             const audioSource =
                 audioContext.createBufferSource();
             activeAudioSources.add(audioSource);
-            audioSource.onended = () => activeAudioSources.delete(audioSource);
+            audioSource.onended = () => {
+                activeAudioSources.delete(audioSource);
+                if (!activeAudioSources.size) updateTeacherVisualizer(0);
+            };
 
             audioSource.buffer =
                 audioBuffer;
@@ -1289,8 +1309,8 @@ VIDEO LESSON MODE:
 
         voiceMicLevel = 0;
         voiceTeacherLevel = 0;
-        updateVoiceVisualizer(0, "user");
-        updateVoiceVisualizer(0, "teacher");
+        updateVoiceVisualizer(0);
+        updateTeacherVisualizer(0);
 
         setStatus("⚪ Suhbat to'xtatildi. Start tugmasini bosing.");
         console.log("✅ Teacher Hasan lokal audio va mikrofon resurslari uzildi");
