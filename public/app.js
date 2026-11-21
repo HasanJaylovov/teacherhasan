@@ -372,18 +372,24 @@ document.addEventListener("DOMContentLoaded", () => {
     // ==========================================
 
     function addTranscript(text) {
-
         if (!text) return;
-
-        const oldText = transcript.textContent.trim();
-
-        transcript.textContent =
-            oldText
-                ? oldText + "\n" + text
-                : text;
-
-        transcript.scrollTop =
-            transcript.scrollHeight;
+        const raw = String(text).trim();
+        if (!raw) return;
+        const isUser = raw.startsWith("👤 Siz:");
+        const role = isUser ? "user" : "assistant";
+        const display = raw.replace(/^👤 Siz:\s*/, "").replace(/^👨‍🏫 Teacher Hasan:\s*/, "");
+        const bubble = document.createElement("div");
+        bubble.className = "chat-bubble " + role;
+        bubble.setAttribute("data-speaker", role);
+        const label = document.createElement("span");
+        label.className = "chat-bubble-label";
+        label.textContent = isUser ? "Siz" : "Teacher Hasan";
+        const body = document.createElement("div");
+        body.className = "chat-bubble-text";
+        body.textContent = display;
+        bubble.append(label, body);
+        transcript.appendChild(bubble);
+        transcript.scrollTop = transcript.scrollHeight;
     }
 
     // ==========================================
