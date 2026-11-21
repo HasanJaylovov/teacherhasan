@@ -59,6 +59,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const teacherOrb = document.getElementById("teacherOrb");
     const orbMouth = document.getElementById("orbMouth");
     const voiceActivityLabel = document.getElementById("voiceActivityLabel");
+    const voiceWave = document.getElementById("voiceWave");
     let learnerDisplayName = "";
     let learnerMemoryContext = "";
     let pendingVoiceUserText = "";
@@ -70,6 +71,12 @@ document.addEventListener("DOMContentLoaded", () => {
         teacherOrb.classList.add(state);
         const intensity = Math.max(0, Math.min(1, Number(level) || 0));
         teacherOrb.style.setProperty("--orb-intensity", intensity.toFixed(2));
+        if (voiceWave) {
+            voiceWave.classList.remove("idle", "listening", "speaking");
+            voiceWave.classList.add(state);
+            voiceWave.style.setProperty("--wave-level", Math.max(.06, intensity).toFixed(2));
+            voiceWave.setAttribute("aria-label", state === "speaking" ? "Teacher Hasan gapiryapti" : state === "listening" ? "Mikrofon ovozni qabul qilmoqda" : "Ovoz vizualizatsiyasi kutish holatida");
+        }
         if (orbMouth) orbMouth.style.transform = "translateX(-50%) scale(" + (1 + intensity * 1.8) + ")";
         if (voiceActivityLabel) {
             const labels = {
