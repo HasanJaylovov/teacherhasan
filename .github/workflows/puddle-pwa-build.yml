@@ -40,6 +40,8 @@ jobs:
           node --check public/puddle-redesign/app.js
           node -e "const m=require('./public/puddle-redesign/manifest.json'); if(!m.name || !m.start_url || !m.icons?.length) process.exit(1)"
           grep -q '@media' public/puddle-redesign/styles.css
+          grep -q 'desktop-sidebar' public/puddle-redesign/index.html
+          grep -q 'grid-template-columns:230px' public/puddle-redesign/styles.css
       - name: Package both PWA versions
         run: |
           mkdir -p build
