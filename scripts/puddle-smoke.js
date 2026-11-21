@@ -19,6 +19,7 @@ for (const file of required) {
 
 const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const js = fs.readFileSync(path.join(root, "app.js"), "utf8");
+const sw = fs.readFileSync(path.join(root, "sw.js"), "utf8");
 const videoLessons = fs.readFileSync(path.join(root, "video-lessons.html"), "utf8");
 const reading = fs.readFileSync(path.join(root, "reading.html"), "utf8");
 const listening = fs.readFileSync(path.join(root, "listening.html"), "utf8");
@@ -62,6 +63,10 @@ if (/Upper Intermediate.{0,30}75%|75%.{0,30}Upper Intermediate/.test(html)) {
 }
 const manifest = JSON.parse(fs.readFileSync(path.join(root, "manifest.json"), "utf8"));
 if (!manifest.name || !manifest.start_url || !manifest.icons?.length) throw Error("PWA manifest incomplete");
+if (!sw.includes("teacherhasan-puddle-v3") || !sw.includes('url.pathname.startsWith("/api/")') ||
+    !sw.includes("url.search") || !sw.includes("APP_PATHS.has(url.pathname)")) {
+    throw Error("PWA service worker cache scope must exclude API and query routes");
+}
 
 // Route compatibility with the existing site pages and Express route.
 const routes = [
