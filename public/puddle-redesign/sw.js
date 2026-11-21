@@ -2,7 +2,7 @@ const CACHE = "teacherhasan-puddle-v3";
 const FILES = [
     "./", "./index.html", "./styles.css", "./app.js", "./manifest.json", "./icon.svg",
     "./reading.html", "./listening.html", "./english-practice.html",
-    "./cefr-assessment.html", "./video-lessons.html"
+    "./cefr-assessment.html", "./video-lessons.html", "./voice.html"
 ];
 const APP_PATHS = new Set(FILES.map(file => new URL(file, self.registration.scope).pathname));
 
