@@ -2,7 +2,7 @@ name: TeacherHasan PWA Build
 on:
   push:
     branches: [redesign/puddle-pwa]
-    paths: ["public/puddle-redesign/**", "public/app.js", "public/speaking-exam.html", "server.js", "scripts/puddle-smoke.js", ".github/workflows/puddle-pwa-build-preview.yml"]
+    paths: ["public/puddle-redesign/**", "public/index.html", "public/app.js", "public/speaking-exam.html", "server.js", "scripts/puddle-smoke.js", ".github/workflows/puddle-pwa-build-preview.yml"]
   pull_request:
     paths: ["public/puddle-redesign/**", "public/speaking-exam.html", "server.js", "scripts/puddle-smoke.js", ".github/workflows/puddle-pwa-build-preview.yml"]
   workflow_dispatch:
@@ -16,7 +16,7 @@ jobs:
       - name: Validate app files
         run: |
           set -e
-          for file in index.html styles.css app.js manifest.json sw.js reading.html listening.html english-practice.html cefr-assessment.html video-lessons.html; do
+          for file in index.html styles.css app.js manifest.json sw.js voice.html reading.html listening.html english-practice.html cefr-assessment.html video-lessons.html; do
             test -s "public/puddle-redesign/$file"
           done
           node --check public/puddle-redesign/app.js
