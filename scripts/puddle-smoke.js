@@ -71,7 +71,7 @@ if (!sw.includes("teacherhasan-puddle-v3") || !sw.includes('url.pathname.startsW
 
 // Route compatibility with the existing site pages and Express route.
 const routes = [
-    { href: "/", file: "index.html", label: "Voice AI" },
+    { href: "./voice.html", file: "puddle-redesign/voice.html", label: "Voice AI" },
     { href: "/speaking-exam.html", file: "speaking-exam.html", label: "Speaking Exam" },
     { href: "/profile.html?returnTo=%2Fpuddle-redesign%2F", file: "profile.html", label: "Profile" },
     { href: "/offer.html", file: "offer.html", label: "Premium" },
