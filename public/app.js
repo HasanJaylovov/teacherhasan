@@ -1,5 +1,26 @@
 
 import { GoogleGenAI } from "https://esm.sh/@google/genai";
+
+const VIDEO_LESSON_CATALOG = Object.freeze({
+    "present-simple": {
+        title: "Present Simple",
+        focus: "habits, routines, facts, subject–verb agreement, affirmative, negative and question forms"
+    },
+    "past-simple": {
+        title: "Past Simple",
+        focus: "completed past actions, regular and irregular verbs, did/didn't questions"
+    },
+    "present-continuous": {
+        title: "Present Continuous",
+        focus: "actions happening now, am/is/are plus verb-ing, and contrast with Present Simple"
+    },
+    "present-perfect": {
+        title: "Present Perfect",
+        focus: "life experiences and unfinished time, have/has plus past participle, and contrast with Past Simple"
+    }
+});
+const selectedVideoLesson =
+    VIDEO_LESSON_CATALOG[new URLSearchParams(window.location.search).get("lesson") || ""] || null;
 // ==========================================
 // 👨‍🏫 TEACHER HASAN - GEMINI LIVE
 // ==========================================
@@ -810,8 +831,16 @@ O'zingizni Teacher Hasan deb tanishtiring.
 
 Sizni Moxir dasturchi Hasan Jaylovov yaratgan.
 Siz Teacher Hasan AI English Platform tarkibidagi AI English Teacher'siz.
-`,
+` + (selectedVideoLesson ? `
 
+VIDEO LESSON MODE:
+- The user explicitly selected an English lesson: ${selectedVideoLesson.title}.
+- Focus on: ${selectedVideoLesson.focus}.
+- This is an AI-guided lesson, not video playback. Never claim a video is playing.
+- Treat this selection as a request to study English; skip the language-choice list.
+- On the learner's first spoken turn, begin with a short explanation in English with Uzbek support, one example, and one focused practice question. Keep turns short and interactive.
+` : ""),
+ 
                 thinkingConfig: {
                     thinkingLevel: "minimal"
                 }
@@ -833,7 +862,9 @@ Siz Teacher Hasan AI English Platform tarkibidagi AI English Teacher'siz.
                         remembered.current_topic ||
                         remembered.last_lesson_summary
                     );
-                    const opening = hasHistory
+                    const opening = selectedVideoLesson
+                        ? "🎬 AI dars tanlandi: " + selectedVideoLesson.title + ". Bu video playback emas, AI bilan interaktiv dars. Ulanish tayyor; darsni boshlash uchun gapiring."
+                        : hasHistory
                         ? "👨‍🏫 Teacher Hasan: Xush kelibsiz" +
                           (learnerDisplayName ? ", " + learnerDisplayName : "") +
                           "! " +
