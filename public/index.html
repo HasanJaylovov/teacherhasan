@@ -1426,7 +1426,54 @@ body{min-height:100dvh;display:flex;align-items:stretch;justify-content:center}
       .status{padding:6px 12px;font-size:11px}
       .controls{padding:16px 20px}
       @media(max-width:680px){.conversation{padding:10px 12px 4px}.teacher-hero{margin:0 auto 8px}#transcript{max-height:36vh}.controls{padding:12px 14px;gap:8px}.control-button{padding:12px 18px;font-size:13px}}
-    </style>
+    
+/* Voice Assessment — reference-matched immersive interface */
+:root{--va-purple:#21102f;--va-violet:#9a5bdf;--va-pink:#f05bdb;--va-cyan:#42e9ed;--va-lime:#b9ff9a}
+html,body{width:100%;height:100%;min-height:100%;overflow:hidden}
+body{background:radial-gradient(ellipse at 50% 38%,#40205d 0%,#251137 43%,#160d27 100%)!important;color:#f8f3ff}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at 84% 8%,rgba(177,68,197,.23),transparent 32%),radial-gradient(ellipse at 4% 78%,rgba(75,62,178,.18),transparent 35%);z-index:0}
+.menu-button{display:none!important}
+.app{position:relative;z-index:1;width:100%;height:100dvh;min-height:100dvh;margin:0;border:1px solid rgba(222,181,255,.3);border-radius:22px;background:linear-gradient(145deg,rgba(37,17,57,.82),rgba(25,13,42,.92));box-shadow:none;backdrop-filter:blur(24px);overflow:hidden}
+.main{min-height:0;height:100%;overflow:hidden}
+.conversation{position:relative;min-height:0;height:100%;padding:0 clamp(16px,4vw,34px) 0;overflow:hidden;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start}
+.teacher-hero.voice-assessment{position:relative;flex:1 1 auto;width:100%;max-width:560px;min-height:0;margin:0 auto;display:grid;grid-template-rows:74px 42px minmax(230px,1fr) auto 22px;align-items:center;justify-items:center;text-align:center}
+.va-header{width:100%;height:74px;display:grid;grid-template-columns:54px 1fr 54px;align-items:center}
+.va-back{width:54px;height:54px;border-radius:50%;border:1px solid rgba(191,135,255,.72);background:rgba(47,27,72,.38);color:#f5eaff;font-size:35px;font-weight:200;line-height:1;display:grid;place-items:center;cursor:pointer}
+.va-title{font-size:16px;font-weight:650;letter-spacing:.01em;color:#f7efff}
+.va-header-spacer{width:54px}
+.va-prompt{align-self:center;color:#e4d9ef;font-size:14px;font-weight:400;letter-spacing:.01em;min-height:22px}
+.va-organic-wrap{position:relative;width:min(88vw,430px);height:100%;max-height:430px;min-height:220px;display:grid;place-items:center;isolation:isolate;overflow:visible}
+#organicCanvas{width:100%;height:100%;display:block;overflow:visible}
+.va-core-glow{position:absolute;left:50%;top:50%;width:28%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,#020606 0%,#020607 56%,rgba(5,13,17,.88) 68%,rgba(9,13,26,.12) 100%);box-shadow:0 0 24px rgba(4,8,13,.8),0 0 45px rgba(199,67,255,.17);pointer-events:none;z-index:-1}
+.va-caption{width:min(100%,460px);margin:0 auto 4px;padding:0 8px;color:#f4edf9;font-size:clamp(16px,4.5vw,22px);font-weight:550;line-height:1.25;letter-spacing:-.025em;text-align:center;text-wrap:balance}
+.va-transcript-slot{min-height:22px;width:100%;display:flex;justify-content:center;align-items:center}
+.voice-activity-label{min-height:18px;margin:0;color:#cbb5dc;font-size:11px;letter-spacing:.035em}
+#transcript{display:none;width:min(100%,540px);max-width:540px;min-height:0;max-height:22dvh;flex:0 1 auto;margin:8px auto;padding:10px 8px;overflow:auto;background:rgba(12,8,24,.55);border:1px solid rgba(211,160,255,.15);border-radius:14px}
+#transcript.va-visible{display:flex}
+.chat-bubble{font-size:13px;padding:9px 12px}
+.status-container{width:100%;margin:0 auto 2px;padding:0;flex:0 0 auto;min-height:20px;display:flex;justify-content:center}
+.status{min-height:20px;padding:2px 8px;border:0;background:transparent;color:rgba(221,202,236,.64);font-size:10px}
+.va-controls{position:relative;isolation:isolate;flex:0 0 clamp(150px,21vh,205px);width:100%;max-width:560px;margin:0 auto;padding:0 12px 24px;border:0;display:grid;grid-template-columns:1fr 112px 1fr;align-items:end;justify-items:center;gap:10px;background:transparent}
+.va-bottom-wave{position:absolute;left:50%;bottom:0;transform:translateX(-50%);width:min(100%,440px);height:180px;z-index:-1;pointer-events:none;opacity:.9}
+#bottomWaveCanvas{width:100%;height:100%;display:block}
+.va-side-button{width:60px;height:60px;margin-bottom:13px;border:1px solid rgba(198,154,239,.28);border-radius:50%;background:rgba(80,53,106,.23);color:#e9d9fa;font-size:26px;display:grid;place-items:center;cursor:pointer;backdrop-filter:blur(8px);transition:background .2s,transform .2s}
+.va-side-button:active{transform:scale(.94);background:rgba(159,99,220,.3)}
+.va-mic-halo{position:relative;width:108px;height:108px;margin-bottom:0;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle,rgba(166,99,222,.25),rgba(158,100,215,.12) 64%,transparent 70%)}
+.va-mic-halo::before{content:"";position:absolute;inset:1px;border:5px solid rgba(168,111,224,.86);border-radius:50%;box-shadow:0 0 18px rgba(175,111,255,.36),inset 0 0 13px rgba(175,111,255,.12)}
+.va-mic-button{position:absolute;inset:8px;width:92px;height:92px;border:1px solid rgba(232,204,255,.24);border-radius:50%;background:linear-gradient(145deg,#24232e,#171821);color:#b77cff;display:grid;place-items:center;cursor:pointer;box-shadow:0 8px 22px rgba(0,0,0,.35)}
+.va-mic-button svg{width:36px;height:36px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#stopBtn{display:none}
+#stopBtn:not(:disabled){display:grid}
+#startBtn:disabled{display:none}
+.va-mic-button:disabled{opacity:.42;cursor:wait}
+#startBtn:focus-visible,#stopBtn:focus-visible,.va-side-button:focus-visible,.va-back:focus-visible{outline:2px solid #d8a9ff;outline-offset:4px}
+.footer,.topbar,.welcome{display:none!important}
+.controls:not(.va-controls){display:none!important}
+@media(min-width:700px){.conversation{padding-left:30px;padding-right:30px}.teacher-hero.voice-assessment{max-width:560px}.va-organic-wrap{width:min(78vw,440px)}}
+@media(max-width:520px){.app{border-radius:18px}.conversation{padding:0 15px}.teacher-hero.voice-assessment{grid-template-rows:72px 36px minmax(220px,1fr) auto 20px}.va-header{height:72px}.va-back{width:50px;height:50px}.va-organic-wrap{width:min(94vw,410px);min-height:220px}.va-caption{font-size:clamp(16px,5vw,21px);line-height:1.26;padding:0 0 3px}.va-controls{grid-template-columns:1fr 104px 1fr;flex-basis:clamp(142px,20vh,180px);padding-bottom:20px}.va-mic-halo{width:104px;height:104px}.va-mic-button{width:88px;height:88px;inset:8px}.va-side-button{width:58px;height:58px;margin-bottom:10px}.va-bottom-wave{height:160px}}
+@media(max-height:740px){.teacher-hero.voice-assessment{grid-template-rows:62px 30px minmax(180px,1fr) auto 18px}.va-header{height:62px}.va-back{width:46px;height:46px}.va-controls{flex-basis:138px;padding-bottom:12px}.va-mic-halo{width:92px;height:92px}.va-mic-button{width:78px;height:78px;inset:7px}.va-side-button{width:52px;height:52px;margin-bottom:8px}.va-bottom-wave{height:135px}}
+@media(prefers-reduced-motion:reduce){.va-mic-button,.va-side-button{transition:none}}
+</style>
 </head>
 
 <body>
@@ -1894,24 +1941,22 @@ body{min-height:100dvh;display:flex;align-items:stretch;justify-content:center}
                 aria-label="Ovozli suhbat"
             >
 
-                <div class="teacher-hero">
-
-                    <div class="teacher-orb-wrap" id="teacherOrbWrap">
-                        <div class="teacher-orb" id="teacherOrb" role="img" aria-label="Teacher Hasan AI — ko‘zlari yumilgan animatsion avatar">
-                            <div class="orb-aura"></div><div class="orb-ring orb-ring-one"></div><div class="orb-ring orb-ring-two"></div>
-                            <div class="orb-face"><div class="orb-brow orb-brow-left"></div><div class="orb-brow orb-brow-right"></div><div class="orb-eye orb-eye-left"><span class="orb-iris"><i class="orb-pupil"></i><i class="orb-eye-shine"></i></span><i class="orb-eyelid"></i></div><div class="orb-eye orb-eye-right"><span class="orb-iris"><i class="orb-pupil"></i><i class="orb-eye-shine"></i></span><i class="orb-eyelid"></i></div><div class="orb-cheek orb-cheek-left"></div><div class="orb-cheek orb-cheek-right"></div><div class="orb-mouth" id="orbMouth"></div></div>
-                            <div class="orb-glint orb-glint-top"></div><div class="orb-glint orb-glint-side"></div>
-                        </div>
+                <div class="teacher-hero voice-assessment">
+                    <div class="va-header">
+                        <button class="va-back" id="voiceBack" type="button" aria-label="Orqaga">‹</button>
+                        <div class="va-title">Voice Assessment</div>
+                        <div class="va-header-spacer"></div>
                     </div>
-                    <p class="voice-activity-label" id="voiceActivityLabel" aria-live="polite"></p>
-                    <div class="voice-wave" id="voiceWave" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
-
+                    <div class="va-prompt" id="vaPrompt">Go ahead, I'm listening...</div>
+                    <div class="va-organic-wrap" id="teacherOrb" role="img" aria-label="Teacher Hasan AI ovoz vizualizatsiyasi">
+                        <canvas id="organicCanvas" aria-hidden="true"></canvas>
+                        <div class="va-core-glow"></div>
+                    </div>
+                    <p class="va-caption">Speak naturally. Teacher Hasan is listening, responding and helping you improve your English.</p>
+                    <div class="va-transcript-slot">
+                        <p class="voice-activity-label" id="voiceActivityLabel" aria-live="polite">Teacher Hasan AI suhbatga tayyor</p>
+                    </div>
                 </div>
-
-
-                <!-- IMPORTANT:
-                     app.js ushbu elementni ishlatadi.
-                -->
 
                 <div id="transcript" role="log" aria-live="polite" aria-relevant="additions text" aria-atomic="false"></div>
 
@@ -1943,24 +1988,20 @@ body{min-height:100dvh;display:flex;align-items:stretch;justify-content:center}
 
             <!-- CONTROLS -->
 
-            <div class="controls">
-
-                <button
-                    id="startBtn"
-                    class="control-button"
-                    type="button"
-                >
-                    🎤 Start Speaking
-                </button>
-
-                <button
-                    id="stopBtn"
-                    class="control-button"
-                    type="button"
-                >
-                    🔴 Stop
-                </button>
-
+            <div class="controls va-controls">
+                <div class="va-bottom-wave" aria-hidden="true">
+                    <canvas id="bottomWaveCanvas"></canvas>
+                </div>
+                <button class="va-side-button" id="toggleTranscript" type="button" aria-label="Suhbat matnini ko‘rsatish" title="Transcript">✎</button>
+                <div class="va-mic-halo">
+                    <button id="startBtn" class="va-mic-button" type="button" aria-label="Suhbatni boshlash">
+                        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 20a5 5 0 0 0 5-5V9a5 5 0 0 0-10 0v6a5 5 0 0 0 5 5Z"/><path d="M7 15a9 9 0 0 0 18 0M16 24v5m-5 0h10"/></svg>
+                    </button>
+                    <button id="stopBtn" class="va-mic-button va-stop-button" type="button" aria-label="Suhbatni to‘xtatish">
+                        <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="10" y="10" width="12" height="12" rx="2"/></svg>
+                    </button>
+                </div>
+                <button class="va-side-button" id="saveVoiceNote" type="button" aria-label="Suhbatni saqlash" title="Saqlash">♧</button>
             </div>
 
 
