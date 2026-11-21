@@ -33,6 +33,12 @@ jobs:
           grep -q 'evaluated: true' server.js
           grep -q 'data.evaluated' public/speaking-exam.html
           node -e "const fs=require('fs'); const h=fs.readFileSync('public/speaking-exam.html','utf8'); const a=h.lastIndexOf('<script>')+8; const b=h.lastIndexOf('</script>'); if(a<8 || b<a) throw Error('Speaking script missing'); new Function(h.slice(a,b));"
+      - name: Install browser test runtime
+        run: |
+          npm install --no-save --package-lock=false playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Run desktop and mobile browser smoke
+        run: node scripts/puddle-browser-smoke.mjs
       - name: Package PWA
         run: |
           mkdir -p build
