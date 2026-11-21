@@ -171,6 +171,11 @@ if (!listening.includes("speechSynthesis") || !listening.includes("stopAudio") |
     throw Error("Listening playback/check missing");
 }
 
+// Chat history persistence and explicit clearing are wired.
+if (!js.includes("CHAT_STORAGE_KEY") || !js.includes("persistChat()") || !js.includes("restoreChat()") || !js.includes("localStorage.removeItem(CHAT_STORAGE_KEY)")) {
+    throw Error("Puddle chat persistence/clear hooks missing");
+}
+
 // Admin uses its own token and protected endpoints, separate from learner auth.
 if (!legacyAdmin.includes("th_admin_token") || !legacyAdmin.includes("Authorization") ||
     !legacyAdminHtml.includes('id="loginForm"') || !legacyAdminHtml.includes('id="app"')) {
