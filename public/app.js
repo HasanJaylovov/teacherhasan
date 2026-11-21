@@ -920,6 +920,14 @@ document.addEventListener("DOMContentLoaded", () => {
             config: {
                 responseModalities: ["AUDIO"],
 
+                speechConfig: {
+                    voiceConfig: {
+                        prebuiltVoiceConfig: {
+                            voiceName: "Aoede"
+                        }
+                    }
+                },
+
                 inputAudioTranscription: {},
 
                 outputAudioTranscription: {},
@@ -931,6 +939,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 },
 
                 systemInstruction: `
+OVOZLI JAVOB TILI VA TALAFFUZI:
+- Har bir javobdan oldin foydalanuvchi aynan qaysi tilda javob yoki matn eshitishni xohlayotganini aniqlang.
+- Inglizcha matnni to‘liq tabiiy inglizcha talaffuzda, ingliz tilining ravon ritmi va urg‘usi bilan o‘qing.
+- O‘zbekcha matnni o‘zbek tilida, lotin yozuvidagi o‘zbek imlosi va tabiiy o‘zbekcha talaffuz bilan o‘qing.
+- O‘zbekcha gap ichidagi inglizcha misol yoki iborani inglizcha talaffuz qiling; keyin yana o‘zbekchaga qayting.
+- Bitta gap ichida tillarni sababsiz aralashtirmang. Matn qaysi tilda bo‘lsa, ovoz ham o‘sha tilga mos bo‘lsin.
+- Matnni tarjima qilib yubormang; aynan berilgan matnni o‘qing.
+- Javobni ravon, tabiiy, aniq va eshitishga qulay tempda ayting.
+
 O‘QUVCHI PROFILIDAGI ISM: ${learnerDisplayName || "profil ism ko‘rsatilmagan"}. Faqat profil ismi mavjud bo‘lsa, shu ism bilan tabiiy murojaat qiling. Profil ism bo‘sh bo‘lsa, ism so‘ramang va taxmin qilmang.
 
 O‘QUVCHINING AVVALGI O‘QUV XOTIRASI (JSON):
@@ -1534,8 +1551,9 @@ VIDEO LESSON MODE:
         () => { void stopTeacher(); }
     );
 
-    document.getElementById("voiceBack")?.addEventListener("click", () => {
-        document.getElementById("menuButton")?.click();
+    document.getElementById("voiceBack")?.addEventListener("click", (event) => {
+        event.preventDefault();
+        window.location.assign("/puddle-redesign/");
     });
 
 
