@@ -8,7 +8,7 @@ const read = file => fs.readFileSync(path.join(process.cwd(), file), "utf8");
 const required = [
     "index.html", "styles.css", "app.js", "manifest.json", "sw.js",
     "reading.html", "listening.html", "english-practice.html",
-    "cefr-assessment.html", "video-lessons.html", "voice.html"
+    "cefr-assessment.html", "video-lessons.html", "voice.html", "library-engine.js", "learning-library.css"
 ];
 for (const file of required) {
     const fullPath = path.join(root, file);
@@ -184,18 +184,42 @@ if (!legacyVoiceHtml.includes('<script type="module" src="/app.js"') && !legacyV
 const videoBrandLink = videoLessons.match(/<a class="brand" href="([^"]+)"/);
 if (!videoBrandLink || videoBrandLink[1] !== "./index.html") throw Error("Video lesson brand must return to the redesigned PWA");
 
-// Static/local modules are checked for their actual client-side behavior and disclaimers.
-if (!practice.includes("const qs=") || !practice.includes("Your score:") || !practice.includes("Rasmiy CEFR")) {
-    throw Error("English Practice module behavior/disclaimer missing");
+// Expanded learning library modules: shared engine, generated banks and real interactions.
+const libraryEngine = fs.readFileSync(path.join(root, "library-engine.js"), "utf8");
+const libraryCss = fs.readFileSync(path.join(root, "learning-library.css"), "utf8");
+new Function(libraryEngine);
+for (const [page, moduleName] of [
+    [practice, "practice"], [cefr, "cefr"], [reading, "reading"],
+    [listening, "listening"], [videoLessons, "videos"]
+]) {
+    if (!page.includes('data-module="' + moduleName + '"') ||
+        !page.includes('src="./library-engine.js"') ||
+        !page.includes('id="questionCard"') ||
+        !page.includes('id="levelFilter"') ||
+        !page.includes('id="topicFilter"')) {
+        throw Error("Learning module shell or engine integration missing: " + moduleName);
+    }
 }
-if (!cefr.includes("const qs=") || !cefr.includes("Preliminary result") || !cefr.includes("Rasmiy CEFR")) {
-    throw Error("CEFR Assessment disclaimer/quiz missing");
+for (const feature of [
+    "length:1200", "cefr:[...grammar,...reading.map", "speechSynthesis",
+    "function renderVideos()", "function answer(", "function finish()",
+    "function populateFilters()", "lessonPrev", "lessonNext"
+]) {
+    if (!libraryEngine.includes(feature)) throw Error("Learning library engine feature missing: " + feature);
 }
-if (!reading.includes("quizChoices") || !reading.includes("quizFeedback")) {
-    throw Error("Reading comprehension quiz missing");
+for (const feature of [".learning-hero", ".library-options", ".lesson-grid", ".lesson-player", ".learning-orb"]) {
+    if (!libraryCss.includes(feature)) throw Error("Learning module design component missing: " + feature);
 }
-if (!listening.includes("speechSynthesis") || !listening.includes("stopAudio") || !listening.includes("Listening check")) {
+if (!reading.includes('data-module="reading"') || !reading.includes('id="passageText"')) {
+    throw Error("Reading passage module missing");
+}
+if (!listening.includes('data-module="listening"') || !listening.includes('id="playScript"') ||
+    !libraryEngine.includes('function speak(')) {
     throw Error("Listening playback/check missing");
+}
+if (!practice.includes("1,200+") || !cefr.includes("3,600+") ||
+    !videoLessons.includes("1,200+") || !videoLessons.includes("video fayllar mavjudligini anglatmaydi")) {
+    throw Error("Learning bank counts or honest video lesson disclosure missing");
 }
 
 // Chat history persistence is account-scoped and identity lookup failure fails closed.
