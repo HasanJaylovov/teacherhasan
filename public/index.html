@@ -1259,6 +1259,11 @@
             background: rgba(16,24,32,.58);
         }
         .control-button { min-height: 52px; border-radius: 15px; }
+        .control-button:focus-visible, .language-button:focus-visible, .menu-button:focus-visible, .topbar-account-link:focus-visible {
+            outline: 3px solid var(--voice-accent);
+            outline-offset: 3px;
+        }
+        #transcript:focus-visible { outline: 2px solid var(--voice-accent); outline-offset: 3px; }
         #startBtn {
             color: var(--voice-accent-ink);
             background: var(--voice-accent);
@@ -1779,6 +1784,7 @@
             <section
                 id="conversation"
                 class="conversation"
+                aria-label="Ovozli suhbat"
             >
 
                 <div class="teacher-hero">
@@ -1824,7 +1830,7 @@
                      app.js ushbu elementni ishlatadi.
                 -->
 
-                <div id="transcript">
+                <div id="transcript" role="log" aria-live="polite" aria-relevant="additions text" aria-atomic="false">
                     👨‍🏫 Teacher Hasan:
                     Salom! Men Teacher Hasanman.
                     Tillarni birga mashq qilamiz.
@@ -1842,9 +1848,10 @@
                         <span
                             id="statusDot"
                             class="status-dot"
+                            aria-hidden="true"
                         ></span>
 
-                        <span id="status">
+                        <span id="status" role="status" aria-live="polite" aria-atomic="true">
                             Tayyor. Start tugmasini bosing.
                         </span>
 
