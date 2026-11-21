@@ -101,7 +101,7 @@ if (!legacyAuth.includes('const AUTH_TOKEN_KEY = "th_auth_token"') ||
     throw Error("Login/register/profile/logout token behavior incomplete");
 }
 if (!legacyAuth.includes("getSafeReturnTo") || !legacyAuth.includes("new URL(target, location.origin)") ||
-    !legacyAuth.includes("target.startsWith(\"//\")") || !legacyAuth.includes('"/login.html?returnTo="')) {
+    !legacyAuth.includes("target.startsWith(\"//\")") || !legacyAuth.includes("url.origin === location.origin") || !legacyAuth.includes('"/login.html?returnTo="')) {
     throw Error("Safe returnTo behavior missing from legacy auth flow");
 }
 if (!js.includes('location.href="./index.html"')) throw Error("PWA logout must return to redesigned home");
