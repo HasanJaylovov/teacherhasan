@@ -154,6 +154,8 @@ document.addEventListener("DOMContentLoaded", () => {
     let learnerMemoryContext = "";
     let pendingVoiceUserText = "";
     let pendingVoiceTeacherText = "";
+    let activeUserMessage = null;
+    let activeTeacherMessage = null;
 
     function setOrbState(state, level = 0) {
         if (!teacherOrb) return;
@@ -463,8 +465,26 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    function uiText(key, fallback) { return window.TeacherHasanI18n?.t?.(key) || fallback; }
+    function applyVoiceLanguage() {
+        const lang = window.TeacherHasanI18n?.getLanguage?.() || "uz";
+        document.documentElement.lang = lang;
+        const title = document.querySelector("[data-voice-title]");
+        if (title) title.textContent = uiText("voiceTitle", "Ovozli suhbat");
+        const empty = transcript?.querySelector(".va-chat-empty");
+        if (empty) empty.textContent = uiText("chatEmpty", "Suhbat shu yerda ko‘rinadi");
+        if (vaPrompt) vaPrompt.textContent = visualState === "speaking" ? uiText("voiceSpeaking", "Teacher Hasan javob bermoqda...") : visualState === "listening" ? uiText("voiceListening", "Sizni tinglayapman...") : uiText("voiceIdle", "Suhbatni boshlash uchun mikrofonni bosing");
+        document.querySelectorAll("[data-ui-lang]").forEach(button => button.classList.toggle("active", button.dataset.uiLang === lang));
+        transcript?.querySelectorAll(".chat-bubble-label").forEach(label => { const role = label.closest(".chat-bubble")?.dataset.speaker; label.textContent = role === "user" ? uiText("you", "Siz") : uiText("teacher", "Teacher Hasan"); });
+    }
+    window.addEventListener("teacherHasanLanguageChanged", applyVoiceLanguage);
+    document.addEventListener("DOMContentLoaded", applyVoiceLanguage);
     function setStatus(text) {
-        status.textContent = text;
+        const value = String(text || ""); let key = "";
+        if (/tayyor|ready/i.test(value) && /start|mikrofon/i.test(value)) key = "statusReady";
+        else if (/tinglamoqda|tinglayapti|listening/i.test(value)) key = "statusListening";
+        else if (/to‘xtatildi|to\x27xtatildi|stopped/i.test(value)) key = "statusStopped";
+        status.textContent = key ? uiText(key, value) : value;
     }
 
     // ==========================================
