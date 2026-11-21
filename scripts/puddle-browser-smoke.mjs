@@ -73,6 +73,40 @@ try {
     assert.equal(await page.locator(".desktop-sidebar").isVisible(), true, "desktop sidebar should be visible");
     assert.equal(await page.locator(".bottom-nav").isVisible(), false, "desktop bottom navigation should be hidden");
     assert.equal(await page.locator(".hero-card").count(), 1, "home hero should render");
+    assert.equal(await page.locator(".topbar").locator(":scope > .brand").count(), 1, "Teacher Hasan AI brand should be anchored in the top bar");
+    assert.equal(await page.locator(".topbar").evaluate(el => el.firstElementChild.classList.contains("brand")), true, "brand should be the first top-left header item");
+
+    // Check the new 1,000+ learning libraries and their interactions.
+    await page.goto("http://127.0.0.1:4173/puddle-redesign/english-practice.html", { waitUntil: "domcontentloaded" });
+    assert.match(await page.locator("#bankCount").innerText(), /1,200/);
+    assert.equal(await page.locator("#options .library-option").count(), 4, "Practice should render four answer options");
+    await page.locator("#options .library-option").first().click();
+    assert.equal(await page.locator("#nextButton").isDisabled(), false, "Practice should unlock next after an answer");
+    await page.locator("#nextButton").click();
+    assert.match(await page.locator("#positionLabel").innerText(), /2 \/ 20/, "Practice should run a manageable 20-question session");
+
+    await page.goto("http://127.0.0.1:4173/puddle-redesign/cefr-assessment.html", { waitUntil: "domcontentloaded" });
+    assert.match(await page.locator("#bankCount").innerText(), /3,600/);
+    await page.locator("#levelFilter").selectOption("B2");
+    assert.equal(await page.locator("#options .library-option").count(), 4, "CEFR bank should filter by level");
+
+    await page.goto("http://127.0.0.1:4173/puddle-redesign/reading.html", { waitUntil: "domcontentloaded" });
+    assert.equal(await page.locator("#passagePanel").isVisible(), true, "Reading should show a passage");
+    assert.ok((await page.locator("#passageText").innerText()).length > 100, "Reading passage should contain learning text");
+
+    await page.goto("http://127.0.0.1:4173/puddle-redesign/listening.html", { waitUntil: "domcontentloaded" });
+    assert.equal(await page.locator("#playScript").isVisible(), true, "Listening should expose audio playback");
+    assert.ok((await page.locator("#passageText").innerText()).length > 80, "Listening script should be populated");
+
+    await page.goto("http://127.0.0.1:4173/puddle-redesign/video-lessons.html", { waitUntil: "domcontentloaded" });
+    assert.match(await page.locator("#bankCount").innerText(), /1,200/);
+    assert.equal(await page.locator(".lesson-card").count(), 60, "Video lesson library should render its first catalog page");
+    await page.locator("#lessonNext").click();
+    assert.match(await page.locator("#lessonPager").innerText(), /Sahifa 2/);
+    await page.locator(".lesson-card").first().click();
+    assert.equal(await page.locator("#lessonPlayer").isVisible(), true, "Lesson player should open from a catalog card");
+    assert.ok((await page.locator("#playerExplain").innerText()).length > 60, "Lesson player should show a real lesson explanation");
+
     assert.equal(await page.locator(".language-chip").count(), 8, "homepage should list all eight supported learning languages");
     assert.deepEqual(await page.locator(".language-chip b").allTextContents(), ["Uzbek", "English", "German", "Arabic", "Russian", "Turkish", "Korean", "Chinese"], "language cards should match the supported eight-language catalog");
     assert.match(await page.locator(".hero-card").innerText(), /8 ta tilni/, "hero should promote eight-language learning");
