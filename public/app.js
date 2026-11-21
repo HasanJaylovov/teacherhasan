@@ -71,7 +71,6 @@ document.addEventListener("DOMContentLoaded", () => {
         teacherOrb.classList.add(state);
         const intensity = Math.max(0, Math.min(1, Number(level) || 0));
         teacherOrb.style.setProperty("--orb-intensity", intensity.toFixed(2));
-        teacherOrb.style.setProperty("--orb-intensity", intensity.toFixed(2));
         if (voiceWave) {
             voiceWave.classList.remove("idle", "listening", "speaking");
             voiceWave.classList.add(state);
