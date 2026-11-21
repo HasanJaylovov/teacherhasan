@@ -3296,7 +3296,7 @@ app.get(
                                 speechConfig: {
                                     voiceConfig: {
                                         prebuiltVoiceConfig: {
-                                            voiceName: "Aoede"
+                                            voiceName: "Charon"
                                         }
                                     }
                                 },
@@ -3537,6 +3537,84 @@ app.get("/api/speaking/results", async (req, res) => {
         return res.status(500).json({ success: false, error: "Speaking tarixini yuklashda xatolik." });
     }
 });
+
+// ==============================================
+ // GEMINI NATIVE TTS — language-aware read aloud
+ // ==============================================
+const ttsAudioCache = new Map();
+const ttsRateWindows = new Map();
+
+app.post("/api/tts", async (req, res) => {
+    try {
+        if (!ai || !GEMINI_API_KEY) {
+            return res.status(503).json({ success: false, error: "Gemini TTS xizmati sozlanmagan." });
+        }
+
+        const text = String(req.body?.text || "").trim();
+        const language = ["uz", "en", "auto"].includes(String(req.body?.language || "auto").toLowerCase())
+            ? String(req.body?.language || "auto").toLowerCase()
+            : "auto";
+
+        if (!text) return res.status(400).json({ success: false, error: "O‘qiladigan matn yuborilmadi." });
+        if (text.length > 2400) return res.status(413).json({ success: false, error: "Matn juda uzun. Uni 2 400 belgigacha qismlarga ajrating." });
+
+        const now = Date.now();
+        const clientKey = String(req.ip || req.socket?.remoteAddress || "unknown");
+        const window = ttsRateWindows.get(clientKey);
+        if (!window || now - window.startedAt >= 60_000) {
+            ttsRateWindows.set(clientKey, { startedAt: now, count: 1 });
+        } else if (window.count >= 18) {
+            return res.status(429).json({ success: false, error: "Ovoz yaratish limiti vaqtincha tugadi. Bir daqiqadan keyin qayta urinib ko‘ring." });
+        } else {
+            window.count += 1;
+        }
+
+        const cacheKey = crypto.createHash("sha256").update(language + "\n" + text).digest("hex");
+        const cached = ttsAudioCache.get(cacheKey);
+        if (cached && cached.expiresAt > now) {
+            return res.json({ success: true, audio: cached.audio, mimeType: "audio/wav", cached: true });
+        }
+
+        const style = language === "uz"
+            ? "Read the exact transcript in natural Northern Uzbek as spoken in Uzbekistan. Use clear, native Uzbek pronunciation, natural Uzbek rhythm and stress. Do not translate or paraphrase."
+            : language === "en"
+                ? "Read the exact transcript in natural native English with a clear, neutral British accent, natural rhythm and stress. Do not translate or paraphrase."
+                : "Read the exact transcript verbatim. Detect the language of each passage and use natural native-like pronunciation, rhythm and stress for that language. Preserve language changes; do not translate or paraphrase.";
+
+        const generated = await generateGeminiWithRetry({
+            model: "gemini-3.8-flash-tts",
+            contents: [{
+                role: "user",
+                parts: [{ text, speechMetadata: { style } }]
+            }],
+            config: {
+                responseModalities: ["AUDIO"],
+                speechConfig: {
+                    voiceConfig: { voice: "Charon" }
+                }
+            }
+        });
+
+        const audioPart = generated?.candidates?.[0]?.content?.parts?.find(part => part?.inlineData?.data);
+        if (!audioPart?.inlineData?.data) {
+            throw new Error("Gemini TTS audio qaytarmadi.");
+        }
+
+        const audioBuffer = Buffer.from(audioPart.inlineData.data);
+        const audio = audioBuffer.toString("base64");
+        if (ttsAudioCache.size >= 100) {
+            const firstKey = ttsAudioCache.keys().next().value;
+            if (firstKey) ttsAudioCache.delete(firstKey);
+        }
+        ttsAudioCache.set(cacheKey, { audio, expiresAt: now + 60 * 60 * 1000 });
+
+        return res.json({ success: true, audio, mimeType: "audio/wav", cached: false });
+    } catch (error) {
+        console.error("Gemini TTS error:", error?.message || error);
+        return res.status(502).json({ success: false, error: "Gemini ovozini yaratib bo‘lmadi. Qayta urinib ko‘ring." });
+    }
+});
+
 
 // ==============================================
 // NORMAL CHAT
