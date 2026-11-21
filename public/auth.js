@@ -109,7 +109,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
 
                 setAuthToken(data.token);
-                location.href = "/";
+                location.href = getSafeReturnTo();
             } catch (error) {
                 showError(error.message);
             }
@@ -127,7 +127,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 if (!data.authenticated) {
                     clearAuthToken();
-                    return location.href = "/login.html";
+                    return location.href = "/login.html?returnTo=" + encodeURIComponent(getSafeReturnTo());
                 }
 
                 const user = data.user;
@@ -185,7 +185,7 @@ document.addEventListener("DOMContentLoaded", () => {
             : "—";
             } catch (error) {
                 clearAuthToken();
-                location.href = "/login.html";
+                location.href = "/login.html?returnTo=" + encodeURIComponent(getSafeReturnTo());
             }
         })();
     }
@@ -200,7 +200,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 // Even if the server session has already expired, clear local auth.
             } finally {
                 clearAuthToken();
-                location.href = "/login.html";
+                location.href = "/login.html?returnTo=" + encodeURIComponent(getSafeReturnTo());
             }
         };
     }
