@@ -1,1 +1,47 @@
-const CACHE="teacherhasan-puddle-v2",FILES=["./","./index.html","./styles.css","./app.js","./manifest.json","./icon.svg","./reading.html","./listening.html","./english-practice.html","./cefr-assessment.html","./video-lessons.html"];self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting())));self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==CACHE).map(x=>caches.delete(x)))).then(()=>self.clients.claim())));self.addEventListener("fetch",e=>{if(e.request.method!=="GET"||new URL(e.request.url).origin!==location.origin)return;e.respondWith(fetch(e.request).then(r=>{if(r.ok)caches.open(CACHE).then(c=>c.put(e.request,r.clone()));return r}).catch(()=>caches.match(e.request).then(c=>c||new Response("Offline",{status:503}))))});
+const CACHE = "teacherhasan-puddle-v3";
+const FILES = [
+    "./", "./index.html", "./styles.css", "./app.js", "./manifest.json", "./icon.svg",
+    "./reading.html", "./listening.html", "./english-practice.html",
+    "./cefr-assessment.html", "./video-lessons.html"
+];
+const APP_PATHS = new Set(FILES.map(file => new URL(file, self.registration.scope).pathname));
+
+self.addEventListener("install", event => {
+    event.waitUntil((async () => {
+        const cache = await caches.open(CACHE);
+        await cache.addAll(FILES);
+        await self.skipWaiting();
+    })());
+});
+
+self.addEventListener("activate", event => {
+    event.waitUntil((async () => {
+        const keys = await caches.keys();
+        await Promise.all(keys.filter(key => key !== CACHE).map(key => caches.delete(key)));
+        await self.clients.claim();
+    })());
+});
+
+self.addEventListener("fetch", event => {
+    const request = event.request;
+    if (request.method !== "GET") return;
+
+    const url = new URL(request.url);
+    // Never cache API responses, authenticated/profile pages, or query-specific lessons.
+    if (url.origin !== location.origin || url.pathname.startsWith("/api/") ||
+        url.search || !APP_PATHS.has(url.pathname)) return;
+
+    event.respondWith(
+        fetch(request)
+            .then(response => {
+                if (response.ok && response.type === "basic") {
+                    const copy = response.clone();
+                    caches.open(CACHE).then(cache => cache.put(request, copy));
+                }
+                return response;
+            })
+            .catch(() => caches.match(request).then(cached =>
+                cached || new Response("Offline", { status: 503 })
+            ))
+    );
+});
