@@ -3425,6 +3425,71 @@ app.post(
         }
     }
 );
+
+// ==============================================
+// SPEAKING EXAM — SAVE COMPLETED MOCK RESULT
+// ==============================================
+app.post("/api/speaking/results", async (req, res) => {
+    try {
+        const user = await getAuthenticatedUser(req);
+        if (!user?.id) return res.status(401).json({ success: false, error: "Natijani saqlash uchun tizimga kiring." });
+        const body = req.body || {};
+        const level = String(body.level || "").toUpperCase();
+        const estimatedLevel = String(body.estimatedLevel || "").toUpperCase();
+        const validLevels = ["A1", "A2", "B1", "B2", "C1"];
+        if (!validLevels.includes(level) || !validLevels.includes(estimatedLevel)) {
+            return res.status(400).json({ success: false, error: "CEFR darajasi noto‘g‘ri." });
+        }
+        const scoreKeys = ["grammar", "vocabulary", "fluency", "pronunciation", "overall"];
+        const scores = {};
+        for (const key of scoreKeys) {
+            const value = Number(body.scores?.[key]);
+            if (!Number.isFinite(value) || value < 0 || value > 100) {
+                return res.status(400).json({ success: false, error: "Speaking score qiymati noto‘g‘ri." });
+            }
+            scores[key] = Math.round(value);
+        }
+        if (!Array.isArray(body.answers) || body.answers.length < 1 || body.answers.length > 12) {
+            return res.status(400).json({ success: false, error: "Speaking javoblari topilmadi." });
+        }
+        const answers = body.answers.map((answer, index) => ({
+            part: Math.max(1, Math.min(3, Number(answer?.part) || 1)),
+            question: String(answer?.question || "").slice(0, 1000),
+            transcript: String(answer?.transcript || "").slice(0, 5000),
+            grammar: Math.max(0, Math.min(100, Math.round(Number(answer?.grammar) || 0))),
+            vocabulary: Math.max(0, Math.min(100, Math.round(Number(answer?.vocabulary) || 0))),
+            fluency: Math.max(0, Math.min(100, Math.round(Number(answer?.fluency) || 0))),
+            pronunciation: Math.max(0, Math.min(100, Math.round(Number(answer?.pronunciation) || 0))),
+            overall: Math.max(0, Math.min(100, Math.round(Number(answer?.overall) || 0))),
+            feedback: String(answer?.feedback || "").slice(0, 2500),
+            strengths: Array.isArray(answer?.strengths) ? answer.strengths.slice(0, 4).map(x => String(x).slice(0, 300)) : [],
+            improvements: Array.isArray(answer?.improvements) ? answer.improvements.slice(0, 4).map(x => String(x).slice(0, 300)) : [],
+            correctedVersion: String(answer?.correctedVersion || "").slice(0, 1500)
+        }));
+        const savedResult = {
+            type: "cefr-speaking-mock",
+            level,
+            estimatedLevel,
+            scores,
+            answers,
+            completedAt: new Date().toISOString()
+        };
+        const saved = await pool.query(
+            "INSERT INTO speaking_results (user_id, result) VALUES ($1, $2::jsonb) RETURNING id, created_at",
+            [user.id, JSON.stringify(savedResult)]
+        );
+        return res.status(201).json({
+            success: true,
+            saved: true,
+            resultId: saved.rows[0].id,
+            createdAt: saved.rows[0].created_at
+        });
+    } catch (error) {
+        console.error("Speaking result save error:", error?.message || error);
+        return res.status(500).json({ success: false, error: "Speaking natijasini saqlashda xatolik yuz berdi." });
+    }
+});
+
 // ==============================================
 // NORMAL CHAT
 // ==============================================
