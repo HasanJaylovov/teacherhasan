@@ -1133,8 +1133,18 @@ body{min-height:100dvh;display:flex;align-items:stretch;justify-content:center}
 .orb-ring-one{animation:orbRing 9s linear infinite}
 .orb-ring-two{inset:-14%;border-color:rgba(133,228,223,.12);transform:rotateX(72deg) rotateZ(22deg);animation:orbRing 13s linear infinite reverse}
 .orb-face{position:relative;width:55%;height:43%;transform:translateY(5%);filter:drop-shadow(0 5px 9px rgba(14,22,72,.3))}
-.orb-eye{position:absolute;width:27%;height:8px;top:47%;border-radius:0 0 100% 100%;border-bottom:4px solid #222d68;transform:rotate(-5deg);opacity:.9}
-.orb-eye-left{left:9%}.orb-eye-right{right:9%;transform:rotate(5deg)}
+.orb-eye{position:absolute;top:39%;width:29%;height:16%;overflow:hidden;border-radius:50%;background:linear-gradient(180deg,#fff 0%,#e7edff 100%);box-shadow:0 2px 5px rgba(13,23,72,.28),inset 0 -2px 3px rgba(43,57,126,.12);opacity:1;transform:rotate(-4deg)}
+.orb-eye-left{left:7%}.orb-eye-right{right:7%;transform:rotate(4deg)}
+.orb-iris{position:absolute;left:50%;top:50%;width:47%;height:90%;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle at 42% 35%,#9bd6ff 0 9%,#4c78c8 20%,#263b7d 66%,#17244e 100%);box-shadow:inset 0 0 4px rgba(9,18,53,.65)}
+.orb-pupil{position:absolute;left:50%;top:50%;width:43%;height:57%;transform:translate(-50%,-50%);border-radius:50%;background:#07132e}
+.orb-eye-shine{position:absolute;left:28%;top:17%;width:24%;height:24%;border-radius:50%;background:#fff;box-shadow:0 0 3px #fff}
+.orb-eyelid{position:absolute;inset:-2px;border-radius:50%;transform:scaleY(0);transform-origin:top center;background:linear-gradient(180deg,#879ce9,#5367bd 80%);z-index:2;animation:humanBlink 5.1s infinite}
+.orb-eye-right .orb-eyelid{animation-delay:.12s}
+@keyframes humanBlink{0%,43%,46%,78%,81%,100%{transform:scaleY(0)}44.5%,79.5%{transform:scaleY(1)}}
+#teacherOrb.listening .orb-eyelid{animation-duration:4.2s}
+#teacherOrb.speaking .orb-eyelid{animation-duration:3.2s}
+#teacherOrb.speaking .orb-iris{animation:eyeFocus 1.8s ease-in-out infinite alternate}
+@keyframes eyeFocus{from{transform:translate(-50%,-50%) translateX(-2px)}to{transform:translate(-50%,-50%) translateX(2px)}}
 .orb-brow{position:absolute;top:36%;width:26%;height:3px;border-radius:50%;background:rgba(40,53,115,.42)}
 .orb-brow-left{left:9%;transform:rotate(-9deg)}.orb-brow-right{right:9%;transform:rotate(9deg)}
 .orb-cheek{position:absolute;top:58%;width:18%;height:10%;border-radius:50%;background:rgba(157,179,255,.25);filter:blur(7px)}
@@ -1162,6 +1172,14 @@ body{min-height:100dvh;display:flex;align-items:stretch;justify-content:center}
         .voice-wave span:nth-child(2n){animation-delay:-.18s!important}.voice-wave span:nth-child(3n){animation-delay:-.31s!important}
         @keyframes voiceWaveUser{from{transform:scaleY(.35)}to{transform:scaleY(1.1)}}@keyframes voiceWaveTeacher{from{transform:scaleY(.4)}to{transform:scaleY(1.5)}}
         .voice-activity-label{min-height:18px;margin:0 auto 10px;text-align:center;color:#aeb7d0;font-size:11px;letter-spacing:.04em}
+        .voice-wave{width:min(420px,82vw);height:48px;display:flex;align-items:center;justify-content:center;gap:4px;margin:2px auto 8px;--wave-level:.08;filter:drop-shadow(0 0 12px rgba(184,243,107,.16))}
+        .voice-wave span{display:block;flex:1 1 4px;max-width:7px;height:calc(5px + var(--wave-level)*35px);min-height:4px;border-radius:99px;background:linear-gradient(180deg,#e7ffb8,#b8f36b 55%,#5fc5a0);opacity:.48;transform:scaleY(.45);transition:height 65ms linear,opacity 65ms linear,transform 65ms linear}
+        #voiceWave.listening span{opacity:.82;animation:visibleWave .72s ease-in-out infinite alternate}
+        #voiceWave.speaking span{opacity:1;background:linear-gradient(180deg,#e2fff8,#59e0c5 55%,#399fbc);animation:visibleWave .34s ease-in-out infinite alternate;box-shadow:0 0 8px rgba(89,224,197,.28)}
+        #voiceWave span:nth-child(3n){animation-delay:-.22s!important}#voiceWave span:nth-child(4n){animation-delay:-.38s!important}
+        @keyframes visibleWave{from{transform:scaleY(.24);filter:brightness(.8)}to{transform:scaleY(1.15);filter:brightness(1.3)}}
+        @media(max-width:680px){.voice-wave{height:34px;gap:3px;width:min(340px,84vw)}.voice-wave span{max-width:5px}}
+        @media(prefers-reduced-motion:reduce){#voiceWave span{animation:none!important}}
         @media(max-width:680px){.voice-wave{height:28px;gap:3px}.voice-wave span{width:4px}.voice-activity-label{font-size:10px}}
         @media(prefers-reduced-motion:reduce){.voice-wave span{animation:none!important}}
         @media (prefers-reduced-motion: reduce) {
@@ -1881,11 +1899,12 @@ body{min-height:100dvh;display:flex;align-items:stretch;justify-content:center}
                     <div class="teacher-orb-wrap" id="teacherOrbWrap">
                         <div class="teacher-orb" id="teacherOrb" role="img" aria-label="Teacher Hasan AI — ko‘zlari yumilgan animatsion avatar">
                             <div class="orb-aura"></div><div class="orb-ring orb-ring-one"></div><div class="orb-ring orb-ring-two"></div>
-                            <div class="orb-face"><div class="orb-brow orb-brow-left"></div><div class="orb-brow orb-brow-right"></div><div class="orb-eye orb-eye-left"></div><div class="orb-eye orb-eye-right"></div><div class="orb-cheek orb-cheek-left"></div><div class="orb-cheek orb-cheek-right"></div><div class="orb-mouth" id="orbMouth"></div></div>
+                            <div class="orb-face"><div class="orb-brow orb-brow-left"></div><div class="orb-brow orb-brow-right"></div><div class="orb-eye orb-eye-left"><span class="orb-iris"><i class="orb-pupil"></i><i class="orb-eye-shine"></i></span><i class="orb-eyelid"></i></div><div class="orb-eye orb-eye-right"><span class="orb-iris"><i class="orb-pupil"></i><i class="orb-eye-shine"></i></span><i class="orb-eyelid"></i></div><div class="orb-cheek orb-cheek-left"></div><div class="orb-cheek orb-cheek-right"></div><div class="orb-mouth" id="orbMouth"></div></div>
                             <div class="orb-glint orb-glint-top"></div><div class="orb-glint orb-glint-side"></div>
                         </div>
                     </div>
                     <p class="voice-activity-label" id="voiceActivityLabel" aria-live="polite"></p>
+                    <div class="voice-wave" id="voiceWave" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
 
                 </div>
 
