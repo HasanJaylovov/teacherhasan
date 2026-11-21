@@ -1373,6 +1373,7 @@ VIDEO LESSON MODE:
         startBtn.disabled = false;
         stopBtn.disabled = true;
         setStatus("⏹️ Suhbat to'xtatilmoqda...");
+        void saveVoiceTurnMemory();
 
         if (guestHeartbeatTimer) {
             clearInterval(guestHeartbeatTimer);
