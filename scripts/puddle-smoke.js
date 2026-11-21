@@ -172,7 +172,7 @@ if (!listening.includes("speechSynthesis") || !listening.includes("stopAudio") |
 }
 
 // Chat history persistence is account-scoped and identity lookup failure fails closed.
-if (!js.includes("CHAT_STORAGE_PREFIX") || !js.includes("user_") || !js.includes("setChatIdentity") || !js.includes("chatIdentityReady") || !js.includes("persistChat()") || !js.includes("restoreChat()") || !js.includes("localStorage.removeItem(CHAT_STORAGE_KEY)") || !js.includes("chatIdentityReady=false;CHAT_STORAGE_KEY=null")) {
+if (!js.includes("CHAT_STORAGE_PREFIX") || !js.includes("user_") || !js.includes("setChatIdentity") || !js.includes("chatIdentityReady") || !js.includes("identityReadyPromise") || !js.includes("await identityReadyPromise") || !js.includes("messagesEl.innerHTML=\"\"") || !js.includes("persistChat()") || !js.includes("restoreChat()") || !js.includes("localStorage.removeItem(CHAT_STORAGE_KEY)") || !js.includes("chatIdentityReady=false;CHAT_STORAGE_KEY=null")) {
     throw Error("Puddle account-scoped chat persistence/clear safety hooks missing");
 }
 if (!legacyServer.includes("user.id") || !legacyServer.includes("authenticated:")) {
