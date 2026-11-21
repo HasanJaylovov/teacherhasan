@@ -77,7 +77,7 @@ try {
     assert.match(await page.locator(".hero-card").innerText(), /8 ta tilni/, "hero should promote eight-language learning");
 
     // Exercise the real client-side chat flow against a deterministic API stub.
-    await page.locator('.nav-item[data-view="chat"]').click();
+    await page.locator('.desktop-sidebar [data-view="chat"]').click();
     const chatInput = page.locator("#chatInput");
     await chatInput.fill("I want to practise Present Simple.");
     await page.locator("#sendBtn").click();
