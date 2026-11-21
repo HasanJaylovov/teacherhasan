@@ -1361,6 +1361,18 @@
         }
     </style>
 
+
+    <style id="conversation-only-visual">
+      .teacher-hero{margin:0 auto 14px;max-width:none}
+      .teacher-hero h1,.teacher-hero .subtitle,.teacher-hero .ai-badge,.welcome{display:none!important}
+      .voice-activity-label{min-height:0;margin:0 auto 4px}
+      .conversation{padding:clamp(12px,3vw,34px);display:flex;flex-direction:column;min-height:0}
+      #transcript{margin:10px auto 0;min-height:0;max-height:min(38vh,360px);width:min(760px,100%);padding:0 2px;overflow:auto}
+      .status-container{margin:8px auto 0;opacity:.65}
+      .status{padding:6px 12px;font-size:11px}
+      .controls{padding:16px 20px}
+      @media(max-width:680px){.conversation{padding:10px 12px 4px}.teacher-hero{margin:0 auto 8px}#transcript{max-height:36vh}.controls{padding:12px 14px;gap:8px}.control-button{padding:12px 18px;font-size:13px}}
+    </style>
 </head>
 
 <body>
@@ -1837,37 +1849,7 @@
                             <div class="orb-glint orb-glint-top"></div><div class="orb-glint orb-glint-side"></div>
                         </div>
                     </div>
-                    <p class="voice-activity-label" id="voiceActivityLabel" aria-live="polite">Teacher Hasan AI suhbatga tayyor</p>
-
-                    <h1>
-                        Teacher Hasan AI
-                    </h1>
-
-                    <p class="subtitle">
-                        Tillarni ovozli suhbat orqali
-                        tabiiy va interaktiv tarzda o‘rganing.
-                    </p>
-
-                    <div class="ai-badge">
-                        🟢 Natural AI Voice
-                    </div>
-
-                </div>
-
-
-                <div class="welcome">
-
-                    <h2>
-                        Assalomu alaykum! 👋
-                    </h2>
-
-                    <p>
-                        Men Teacher Hasanman.
-                        Tillarni birga o‘rganamiz.
-                        Speaking mashq qilish uchun
-                        <b>Start</b> tugmasini bosing
-                        va gapirishni boshlang.
-                    </p>
+                    <p class="voice-activity-label" id="voiceActivityLabel" aria-live="polite"></p>
 
                 </div>
 
@@ -1876,11 +1858,7 @@
                      app.js ushbu elementni ishlatadi.
                 -->
 
-                <div id="transcript" role="log" aria-live="polite" aria-relevant="additions text" aria-atomic="false">
-                    👨‍🏫 Teacher Hasan:
-                    Salom! Men Teacher Hasanman.
-                    Tillarni birga mashq qilamiz.
-                </div>
+                <div id="transcript" role="log" aria-live="polite" aria-relevant="additions text" aria-atomic="false"></div>
 
 
                 <!-- IMPORTANT:
