@@ -144,6 +144,7 @@ try {
     assert.equal(await page.locator('a[href="/offer.html"]').count(), 1, "offer link should remain on login page");
     assert.equal(await page.locator('a[href="/privacy.html"]').count(), 1, "privacy link should remain on login page");
     await page.goto("http://127.0.0.1:4173/register.html", { waitUntil: "domcontentloaded" });
+    await page.goto("http://127.0.0.1:4173/", { waitUntil: "domcontentloaded" });
     assert.equal(await page.locator('a[href="/offer.html"]').count(), 1, "offer consent link should remain on registration page");
     assert.equal(await page.locator('a[href="/privacy.html"]').count(), 1, "privacy consent link should remain on registration page");
     const focusedLayout = await page.evaluate(() => {
