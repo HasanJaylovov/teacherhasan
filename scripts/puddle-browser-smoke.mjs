@@ -46,12 +46,21 @@ try {
     browser = await chromium.launch({ headless: true });
     const context = await browser.newContext({ serviceWorkers: "block" });
     const page = await context.newPage();
+    let chatRequests = 0;
 
     await page.route("**/api/me", route => route.fulfill({
         status: 200,
         contentType: "application/json",
         body: JSON.stringify({ authenticated: false })
     }));
+    await page.route("**/api/chat", route => {
+        chatRequests += 1;
+        return route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify({ success: true, reply: "Mock AI reply: Excellent work!" })
+        });
+    });
     await page.route("https://esm.sh/@google/genai", route => route.fulfill({
         status: 200,
         contentType: "text/javascript",
@@ -64,6 +73,35 @@ try {
     assert.equal(await page.locator(".desktop-sidebar").isVisible(), true, "desktop sidebar should be visible");
     assert.equal(await page.locator(".bottom-nav").isVisible(), false, "desktop bottom navigation should be hidden");
     assert.equal(await page.locator(".hero-card").count(), 1, "home hero should render");
+
+    // Exercise the real client-side chat flow against a deterministic API stub.
+    await page.locator('.nav-item[data-view="chat"]').click();
+    const chatInput = page.locator("#chatInput");
+    await chatInput.fill("I want to practise Present Simple.");
+    await page.locator("#sendBtn").click();
+    await page.getByText("I want to practise Present Simple.", { exact: true }).waitFor();
+    await page.getByText("Mock AI reply: Excellent work!", { exact: true }).waitFor();
+    assert.equal(chatRequests, 1, "chat should issue exactly one API request");
+    assert.equal(await page.locator("#sendBtn").isDisabled(), false, "send button should re-enable after response");
+    await page.waitForFunction(() => Object.keys(localStorage).some(k => k.startsWith("th_puddle_chat_v1_guest")));
+    const savedChat = await page.evaluate(() => {
+        const key = Object.keys(localStorage).find(k => k.startsWith("th_puddle_chat_v1_guest"));
+        return key ? JSON.parse(localStorage.getItem(key)) : [];
+    });
+    assert.ok(savedChat.some(m => m.role === "user" && m.text.includes("Present Simple")), "guest chat should persist user message");
+    assert.ok(savedChat.some(m => m.role === "assistant" && m.text.includes("Mock AI reply")), "guest chat should persist AI reply");
+
+    await page.locator("#themeToggle").click();
+    assert.equal(await page.locator("body").evaluate(el => el.classList.contains("dark")), true, "theme toggle should activate dark mode");
+    assert.equal(await page.evaluate(() => localStorage.getItem("th_theme")), "dark", "theme choice should persist");
+
+    await page.locator("#clearChat").click();
+    await page.getByText("Assalomu alaykum! 😊 Men Teacher Hasan AI.", { exact: false }).waitFor();
+    const afterClear = await page.evaluate(() => {
+        const key = Object.keys(localStorage).find(k => k.startsWith("th_puddle_chat_v1_guest"));
+        return key ? JSON.parse(localStorage.getItem(key)) : [];
+    });
+    assert.equal(afterClear.some(m => m.text.includes("Present Simple")), false, "clear chat should remove the previous conversation");
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.reload({ waitUntil: "domcontentloaded" });
@@ -90,7 +128,7 @@ try {
     const voiceOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
     assert.equal(voiceOverflow, false, "mobile Voice AI wrapper should not overflow horizontally");
 
-    console.log("Browser smoke passed: desktop sidebar, mobile navigation, no horizontal overflow, Voice AI iframe, microphone permission and live-client DOM hooks.");
+    console.log("Browser smoke passed: desktop/mobile navigation, chat API interaction and persistence, clear chat, theme persistence, responsive layout, Voice AI iframe and legacy controls.");
     await context.close();
 } finally {
     if (browser) await browser.close();
