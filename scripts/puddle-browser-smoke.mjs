@@ -138,6 +138,14 @@ try {
     assert.equal(await page.locator("#stopBtn").isVisible(), true, "Stop control should remain visible");
     assert.equal(await page.locator(".topbar").isVisible(), false, "intro/header copy should be hidden");
     assert.equal(await page.locator(".welcome").isVisible(), false, "welcome copy should be hidden");
+    assert.equal(await page.locator('a[href="/offer.html"]').count(), 0, "legal offer link should not appear on speaking page");
+    assert.equal(await page.locator('a[href="/privacy.html"]').count(), 0, "privacy link should not appear on speaking page");
+    await page.goto("http://127.0.0.1:4173/login.html", { waitUntil: "domcontentloaded" });
+    assert.equal(await page.locator('a[href="/offer.html"]').count(), 1, "offer link should remain on login page");
+    assert.equal(await page.locator('a[href="/privacy.html"]').count(), 1, "privacy link should remain on login page");
+    await page.goto("http://127.0.0.1:4173/register.html", { waitUntil: "domcontentloaded" });
+    assert.equal(await page.locator('a[href="/offer.html"]').count(), 1, "offer consent link should remain on registration page");
+    assert.equal(await page.locator('a[href="/privacy.html"]').count(), 1, "privacy consent link should remain on registration page");
     const focusedLayout = await page.evaluate(() => {
         const app = document.querySelector(".app");
         const chat = document.querySelector("#transcript");
