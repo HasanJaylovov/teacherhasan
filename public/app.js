@@ -56,35 +56,40 @@ document.addEventListener("DOMContentLoaded", () => {
     const status = document.getElementById("status");
     const transcript = document.getElementById("transcript");
 
-    const voiceAvatars = Array.from(document.querySelectorAll(".avatar"));
+    const teacherOrb = document.getElementById("teacherOrb");
+    const orbMouth = document.getElementById("orbMouth");
+    const voiceActivityLabel = document.getElementById("voiceActivityLabel");
     let learnerDisplayName = "";
     let learnerMemoryContext = "";
     let pendingVoiceUserText = "";
     let pendingVoiceTeacherText = "";
 
-    const voiceWave = document.getElementById("voiceWave");
-    const voiceActivityLabel = document.getElementById("voiceActivityLabel");
+    function setOrbState(state, level = 0) {
+        if (!teacherOrb) return;
+        teacherOrb.classList.remove("idle", "listening", "speaking");
+        teacherOrb.classList.add(state);
+        const intensity = Math.max(0, Math.min(1, Number(level) || 0));
+        teacherOrb.style.setProperty("--orb-intensity", intensity.toFixed(2));
+        if (orbMouth) orbMouth.style.transform = "translateX(-50%) scale(" + (1 + intensity * 1.8) + ")";
+        if (voiceActivityLabel) {
+            const labels = {
+                idle: "Teacher Hasan AI suhbatga tayyor",
+                listening: intensity > .035 ? "Siz gapiryapsiz · AI tinglamoqda" : "Teacher Hasan sizni tinglamoqda",
+                speaking: "Teacher Hasan javob bermoqda"
+            };
+            voiceActivityLabel.textContent = labels[state] || labels.idle;
+        }
+    }
     function updateVoiceVisualizer(level = 0) {
         const normalized = Math.max(0, Math.min(1, Number(level) || 0));
-        voiceAvatars.forEach((avatar) => {
-            avatar.style.setProperty("--voice-scale", String(1 + normalized * 0.22));
-            avatar.style.setProperty("--voice-glow", String(0.12 + normalized * 0.72));
-            avatar.classList.toggle("voice-active", normalized > 0.035);
-        });
-        if (voiceWave) {
-            voiceWave.style.setProperty("--wave-level", String(normalized));
-            voiceWave.classList.toggle("user-active", normalized > 0.035);
-        }
-        if (voiceActivityLabel && !voiceWave?.classList.contains("teacher-active")) {
-            voiceActivityLabel.textContent = normalized > 0.035 ? "Siz gapiryapsiz · Teacher Hasan tinglamoqda" : (isRunning ? "Teacher Hasan sizni tinglamoqda" : "Ovozli suhbatga tayyor");
-        }
+        if (isRunning) setOrbState("listening", normalized);
+        else setOrbState("idle", 0);
     }
     function updateTeacherVisualizer(level = 0) {
         const normalized = Math.max(0, Math.min(1, Number(level) || 0));
-        if (!voiceWave) return;
-        voiceWave.style.setProperty("--wave-level", String(normalized));
-        voiceWave.classList.toggle("teacher-active", normalized > 0.025);
-        if (voiceActivityLabel) voiceActivityLabel.textContent = normalized > 0.025 ? "Teacher Hasan javob bermoqda" : (isRunning ? "Teacher Hasan sizni tinglamoqda" : "Ovozli suhbatga tayyor");
+        if (isRunning && normalized > 0.025) setOrbState("speaking", normalized);
+        else if (isRunning) setOrbState("listening", 0);
+        else setOrbState("idle", 0);
     }
 
     async function resolveLearnerName() {
@@ -1183,6 +1188,7 @@ VIDEO LESSON MODE:
         );
 
         isRunning = true;
+        setOrbState("listening", 0);
 
         if (guestMode) {
             startGuestHeartbeat();
