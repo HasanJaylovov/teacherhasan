@@ -161,6 +161,21 @@ if (!voicePage.includes('src="/"') || !voicePage.includes('allow="microphone; au
 if ((html.match(/href="\.\/voice\.html"/g) || []).length < 3 || !sw.includes('"./voice.html"')) {
     throw Error("PWA Voice AI navigation or offline shell registration missing");
 }
+// Voice AI visual redesign must retain every DOM hook consumed by the live client.
+const legacyVoiceHtml = read("public/index.html");
+for (const id of ["startBtn", "stopBtn", "status", "transcript", "menuButton", "sideMenu", "menuOverlay", "closeMenu"]) {
+    if (!legacyVoiceHtml.includes('id="' + id + '"')) throw Error("Legacy Voice AI DOM hook missing: " + id);
+}
+for (const visual of ["puddle-voice-redesign", "--voice-accent", ".teacher-hero", "#startBtn", "#stopBtn", "#transcript", "@media (max-width: 700px)"]) {
+    if (!legacyVoiceHtml.includes(visual)) throw Error("Puddle Voice AI visual layer missing: " + visual);
+}
+for (const liveHook of ["startBtn.addEventListener", "stopBtn.addEventListener", "function startTeacher", "function stopTeacher", 'fetch("/api/live-token"', "client.live.connect", "getUserMedia", "createBufferSource"]) {
+    if (!legacyVoice.includes(liveHook)) throw Error("Legacy Voice AI live behavior hook missing: " + liveHook);
+}
+if (!legacyVoiceHtml.includes('<script type="module" src="/app.js"') && !legacyVoiceHtml.includes('src="/app.js"')) {
+    throw Error("Legacy Voice AI client script reference missing");
+}
+
 const videoBrandLink = videoLessons.match(/<a class="brand" href="([^"]+)"/);
 if (!videoBrandLink || videoBrandLink[1] !== "./index.html") throw Error("Video lesson brand must return to the redesigned PWA");
 
