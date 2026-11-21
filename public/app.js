@@ -164,7 +164,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const intensity = Math.max(0, Math.min(1, Number(level) || 0));
         visualState = state;
         visualLevel = intensity;
-        if (vaPrompt) vaPrompt.textContent = state === "speaking" ? "Teacher Hasan is speaking..." : state === "listening" ? "Go ahead, I'm listening..." : "Tap the microphone to start speaking";
+        if (vaPrompt) vaPrompt.textContent = state === "speaking" ? uiText("voiceSpeaking", "Teacher Hasan javob bermoqda...") : state === "listening" ? uiText("voiceListening", "Sizni tinglayapman...") : uiText("voiceIdle", "Suhbatni boshlash uchun mikrofonni bosing");
         teacherOrb.style.setProperty("--orb-intensity", intensity.toFixed(2));
         if (voiceWave) {
             voiceWave.classList.remove("idle", "listening", "speaking");
