@@ -67,10 +67,10 @@ if (!manifest.name || !manifest.start_url || !manifest.icons?.length) throw Erro
 const routes = [
     { href: "/", file: "index.html", label: "Voice AI" },
     { href: "/speaking-exam.html", file: "speaking-exam.html", label: "Speaking Exam" },
-    { href: "/profile.html", file: "profile.html", label: "Profile" },
+    { href: "/profile.html?returnTo=%2Fpuddle-redesign%2F", file: "profile.html", label: "Profile" },
     { href: "/offer.html", file: "offer.html", label: "Premium" },
-    { href: "/login.html", file: "login.html", label: "Login" },
-    { href: "/register.html", file: "register.html", label: "Register" },
+    { href: "/login.html?returnTo=%2Fpuddle-redesign%2F", file: "login.html", label: "Login" },
+    { href: "/register.html?returnTo=%2Fpuddle-redesign%2F", file: "register.html", label: "Register" },
     { href: "/admin", file: "admin.html", label: "Admin" }
 ];
 for (const route of routes) {
@@ -100,6 +100,11 @@ if (!legacyAuth.includes('const AUTH_TOKEN_KEY = "th_auth_token"') ||
     !legacyAuth.includes("Authorization")) {
     throw Error("Login/register/profile/logout token behavior incomplete");
 }
+if (!legacyAuth.includes("getSafeReturnTo") || !legacyAuth.includes("new URL(target, location.origin)") ||
+    !legacyAuth.includes("target.startsWith(\"//\")") || !legacyAuth.includes('"/login.html?returnTo="')) {
+    throw Error("Safe returnTo behavior missing from legacy auth flow");
+}
+if (!js.includes('location.href="./index.html"')) throw Error("PWA logout must return to redesigned home");
 if (!legacyProfile.includes('id="profile"') || !legacyProfile.includes('id="logout"')) {
     throw Error("Profile page auth hooks missing");
 }
