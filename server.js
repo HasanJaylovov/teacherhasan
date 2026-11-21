@@ -3425,8 +3425,8 @@ app.post(
             if (!allowed.includes(mimeType)) return res.status(400).json({ success: false, error: "Audio formati qo‘llab-quvvatlanmaydi." });
             const level = String(req.body?.level || "").toUpperCase();
             const question = String(req.body?.question || "").trim().slice(0, 1000);
-            if (!["A1", "A2", "B1", "B2", "C1"].includes(level) || !question) return res.status(400).json({ success: false, error: "CEFR daraja yoki savol noto‘g‘ri." });
-            const prompt = "Assess this English speaking audio at CEFR " + level + ". Question: " + question + ". Return only JSON with keys transcript, grammar, vocabulary, fluency, pronunciation, overall, feedback, strengths, improvements, correctedVersion. Scores must be integers 0-100 relative to the selected level. Do not judge accent identity. If silent or unintelligible, return zero scores and say a clear recording is needed. This is practice feedback, not official CEFR certification.";
+            if (!["A1", "A2", "B1", "B2", "C1", "MULTILEVEL"].includes(level) || !question) return res.status(400).json({ success: false, error: "CEFR daraja yoki savol noto‘g‘ri." });
+            const prompt = level === "MULTILEVEL" ? "Assess this English speaking audio against the official Uzbekistan UZBMB Multilevel Speaking sample format across CEFR A1-C1. Evaluate task fulfilment, grammar, vocabulary, fluency and intelligibility/pronunciation; do not assume the candidate level in advance. Question: " + question + ". Return only JSON with keys transcript, grammar, vocabulary, fluency, pronunciation, overall, feedback, strengths, improvements, correctedVersion. Scores must be integers 0-100. If silent or unintelligible, return zero scores and say a clear recording is needed. This is practice feedback, not official certification." : "Assess this English speaking audio at CEFR " + level + ". Question: " + question + ". Return only JSON with keys transcript, grammar, vocabulary, fluency, pronunciation, overall, feedback, strengths, improvements, correctedVersion. Scores must be integers 0-100 relative to the selected level. Do not judge accent identity. If silent or unintelligible, return zero scores and say a clear recording is needed. This is practice feedback, not official CEFR certification.";
             const result = await generateGeminiWithRetry({
                 model: CHAT_MODEL,
                 contents: [{ role: "user", parts: [{ text: prompt }, { inlineData: { mimeType, data: req.file.buffer.toString("base64") } }] }],
@@ -3461,7 +3461,7 @@ app.post("/api/speaking/results", async (req, res) => {
         const body = req.body || {};
         const level = String(body.level || "").toUpperCase();
         const estimatedLevel = String(body.estimatedLevel || "").toUpperCase();
-        const validLevels = ["A1", "A2", "B1", "B2", "C1"];
+        const validLevels = ["A1", "A2", "B1", "B2", "C1", "MULTILEVEL"];
         if (!validLevels.includes(level) || !validLevels.includes(estimatedLevel)) {
             return res.status(400).json({ success: false, error: "CEFR darajasi noto‘g‘ri." });
         }
