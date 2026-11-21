@@ -171,6 +171,7 @@ for (const endpoint of [
     if (!legacyAdmin.includes(endpoint) || !legacyServer.includes('"' + endpoint + '"')) {
         throw Error("Admin endpoint compatibility missing: " + endpoint);
 }
+}
 for (const endpoint of [
     "/api/admin/logout", "/api/admin/dashboard", "/api/admin/users",
     "/api/admin/users/:id", "/api/admin/users/:id/premium",
