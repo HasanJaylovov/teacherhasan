@@ -5,6 +5,18 @@
 
     const translations = {
         uz: {
+            voiceTitle: "Ovozli suhbat",
+            voiceListening: "Sizni tinglayapman...",
+            voiceSpeaking: "Teacher Hasan javob bermoqda...",
+            voiceIdle: "Suhbatni boshlash uchun mikrofonni bosing",
+            chatEmpty: "Suhbat shu yerda ko‘rinadi",
+            you: "Siz",
+            teacher: "Teacher Hasan",
+            statusReady: "Tayyor. Suhbatni boshlash uchun mikrofonni bosing.",
+            statusListening: "Teacher Hasan sizni tinglayapti...",
+            statusStopped: "Suhbat to‘xtatildi. Davom etish uchun mikrofonni bosing.",
+            remembered: "Oldingi darsingiz eslandi. Davom etamiz.",
+
             login: "Kirish",
             register: "Ro‘yxatdan o‘tish",
             profile: "Profil",
@@ -34,6 +46,18 @@
         },
 
         ru: {
+            voiceTitle: "Голосовой чат",
+            voiceListening: "Я вас слушаю...",
+            voiceSpeaking: "Teacher Hasan отвечает...",
+            voiceIdle: "Нажмите на микрофон, чтобы начать разговор",
+            chatEmpty: "Здесь будет отображаться беседа",
+            you: "Вы",
+            teacher: "Teacher Hasan",
+            statusReady: "Готово. Нажмите на микрофон, чтобы начать.",
+            statusListening: "Teacher Hasan вас слушает...",
+            statusStopped: "Разговор остановлен. Нажмите на микрофон, чтобы продолжить.",
+            remembered: "Я помню ваш предыдущий урок. Продолжим.",
+
             login: "Войти",
             register: "Регистрация",
             profile: "Профиль",
@@ -63,6 +87,18 @@
         },
 
         en: {
+            voiceTitle: "Voice chat",
+            voiceListening: "I'm listening...",
+            voiceSpeaking: "Teacher Hasan is responding...",
+            voiceIdle: "Tap the microphone to start speaking",
+            chatEmpty: "Your conversation will appear here",
+            you: "You",
+            teacher: "Teacher Hasan",
+            statusReady: "Ready. Tap the microphone to start.",
+            statusListening: "Teacher Hasan is listening...",
+            statusStopped: "Conversation stopped. Tap the microphone to continue.",
+            remembered: "I remember your previous lesson. Let's continue.",
+
             login: "Login",
             register: "Register",
             profile: "Profile",
