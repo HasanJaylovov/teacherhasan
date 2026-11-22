@@ -76,6 +76,13 @@ try {
     assert.equal(await page.locator(".language-chip").count(), 8, "homepage should list all eight supported learning languages");
     assert.deepEqual(await page.locator(".language-chip b").allTextContents(), ["Uzbek", "English", "German", "Arabic", "Russian", "Turkish", "Korean", "Chinese"], "language cards should match the supported eight-language catalog");
     assert.match(await page.locator(".hero-card").innerText(), /8 ta tilni/, "hero should promote eight-language learning");
+    for (const label of ["QAYTA XUSH KELIBSIZ 👋", "O‘rganish yo‘li", "Mashqlarni tanlang", "KO‘NIKMALAR", "HISOB"]) {
+        assert.equal(await page.getByText(label, { exact: true }).count(), 1, "Uzbek dashboard label should be visible: " + label);
+    }
+    const dashboardText = await page.locator("body").innerText();
+    for (const staleLabel of ["Learning path", "Explore learning", "Account & achievements"]) {
+        assert.equal(dashboardText.includes(staleLabel), false, "outdated English dashboard label should not remain: " + staleLabel);
+    }
 
     // Exercise the real client-side chat flow against a deterministic API stub.
     await page.locator('.desktop-sidebar [data-view="chat"]').click();
