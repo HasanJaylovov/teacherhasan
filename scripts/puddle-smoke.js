@@ -177,6 +177,16 @@ if (!speaking.includes("/api/speaking/upload") || !speaking.includes("data.evalu
 if (!speakingApiSection.includes("evaluated: true") || !speakingApiSection.includes("evaluation")) {
     throw Error("Speaking Exam server response contract missing");
 }
+// Saved Speaking history: verify the actual GET response shape used by the PWA profile.
+const speakingHistoryStart = legacyServer.indexOf('app.get("/api/speaking/results"');
+if (speakingHistoryStart < 0) throw Error("Speaking result history API route missing");
+const speakingHistorySection = legacyServer.slice(speakingHistoryStart, speakingHistoryStart + 1500);
+for (const field of ["success: true", "results:", "result: row.result", "createdAt: row.created_at"]) {
+    if (!speakingHistorySection.includes(field)) throw Error("Speaking history API response field missing: " + field);
+}
+for (const field of ['fetch("/api/speaking/results"', "d.results", "row.result", "row.createdAt", "Authorization"]) {
+    if (!html.includes(field)) throw Error("PWA speaking history client contract missing: " + field);
+}
 
 // Video catalog selections now pass a whitelisted lesson context to the live AI room.
 const lessonIds = ["present-simple", "past-simple", "present-continuous", "present-perfect"];
