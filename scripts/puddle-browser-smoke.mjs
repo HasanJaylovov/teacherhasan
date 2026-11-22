@@ -263,7 +263,7 @@ try {
     await page.goto("http://127.0.0.1:4173/puddle-redesign/index.html", { waitUntil: "domcontentloaded" });
     assert.equal(await page.locator("#speakingHistory").count(), 1, "learner profile should include saved Speaking Exam history");
 
-    console.log("Browser smoke passed: eight-language discovery and first-chat greeting, desktop/mobile navigation, chat API interaction and persistence, clear chat, theme persistence, responsive layout, Voice AI iframe, orb focus layout, independent transcript scrolling, left/right speaker bubbles, and legacy controls.");
+    console.log("Browser smoke passed: Uzbek dashboard labels, local English Practice/CEFR/Reading/Listening interactions, AI lesson catalog routing, guest and authenticated chat API headers with account-scoped history, clear chat, theme persistence, responsive desktop/mobile layout, Voice AI iframe/orb/transcript, Speaking Exam screen, and legal-route checks.");
     await context.close();
 } finally {
     if (browser) await browser.close();
