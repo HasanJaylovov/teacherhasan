@@ -222,18 +222,30 @@ if (!legacyVoiceHtml.includes('<script type="module" src="/app.js"') && !legacyV
 const videoBrandLink = videoLessons.match(/<a class="brand" href="([^"]+)"/);
 if (!videoBrandLink || videoBrandLink[1] !== "./index.html") throw Error("Video lesson brand must return to the redesigned PWA");
 
-// Static/local modules are checked for their actual client-side behavior and disclaimers.
-if (!practice.includes("const qs=") || !practice.includes("Your score:") || !practice.includes("Rasmiy CEFR")) {
+// Static/local modules are checked for their actual client-side behavior, Uzbek UI and disclaimers.
+if (!practice.includes("const qs=") || !practice.includes("Natijangiz:") || !practice.includes("Rasmiy CEFR")) {
     throw Error("English Practice module behavior/disclaimer missing");
 }
-if (!cefr.includes("const qs=") || !cefr.includes("Preliminary result") || !cefr.includes("Rasmiy CEFR")) {
+if (!cefr.includes("const qs=") || !cefr.includes("Dastlabki natija") || !cefr.includes("Rasmiy CEFR")) {
     throw Error("CEFR Assessment disclaimer/quiz missing");
 }
 if (!reading.includes("quizChoices") || !reading.includes("quizFeedback")) {
     throw Error("Reading comprehension quiz missing");
 }
-if (!listening.includes("speechSynthesis") || !listening.includes("stopAudio") || !listening.includes("Listening check")) {
+if (!listening.includes("speechSynthesis") || !listening.includes("stopAudio") || !listening.includes("Tinglashni tekshirish")) {
     throw Error("Listening playback/check missing");
+}
+const moduleLabels = [
+    [practice, ["KUNLIK MASHQ", "Grammatika sinovi", "Keyingi savol", "Natijangiz:", "Mashq yakunlandi"]],
+    [cefr, ["TEZKOR DARAJA TESTI", "Dastlabki natija", "Sizning natijangiz:", "To‘g‘ri javob:"]],
+    [videoLessons, ["DARS KATALOGI", "Video darslar", "AI darsni ochish", "video fayllar mavjudligini anglatmaydi"]],
+    [reading, ["O‘QING VA TUSHUNING", "Tushunganingizni tekshiring", "To‘g‘ri! Barakalla 🎉"]],
+    [listening, ["TINGLANG VA O‘RGANING", "Audioni tinglash", "Tinglashni tekshirish", "To‘g‘ri! 🎉"]]
+];
+for (const [page, labels] of moduleLabels) {
+    for (const label of labels) {
+        if (!page.includes(label)) throw Error("Localized learning module UI missing: " + label);
+    }
 }
 
 // Chat history persistence is account-scoped and identity lookup failure fails closed.
