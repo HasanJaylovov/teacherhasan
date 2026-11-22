@@ -46,6 +46,38 @@ const mustHaveIds = [
 for (const id of mustHaveIds) {
     if (!html.includes('id="' + id + '"')) throw Error("Required PWA UI id missing: " + id);
 }
+const localizedLabels = [
+    "AI yordamida til o‘rganish", "O‘RGANISH", "Bosh sahifa", "Til o‘rganuvchi!",
+    "AI TIL HAMROHI", "8 TIL · 1 AI", "O‘rganish yo‘li", "Mashqlarni tanlang",
+    "Tabiiy suhbat va o‘rganish", "AI ustoz bilan gaplashing", "Grammatika va lug‘at",
+    "Darajangizni tekshiring", "Hisob va yutuqlar", "Mening profilim", "Boshqa mashqlar",
+    "Keling, til o‘rganamiz! ✨", "O‘zlashtirish", "Sertifikatlar", "Premium obuna",
+    "Profilni ochish ↗", "AI til ustoz", "Xabaringizni yozing...",
+    "Grammatika qoidalarini mashq qiling", "Yangi so‘zlarni o‘rganing va takrorlang",
+    "Matn va hikoyalarni o‘qing", "Tinglang va tushunishni tekshiring",
+    "AI imtihonchi bilan mashq qiling", "QAYTA XUSH KELIBSIZ 👋",
+    "Natijalar ↗", "Present Simple mashqi", "Kunlik lug‘at", "Speaking mashqi",
+    "Online · Yordamga tayyor", "KO‘NIKMALAR", "HISOB"
+];
+for (const label of localizedLabels) {
+    if (!html.includes(label)) throw Error("Uzbek UI label missing: " + label);
+}
+const outdatedLabels = [
+    "English learning companion", "LEARN", "Dashboard", "English learner!",
+    "AI LANGUAGE PARTNER", "ONE AI · EIGHT LANGUAGES", "Learning path",
+    "Explore learning", "Chat & learn naturally", "Speak with your tutor",
+    "Grammar & vocabulary", "Check your level", "Account & achievements",
+    "My Profile", "More to explore", "Let's learn a language! ✨",
+    "My Progress", "Certificates", "Premium membership", "Open account profile ↗",
+    "AI English Teacher", "Write your message...", "Practice structures and rules",
+    "Learn and review new words", "Read short stories and texts",
+    "Listen and test comprehension", "Practice with AI examiner",
+    "WELCOME BACK 👋", "Progress ↗", "Present Simple practice",
+    "Daily vocabulary", "Speaking practice", "Online · Ready to help", "SKILLS", "ACCOUNT"
+];
+for (const label of outdatedLabels) {
+    if (html.includes(label)) throw Error("Outdated English dashboard label remains: " + label);
+}
 for (const route of ["/api/chat", "/api/me", "/api/auth/logout"]) {
     if (!js.includes(route)) throw Error("PWA API integration missing: " + route);
 }
