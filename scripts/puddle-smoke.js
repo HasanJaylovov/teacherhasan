@@ -91,6 +91,9 @@ for (const localPage of [
 for (const feature of ["th_auth_token", "Authorization", "data-prompt", "serviceWorker.register"]) {
     if (!js.includes(feature)) throw Error("PWA behavior missing: " + feature);
 }
+if (!js.includes("Teacher Hasan javob tayyorlamoqda…")) {
+    throw Error("Chat loading state should be localized into Uzbek");
+}
 if (/Upper Intermediate.{0,30}75%|75%.{0,30}Upper Intermediate/.test(html)) {
     throw Error("Found demo learner progress on the homepage");
 }
@@ -194,6 +197,9 @@ if (!voicePage.includes('src="/"') || !voicePage.includes('title="Teacher Hasan 
 }
 if (!voicePage.includes("100dvh - 56px") || !voicePage.includes("min-height:0")) {
     throw Error("Voice AI wrapper must fit short mobile viewports using dynamic viewport units");
+}
+if (!voicePage.includes("<title>AI bilan suhbat — Teacher Hasan AI</title>") || !voicePage.includes("Jonli suhbat · AI bilan suhbat")) {
+    throw Error("PWA voice page labels should use the Uzbek AI conversation name");
 }
 if ((html.match(/href="\.\/voice\.html"/g) || []).length < 3 || !sw.includes('"./voice.html"')) {
     throw Error("PWA Voice AI navigation or offline shell registration missing");
