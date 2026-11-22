@@ -49,7 +49,7 @@ for (const id of mustHaveIds) {
 const localizedLabels = [
     "AI yordamida til o‘rganish", "O‘RGANISH", "Bosh sahifa", "Til o‘rganuvchi!",
     "AI TIL HAMROHI", "8 TIL · 1 AI", "O‘rganish yo‘li", "Mashqlarni tanlang",
-    "Tabiiy suhbat va o‘rganish", "AI ustoz bilan gaplashing", "Grammatika va lug‘at",
+    "Tabiiy suhbat va o‘rganish", "AI ustoz bilan gaplashing", "AI ustoz bilan gaplashish", "Grammatika va lug‘at",
     "Darajangizni tekshiring", "Hisob va yutuqlar", "Mening profilim", "Boshqa mashqlar",
     "Keling, til o‘rganamiz! ✨", "O‘zlashtirish", "Sertifikatlar", "Premium obuna",
     "Profilni ochish ↗", "AI til ustoz", "Xabaringizni yozing...",
@@ -78,6 +78,7 @@ const outdatedLabels = [
 for (const label of outdatedLabels) {
     if (html.includes(label)) throw Error("Outdated English dashboard label remains: " + label);
 }
+if (html.includes("AI bilan suhbat bilan gaplashish")) throw Error("Duplicated Uzbek CTA wording remains");
 for (const route of ["/api/chat", "/api/me", "/api/auth/logout"]) {
     if (!js.includes(route)) throw Error("PWA API integration missing: " + route);
 }
