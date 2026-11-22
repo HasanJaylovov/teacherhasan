@@ -84,6 +84,39 @@ try {
         assert.equal(dashboardText.includes(staleLabel), false, "outdated English dashboard label should not remain: " + staleLabel);
     }
 
+    // Exercise all local learning modules and their navigation using the actual static quiz scripts.
+    await page.goto("http://127.0.0.1:4173/puddle-redesign/english-practice.html", { waitUntil: "domcontentloaded" });
+    assert.match(await page.locator("#question").innerText(), /She ___ to school every day/);
+    await page.locator("#answers button").nth(1).click();
+    await page.getByText("To‘g‘ri! 🎉", { exact: false }).waitFor();
+    assert.equal(await page.locator("#next").isEnabled(), true);
+    await page.locator("#next").click();
+    assert.match(await page.locator("#question").innerText(), /They ___ watching TV now/);
+
+    await page.goto("http://127.0.0.1:4173/puddle-redesign/cefr-assessment.html", { waitUntil: "domcontentloaded" });
+    assert.match(await page.locator("body").innerText(), /Rasmiy CEFR sertifikati/);
+    await page.locator("#answers button").nth(0).click();
+    await page.getByText("To‘g‘ri!", { exact: true }).waitFor();
+    await page.locator("#next").click();
+    assert.match(await page.locator("#question").innerText(), /She ___ coffee every morning/);
+
+    await page.goto("http://127.0.0.1:4173/puddle-redesign/reading.html", { waitUntil: "domcontentloaded" });
+    assert.match(await page.locator("body").innerText(), /London is the capital city/);
+    await page.locator('#quizChoices [data-answer="1"]').click();
+    await page.getByText("To‘g‘ri! Barakalla 🎉", { exact: true }).waitFor();
+
+    await page.goto("http://127.0.0.1:4173/puddle-redesign/listening.html", { waitUntil: "domcontentloaded" });
+    assert.equal(await page.locator("#playAudio").isVisible(), true);
+    await page.locator('[data-answer="yes"]').click();
+    await page.getByText("To‘g‘ri! 🎉", { exact: true }).waitFor();
+
+    await page.goto("http://127.0.0.1:4173/puddle-redesign/video-lessons.html", { waitUntil: "domcontentloaded" });
+    assert.equal(await page.locator(".list-card a").count(), 4, "AI lesson catalog should contain four lessons");
+    await page.locator('.list-card a[href="/?lesson=present-simple"]').click();
+    await page.waitForURL(/lesson=present-simple/);
+    assert.equal(new URL(page.url()).pathname, "/", "video lesson selection should route into the legacy AI room");
+    await page.goto("http://127.0.0.1:4173/puddle-redesign/index.html", { waitUntil: "domcontentloaded" });
+
     // Exercise the real client-side chat flow against a deterministic API stub.
     await page.locator('.desktop-sidebar [data-view="chat"]').click();
     const chatInput = page.locator("#chatInput");
