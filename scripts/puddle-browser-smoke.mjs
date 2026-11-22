@@ -48,13 +48,21 @@ try {
     const page = await context.newPage();
     let chatRequests = 0;
 
-    await page.route("**/api/me", route => route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({ authenticated: false })
-    }));
+    await page.route("**/api/me", route => {
+        const authorization = route.request().headers()["authorization"] || "";
+        const data = authorization === "Bearer smoke-test-token"
+            ? { authenticated: true, user: { id: "smoke-user", fullName: "Smoke Learner", email: "smoke@example.test" }, access: { mode: "trial", plan: "smoke-test" } }
+            : { authenticated: false };
+        return route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify(data)
+        });
+    });
+    const chatAuthorization = [];
     await page.route("**/api/chat", route => {
         chatRequests += 1;
+        chatAuthorization.push(route.request().headers()["authorization"] || "");
         return route.fulfill({
             status: 200,
             contentType: "application/json",
@@ -125,6 +133,7 @@ try {
     await page.getByText("I want to practise Present Simple.", { exact: true }).waitFor();
     await page.getByText("Mock AI reply: Excellent work!", { exact: true }).waitFor();
     assert.equal(chatRequests, 1, "chat should issue exactly one API request");
+    assert.equal(chatAuthorization[0], "", "guest chat should not send an Authorization header");
     assert.equal(await page.locator("#sendBtn").isDisabled(), false, "send button should re-enable after response");
     await page.waitForFunction(() => Object.keys(localStorage).some(k => k.startsWith("th_puddle_chat_v1_guest")));
     const savedChat = await page.evaluate(() => {
@@ -145,6 +154,23 @@ try {
         return key ? JSON.parse(localStorage.getItem(key)) : [];
     });
     assert.equal(afterClear.some(m => m.text.includes("Present Simple")), false, "clear chat should remove the previous conversation");
+
+    // Re-check authenticated API headers and per-user history with a mocked learner session.
+    await page.evaluate(() => localStorage.setItem("th_auth_token", "smoke-test-token"));
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await page.locator('.desktop-sidebar [data-view="chat"]').click();
+    await page.locator("#chatInput").fill("Please help me practise Past Simple.");
+    await page.locator("#sendBtn").click();
+    await page.getByText("Mock AI reply: Excellent work!", { exact: true }).waitFor();
+    assert.equal(chatRequests, 2, "authenticated chat should issue a second API request");
+    assert.equal(chatAuthorization[1], "Bearer smoke-test-token", "authenticated chat must send the learner Bearer token");
+    const userChat = await page.evaluate(() => {
+        const key = Object.keys(localStorage).find(k => k === "th_puddle_chat_v1_user_smoke-user");
+        return key ? JSON.parse(localStorage.getItem(key)) : [];
+    });
+    assert.ok(userChat.some(m => m.role === "user" && m.text.includes("Past Simple")), "authenticated chat history should be scoped to the returned user id");
+    await page.evaluate(() => localStorage.removeItem("th_auth_token"));
+    await page.goto("http://127.0.0.1:4173/puddle-redesign/index.html", { waitUntil: "domcontentloaded" });
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.reload({ waitUntil: "domcontentloaded" });
