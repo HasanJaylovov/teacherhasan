@@ -59,6 +59,16 @@ try {
             body: JSON.stringify(data)
         });
     });
+    const authRequestBodies = {};
+    await page.route("**/api/auth/register", route => {
+        authRequestBodies.register = route.request().postDataJSON();
+        return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, token: "smoke-register-token", user: { id: "register-user", fullName: "Smoke Learner" }, access: { mode: "trial" } }) });
+    });
+    await page.route("**/api/auth/login", route => {
+        authRequestBodies.login = route.request().postDataJSON();
+        return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, token: "smoke-login-token", user: { id: "login-user", fullName: "Smoke Learner" }, access: { mode: "trial" } }) });
+    });
+
     const chatAuthorization = [];
     await page.route("**/api/chat", route => {
         chatRequests += 1;
@@ -100,9 +110,21 @@ try {
     assert.equal(await page.locator("#next").isEnabled(), true);
     await page.locator("#next").click();
     assert.match(await page.locator("#question").innerText(), /They ___ watching TV now/);
+    const practiceTutorLink = page.locator('a.primary-btn[href="/"]');
+    assert.equal(await practiceTutorLink.count(), 1, "English Practice should provide a direct AI tutor route");
+    await practiceTutorLink.click();
+    await page.waitForURL("http://127.0.0.1:4173/");
+    assert.equal(await page.locator("#teacherOrb").isVisible(), true, "English Practice AI tutor CTA should reach the live Voice AI room");
+    await page.goto("http://127.0.0.1:4173/puddle-redesign/english-practice.html", { waitUntil: "domcontentloaded" });
 
     await page.goto("http://127.0.0.1:4173/puddle-redesign/cefr-assessment.html", { waitUntil: "domcontentloaded" });
     assert.match(await page.locator("body").innerText(), /Rasmiy CEFR sertifikati/);
+    const cefrSpeakingLink = page.locator('a.primary-btn[href="/speaking-exam.html"]');
+    assert.equal(await cefrSpeakingLink.count(), 1, "CEFR Assessment should link to the real Speaking Exam route");
+    await cefrSpeakingLink.click();
+    await page.waitForURL("http://127.0.0.1:4173/speaking-exam.html");
+    assert.equal(await page.locator("#welcomePanel").isVisible(), true, "CEFR Speaking CTA should reach the Speaking Exam start page");
+    await page.goto("http://127.0.0.1:4173/puddle-redesign/cefr-assessment.html", { waitUntil: "domcontentloaded" });
     await page.locator("#answers button").nth(0).click();
     await page.getByText("To‘g‘ri!", { exact: true }).waitFor();
     await page.locator("#next").click();
@@ -206,6 +228,49 @@ try {
     assert.equal(await page.locator(".welcome").isVisible(), false, "welcome copy should be hidden");
     assert.equal(await page.locator('a[href="/offer.html"]').count(), 0, "legal offer link should not appear on speaking page");
     assert.equal(await page.locator('a[href="/privacy.html"]').count(), 0, "privacy link should not appear on speaking page");
+    // Mocked auth flows: preserve PWA returnTo when switching login/register.
+    await page.evaluate(() => localStorage.removeItem("th_auth_token"));
+    const pwaReturn = "%2Fpuddle-redesign%2Findex.html";
+    await page.goto("http://127.0.0.1:4173/login.html?returnTo=" + pwaReturn, { waitUntil: "domcontentloaded" });
+    const registerSwitch = page.locator(".switch a");
+    assert.equal(await registerSwitch.getAttribute("href"), "/register.html?returnTo=%2Fpuddle-redesign%2Findex.html", "login-to-register should preserve validated PWA returnTo");
+    await registerSwitch.click();
+    await page.waitForURL("**/register.html?returnTo=%2Fpuddle-redesign%2Findex.html");
+    assert.equal(await page.locator(".switch a").getAttribute("href"), "/login.html?returnTo=%2Fpuddle-redesign%2Findex.html", "register-to-login should preserve validated PWA returnTo");
+    await page.locator("#fullName").fill("Smoke Learner");
+    await page.locator("#email").fill("smoke@example.test");
+    await page.locator("#phone").fill("+998901234567");
+    await page.locator("#password").fill("smoke-password");
+    await page.locator("#legalConsent").check();
+    await page.locator("#registerForm button").click();
+    await page.waitForURL("**/puddle-redesign/index.html");
+    assert.equal(await page.evaluate(() => localStorage.getItem("th_auth_token")), "smoke-register-token", "registration should store the server token before redirect");
+    assert.deepEqual(authRequestBodies.register, { fullName: "Smoke Learner", email: "smoke@example.test", phone: "+998901234567", password: "smoke-password", legalAccepted: true }, "registration should send expected fields and consent");
+
+    await page.evaluate(() => localStorage.removeItem("th_auth_token"));
+    await page.goto("http://127.0.0.1:4173/register.html?returnTo=" + pwaReturn, { waitUntil: "domcontentloaded" });
+    const backToLogin = page.locator(".switch a");
+    assert.equal(await backToLogin.getAttribute("href"), "/login.html?returnTo=%2Fpuddle-redesign%2Findex.html");
+    await backToLogin.click();
+    await page.waitForURL("**/login.html?returnTo=%2Fpuddle-redesign%2Findex.html");
+    await page.locator("#identifier").fill("smoke@example.test");
+    await page.locator("#password").fill("smoke-password");
+    await page.locator("#loginForm button").click();
+    await page.waitForURL("**/puddle-redesign/index.html");
+    assert.equal(await page.evaluate(() => localStorage.getItem("th_auth_token")), "smoke-login-token", "login should store the server token before redirect");
+    assert.deepEqual(authRequestBodies.login, { identifier: "smoke@example.test", password: "smoke-password" }, "login should send expected fields");
+
+    // External redirect attempts must fail closed to the local root.
+    await page.evaluate(() => localStorage.removeItem("th_auth_token"));
+    await page.goto("http://127.0.0.1:4173/login.html?returnTo=https%3A%2F%2Fevil.example", { waitUntil: "domcontentloaded" });
+    assert.equal(await page.locator(".switch a").getAttribute("href"), "/register.html", "external returnTo should not be forwarded");
+    await page.locator("#identifier").fill("smoke@example.test");
+    await page.locator("#password").fill("smoke-password");
+    await page.locator("#loginForm button").click();
+    await page.waitForURL("http://127.0.0.1:4173/");
+    assert.equal(new URL(page.url()).origin, "http://127.0.0.1:4173", "external returnTo must never redirect off-origin");
+    await page.evaluate(() => localStorage.removeItem("th_auth_token"));
+
     await page.goto("http://127.0.0.1:4173/login.html", { waitUntil: "domcontentloaded" });
     assert.equal(await page.locator('a[href="/offer.html"]').count(), 1, "offer link should remain on login page");
     assert.equal(await page.locator('a[href="/privacy.html"]').count(), 1, "privacy link should remain on login page");
@@ -263,7 +328,7 @@ try {
     await page.goto("http://127.0.0.1:4173/puddle-redesign/index.html", { waitUntil: "domcontentloaded" });
     assert.equal(await page.locator("#speakingHistory").count(), 1, "learner profile should include saved Speaking Exam history");
 
-    console.log("Browser smoke passed: Uzbek dashboard labels, local English Practice/CEFR/Reading/Listening interactions, AI lesson catalog routing, guest and authenticated chat API headers with account-scoped history, clear chat, theme persistence, responsive desktop/mobile layout, Voice AI iframe/orb/transcript, Speaking Exam screen, and legal-route checks.");
+    console.log("Browser smoke passed: Uzbek dashboard labels, local learning module interactions and routes, AI lesson catalog routing, guest/authenticated chat headers and scoped history, login/register returnTo continuity, mocked auth token storage, external redirect blocking, clear chat, theme persistence, responsive desktop/mobile layout, Voice AI iframe/orb/transcript, Speaking Exam screen, and legal-route checks.");
     await context.close();
 } finally {
     if (browser) await browser.close();

@@ -63,6 +63,11 @@ function getSafeReturnTo() {
     }
 }
 
+function getAuthSwitchUrl(path) {
+    const returnTo = getSafeReturnTo();
+    return returnTo === "/" ? path : path + "?returnTo=" + encodeURIComponent(returnTo);
+}
+
 document.addEventListener("DOMContentLoaded", () => {
     const loginForm = byId("loginForm");
 
@@ -91,6 +96,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const registerForm = byId("registerForm");
+    const switchLink = document.querySelector(".switch a");
+    if (switchLink && (loginForm || registerForm)) {
+        switchLink.href = getAuthSwitchUrl(loginForm ? "/register.html" : "/login.html");
+    }
 
     if (registerForm) {
         registerForm.onsubmit = async (event) => {

@@ -136,6 +136,10 @@ for (const endpoint of ["/api/auth/register", "/api/auth/login"]) {
 for (const endpoint of ["/api/auth/login", "/api/auth/register", "/api/me", "/api/auth/logout"]) {
     if (!legacyAuth.includes(endpoint)) throw Error("Auth client route missing: " + endpoint);
 }
+if (!legacyAuth.includes("function getAuthSwitchUrl(path)") ||
+    !legacyAuth.includes('switchLink.href = getAuthSwitchUrl(loginForm ? "/register.html" : "/login.html")')) {
+    throw Error("Login/register switching must preserve a validated PWA returnTo path");
+}
 if (!legacyAuth.includes('const AUTH_TOKEN_KEY = "th_auth_token"') ||
     !legacyAuth.includes("setAuthToken(data.token)") ||
     !legacyAuth.includes("clearAuthToken()") ||
