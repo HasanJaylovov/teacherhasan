@@ -73,6 +73,30 @@ try {
         logoutAuthorization.push(route.request().headers()["authorization"] || "");
         return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true }) });
     });
+    const adminRequestBodies = {};
+    const adminApiAuthorization = [];
+    const adminLogoutAuthorization = [];
+    await page.route("**/api/admin/login", route => {
+        adminRequestBodies.login = route.request().postDataJSON();
+        return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, token: "smoke-admin-token", admin: { username: "admin" } }) });
+    });
+    const adminResponses = {
+        "/api/admin/dashboard": { success: true, stats: { users: 0, premium: 0, trial: 0, blocked: 0, payments: 0, revenue: 0, speakingResults: 0, serverTime: "2026-11-24T00:00:00.000Z" }, recentUsers: [], recentPayments: [] },
+        "/api/admin/users": { success: true, users: [] },
+        "/api/admin/payments": { success: true, payments: [] },
+        "/api/admin/speaking-results": { success: true, results: [] },
+        "/api/admin/settings": { success: true, settings: { guestMinutes: 10, trialDays: 1, plans: { oneMonth: 35000, twoMonths: 55000, threeMonths: 99000 } } }
+    };
+    for (const [endpoint, payload] of Object.entries(adminResponses)) {
+        await page.route("**" + endpoint, route => {
+            adminApiAuthorization.push({ endpoint, authorization: route.request().headers()["authorization"] || "" });
+            return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(payload) });
+        });
+    }
+    await page.route("**/api/admin/logout", route => {
+        adminLogoutAuthorization.push(route.request().headers()["authorization"] || "");
+        return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true }) });
+    });
 
     const chatAuthorization = [];
     await page.route("**/api/chat", route => {
@@ -289,6 +313,34 @@ try {
     await page.waitForURL("**/login.html?returnTo=%2Fpuddle-redesign%2F");
     assert.equal(await page.evaluate(() => localStorage.getItem("th_auth_token")), null, "profile logout should clear learner token");
     assert.deepEqual(logoutAuthorization, ["Bearer smoke-login-token"], "profile logout should revoke the current learner session with Bearer auth");
+
+    // Admin browser flow uses a separate token namespace and protected API Bearer headers.
+    await page.evaluate(() => {
+        localStorage.removeItem("th_admin_token");
+        localStorage.setItem("th_auth_token", "smoke-learner-token");
+    });
+    await page.goto("http://127.0.0.1:4173/admin.html", { waitUntil: "domcontentloaded" });
+    await page.locator("#username").fill("admin");
+    await page.locator("#password").fill("mocked-admin-password");
+    await page.locator("#loginForm button").click();
+    await page.waitForFunction(() => !document.querySelector("#app")?.classList.contains("hidden"));
+    await page.waitForFunction(() => document.querySelector("#usersN")?.textContent === "0");
+    assert.deepEqual(adminRequestBodies.login, { username: "admin", password: "mocked-admin-password" });
+    assert.equal(await page.evaluate(() => localStorage.getItem("th_admin_token")), "smoke-admin-token");
+    assert.equal(await page.evaluate(() => localStorage.getItem("th_auth_token")), "smoke-learner-token",
+        "admin login must not overwrite the learner token");
+    assert.equal(adminApiAuthorization.length, 5, "admin dashboard should load all five protected read endpoints");
+    assert.ok(adminApiAuthorization.every(item => item.authorization === "Bearer smoke-admin-token"),
+        "all admin API requests must use the dedicated admin Bearer token");
+    const adminLogoutResponse = page.waitForResponse(response => response.url().endsWith("/api/admin/logout"));
+    await page.locator("#logout").click();
+    await adminLogoutResponse;
+    assert.equal(await page.evaluate(() => localStorage.getItem("th_admin_token")), null,
+        "admin logout should clear the admin token");
+    assert.equal(await page.evaluate(() => localStorage.getItem("th_auth_token")), "smoke-learner-token",
+        "admin logout must not clear the learner token");
+    assert.deepEqual(adminLogoutAuthorization, ["Bearer smoke-admin-token"],
+        "admin logout should revoke the dedicated admin session");
 
     // External redirect attempts must fail closed to the local root.
     await page.evaluate(() => localStorage.removeItem("th_auth_token"));

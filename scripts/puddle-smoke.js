@@ -286,6 +286,17 @@ if (!legacyAdmin.includes("th_admin_token") || !legacyAdmin.includes("Authorizat
     !legacyAdminHtml.includes('id="loginForm"') || !legacyAdminHtml.includes('id="app"')) {
     throw Error("Admin login/session hooks missing");
 }
+const adminLoginStart = legacyServer.indexOf('"/api/admin/login"');
+const adminLogoutStart = legacyServer.indexOf('"/api/admin/logout"', adminLoginStart);
+const adminLoginSection = legacyServer.slice(adminLoginStart, adminLogoutStart);
+for (const field of ["success: true", "token", "admin:", "username"]) {
+    if (!adminLoginSection.includes(field)) throw Error("Admin login response contract missing " + field);
+}
+if (!legacyAdmin.includes("localStorage.setItem('th_admin_token',token)") ||
+    !legacyAdmin.includes("localStorage.removeItem('th_admin_token')") ||
+    !legacyAdmin.includes("Authorization:'Bearer '+token")) {
+    throw Error("Admin token storage, Bearer header or logout behavior missing");
+}
 for (const endpoint of [
     "/api/admin/login", "/api/admin/logout", "/api/admin/dashboard",
     "/api/admin/users", "/api/admin/payments", "/api/admin/speaking-results", "/api/admin/settings"
