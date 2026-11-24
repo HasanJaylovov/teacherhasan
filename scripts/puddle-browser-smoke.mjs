@@ -50,7 +50,7 @@ try {
 
     await page.route("**/api/me", route => {
         const authorization = route.request().headers()["authorization"] || "";
-        const data = authorization === "Bearer smoke-test-token"
+        const data = ["Bearer smoke-test-token", "Bearer smoke-login-token"].includes(authorization)
             ? { authenticated: true, user: { id: "smoke-user", fullName: "Smoke Learner", email: "smoke@example.test" }, access: { mode: "trial", plan: "smoke-test" } }
             : { authenticated: false };
         return route.fulfill({
@@ -67,6 +67,11 @@ try {
     await page.route("**/api/auth/login", route => {
         authRequestBodies.login = route.request().postDataJSON();
         return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, token: "smoke-login-token", user: { id: "login-user", fullName: "Smoke Learner" }, access: { mode: "trial" } }) });
+    });
+    const logoutAuthorization = [];
+    await page.route("**/api/auth/logout", route => {
+        logoutAuthorization.push(route.request().headers()["authorization"] || "");
+        return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true }) });
     });
 
     const chatAuthorization = [];
@@ -88,6 +93,10 @@ try {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("http://127.0.0.1:4173/puddle-redesign/index.html", { waitUntil: "domcontentloaded" });
     assert.equal(await page.title(), "Teacher Hasan AI");
+    assert.ok(await page.locator('a[href="/profile.html?returnTo=%2Fpuddle-redesign%2F"]').count() >= 3,
+        "PWA profile and premium entry points should open the account/subscription page");
+    assert.equal(await page.locator('a[href="/offer.html"]').count(), 0,
+        "Premium navigation must not lead to the legal offer document");
     assert.equal(await page.locator(".desktop-sidebar").isVisible(), true, "desktop sidebar should be visible");
     assert.equal(await page.locator(".bottom-nav").isVisible(), false, "desktop bottom navigation should be hidden");
     assert.equal(await page.locator(".hero-card").count(), 1, "home hero should render");
@@ -259,6 +268,27 @@ try {
     await page.waitForURL("**/puddle-redesign/index.html");
     assert.equal(await page.evaluate(() => localStorage.getItem("th_auth_token")), "smoke-login-token", "login should store the server token before redirect");
     assert.deepEqual(authRequestBodies.login, { identifier: "smoke@example.test", password: "smoke-password" }, "login should send expected fields");
+
+    // Profile must return to the originally requested profile page after login.
+    await page.evaluate(() => localStorage.removeItem("th_auth_token"));
+    await page.goto("http://127.0.0.1:4173/profile.html?returnTo=%2Fpuddle-redesign%2F", { waitUntil: "domcontentloaded" });
+    await page.waitForURL("**/login.html?returnTo=%2Fprofile.html%3FreturnTo%3D%252Fpuddle-redesign%252F");
+    assert.equal(
+        await page.locator(".switch a").getAttribute("href"),
+        "/register.html?returnTo=%2Fprofile.html%3FreturnTo%3D%252Fpuddle-redesign%252F",
+        "profile login prompt should preserve the full profile destination when switching to registration"
+    );
+    await page.locator("#identifier").fill("smoke@example.test");
+    await page.locator("#password").fill("smoke-password");
+    await page.locator("#loginForm button").click();
+    await page.waitForURL("**/profile.html?returnTo=%2Fpuddle-redesign%2F");
+    await page.waitForFunction(() => document.querySelector("#pName")?.textContent === "Smoke Learner");
+    assert.equal(await page.evaluate(() => localStorage.getItem("th_auth_token")), "smoke-login-token");
+    assert.equal(new URL(page.url()).pathname, "/profile.html", "successful login from a profile deep link must return to profile, not dashboard");
+    await page.locator("#logout").click();
+    await page.waitForURL("**/login.html?returnTo=%2Fpuddle-redesign%2F");
+    assert.equal(await page.evaluate(() => localStorage.getItem("th_auth_token")), null, "profile logout should clear learner token");
+    assert.deepEqual(logoutAuthorization, ["Bearer smoke-login-token"], "profile logout should revoke the current learner session with Bearer auth");
 
     // External redirect attempts must fail closed to the local root.
     await page.evaluate(() => localStorage.removeItem("th_auth_token"));

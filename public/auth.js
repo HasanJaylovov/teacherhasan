@@ -32,7 +32,9 @@ async function api(url, options = {}) {
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-        throw new Error(data.error || "Xatolik");
+        const error = new Error(data.error || "Xatolik");
+        error.status = response.status;
+        throw error;
     }
 
     return data;
@@ -61,6 +63,17 @@ function getSafeReturnTo() {
     } catch {
         return "/";
     }
+}
+
+function getCurrentPagePath() {
+    const current = new URL(location.href);
+    return current.origin === location.origin
+        ? current.pathname + current.search + current.hash
+        : "/";
+}
+
+function redirectToLoginForCurrentPage() {
+    location.href = "/login.html?returnTo=" + encodeURIComponent(getCurrentPagePath());
 }
 
 function getAuthSwitchUrl(path) {
@@ -129,14 +142,14 @@ document.addEventListener("DOMContentLoaded", () => {
         (async () => {
             try {
                 if (!getAuthToken()) {
-                    return location.href = "/login.html?returnTo=" + encodeURIComponent(getSafeReturnTo());
+                    return redirectToLoginForCurrentPage();
                 }
 
                 const data = await api("/api/me");
 
                 if (!data.authenticated) {
                     clearAuthToken();
-                    return location.href = "/login.html?returnTo=" + encodeURIComponent(getSafeReturnTo());
+                    return redirectToLoginForCurrentPage();
                 }
 
                 const user = data.user;
@@ -193,8 +206,14 @@ document.addEventListener("DOMContentLoaded", () => {
             ? new Date(access.until).toLocaleString("uz-UZ")
             : "—";
             } catch (error) {
-                clearAuthToken();
-                location.href = "/login.html?returnTo=" + encodeURIComponent(getSafeReturnTo());
+                if (error.status === 401) {
+                    clearAuthToken();
+                    return redirectToLoginForCurrentPage();
+                }
+                const status = byId("pStatus");
+                const plan = byId("pPlan");
+                if (status) status.textContent = "⚠️ VAQTINCHA XATOLIK";
+                if (plan) plan.textContent = "Profil ma’lumotlari yuklanmadi. Internet aloqasini tekshirib, qayta urinib ko‘ring.";
             }
         })();
     }

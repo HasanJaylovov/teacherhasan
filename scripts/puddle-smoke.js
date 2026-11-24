@@ -150,6 +150,16 @@ if (!legacyAuth.includes("getSafeReturnTo") || !legacyAuth.includes("new URL(tar
     !legacyAuth.includes("target.startsWith(\"//\")") || !legacyAuth.includes("url.origin === location.origin") || !legacyAuth.includes('"/login.html?returnTo="')) {
     throw Error("Safe returnTo behavior missing from legacy auth flow");
 }
+if (!legacyAuth.includes("function getCurrentPagePath()") ||
+    !legacyAuth.includes("function redirectToLoginForCurrentPage()") ||
+    !legacyAuth.includes("error.status = response.status") ||
+    !legacyAuth.includes("error.status === 401")) {
+    throw Error("Profile login return path or transient-error handling missing");
+}
+if (!html.includes('href="/profile.html?returnTo=%2Fpuddle-redesign%2F"') ||
+    html.includes('href="/offer.html"') || !html.includes("Maxfiylik siyosati")) {
+    throw Error("Premium/profile routes or localized privacy link are incorrect");
+}
 if (!js.includes('location.href="./index.html"')) throw Error("PWA logout must return to redesigned home");
 if (!legacyProfile.includes('id="profile"') || !legacyProfile.includes('id="logout"')) {
     throw Error("Profile page auth hooks missing");

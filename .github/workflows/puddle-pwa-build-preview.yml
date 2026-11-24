@@ -2,9 +2,9 @@ name: TeacherHasan PWA Build
 on:
   push:
     branches: [redesign/puddle-pwa]
-    paths: ["public/puddle-redesign/**", "public/index.html", "public/app.js", "public/speaking-exam.html", "server.js", "scripts/puddle-smoke.js", "scripts/puddle-browser-smoke.mjs", ".github/workflows/puddle-pwa-build-preview.yml"]
+    paths: ["public/puddle-redesign/**", "public/index.html", "public/app.js", "public/auth.js", "public/login.html", "public/register.html", "public/profile.html", "public/admin.js", "public/admin.html", "public/offer.html", "public/speaking-exam.html", "server.js", "scripts/puddle-smoke.js", "scripts/puddle-browser-smoke.mjs", ".github/workflows/puddle-pwa-build-preview.yml"]
   pull_request:
-    paths: ["public/puddle-redesign/**", "public/index.html", "public/app.js", "public/speaking-exam.html", "server.js", "scripts/puddle-smoke.js", "scripts/puddle-browser-smoke.mjs", ".github/workflows/puddle-pwa-build-preview.yml"]
+    paths: ["public/puddle-redesign/**", "public/index.html", "public/app.js", "public/auth.js", "public/login.html", "public/register.html", "public/profile.html", "public/admin.js", "public/admin.html", "public/offer.html", "public/speaking-exam.html", "server.js", "scripts/puddle-smoke.js", "scripts/puddle-browser-smoke.mjs", ".github/workflows/puddle-pwa-build-preview.yml"]
   workflow_dispatch:
 permissions:
   contents: read
@@ -16,6 +16,9 @@ jobs:
       - name: Validate app files
         run: |
           set -e
+          for file in public/auth.js public/login.html public/register.html public/profile.html public/admin.js public/admin.html public/offer.html; do
+            test -s "$file"
+          done
           for file in index.html styles.css app.js manifest.json sw.js voice.html reading.html listening.html english-practice.html cefr-assessment.html video-lessons.html; do
             test -s "public/puddle-redesign/$file"
           done
