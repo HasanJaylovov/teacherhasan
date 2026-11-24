@@ -110,7 +110,7 @@ const routes = [
     { href: "./voice.html", file: "puddle-redesign/voice.html", label: "Voice AI" },
     { href: "/speaking-exam.html", file: "speaking-exam.html", label: "Speaking Exam" },
     { href: "/profile.html?returnTo=%2Fpuddle-redesign%2F", file: "profile.html", label: "Profile" },
-    { href: "/offer.html", file: "offer.html", label: "Premium" },
+    { href: "/profile.html?returnTo=%2Fpuddle-redesign%2F", file: "profile.html", label: "Premium subscription" },
     { href: "/login.html?returnTo=%2Fpuddle-redesign%2F", file: "login.html", label: "Login" },
     { href: "/register.html?returnTo=%2Fpuddle-redesign%2F", file: "register.html", label: "Register" },
     { href: "/admin", file: "admin.html", label: "Admin" }
