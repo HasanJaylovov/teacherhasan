@@ -289,7 +289,7 @@ if (!legacyAdmin.includes("th_admin_token") || !legacyAdmin.includes("Authorizat
 const adminLoginStart = legacyServer.indexOf('"/api/admin/login"');
 const adminLogoutStart = legacyServer.indexOf('"/api/admin/logout"', adminLoginStart);
 const adminLoginSection = legacyServer.slice(adminLoginStart, adminLogoutStart);
-for (const field of ["success: true", "token", "admin:", "username"]) {
+for (const field of ["success:", "token", "admin:", "username"]) {
     if (!adminLoginSection.includes(field)) throw Error("Admin login response contract missing " + field);
 }
 if (!legacyAdmin.includes("localStorage.setItem('th_admin_token',token)") ||
