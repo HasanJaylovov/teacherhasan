@@ -210,6 +210,19 @@ try {
     });
     assert.equal(afterClear.some(m => m.text.includes("Present Simple")), false, "clear chat should remove the previous conversation");
 
+    // A stale learner token must be cleared when the real /api/me contract returns authenticated:false.
+    await page.evaluate(() => localStorage.setItem("th_auth_token", "smoke-invalid-token"));
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await page.waitForFunction(() => localStorage.getItem("th_auth_token") === null);
+    assert.equal(await page.evaluate(() => localStorage.getItem("th_auth_token")), null,
+        "an invalid learner token must be removed after /api/me returns authenticated:false");
+    await page.locator('.desktop-sidebar [data-view="chat"]').click();
+    await page.locator("#chatInput").fill("Continue as a guest after the session expires.");
+    await page.locator("#sendBtn").click();
+    await page.getByText("Mock AI reply: Excellent work!", { exact: true }).waitFor();
+    assert.equal(chatRequests, 2, "guest fallback after an invalid token should issue a second chat request");
+    assert.equal(chatAuthorization[1], "", "guest fallback must not send a stale learner Bearer token");
+
     // Re-check authenticated API headers and per-user history with a mocked learner session.
     await page.evaluate(() => localStorage.setItem("th_auth_token", "smoke-test-token"));
     await page.reload({ waitUntil: "domcontentloaded" });
@@ -217,8 +230,8 @@ try {
     await page.locator("#chatInput").fill("Please help me practise Past Simple.");
     await page.locator("#sendBtn").click();
     await page.getByText("Mock AI reply: Excellent work!", { exact: true }).waitFor();
-    assert.equal(chatRequests, 2, "authenticated chat should issue a second API request");
-    assert.equal(chatAuthorization[1], "Bearer smoke-test-token", "authenticated chat must send the learner Bearer token");
+    assert.equal(chatRequests, 3, "authenticated chat should issue a third API request after guest fallback");
+    assert.equal(chatAuthorization[2], "Bearer smoke-test-token", "authenticated chat must send the learner Bearer token");
     const userChat = await page.evaluate(() => {
         const key = Object.keys(localStorage).find(k => k === "th_puddle_chat_v1_user_smoke-user");
         return key ? JSON.parse(localStorage.getItem(key)) : [];
