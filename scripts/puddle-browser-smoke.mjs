@@ -50,7 +50,7 @@ try {
 
     await page.route("**/api/me", route => {
         const authorization = route.request().headers()["authorization"] || "";
-        const data = ["Bearer smoke-test-token", "Bearer smoke-login-token"].includes(authorization)
+        const data = ["Bearer smoke-test-token", "Bearer smoke-login-token", "Bearer smoke-register-token"].includes(authorization)
             ? { authenticated: true, user: { id: "smoke-user", fullName: "Smoke Learner", email: "smoke@example.test" }, access: { mode: "trial", plan: "smoke-test" } }
             : { authenticated: false };
         return route.fulfill({
