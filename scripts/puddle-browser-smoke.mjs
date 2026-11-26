@@ -48,7 +48,22 @@ try {
     const page = await context.newPage();
     let chatRequests = 0;
 
+    let meScenario = "normal";
     await page.route("**/api/me", route => {
+        if (meScenario === "unavailable") {
+            return route.fulfill({
+                status: 503,
+                contentType: "application/json",
+                body: JSON.stringify({ success: false, error: "Temporary account API outage" })
+            });
+        }
+        if (meScenario === "malformed") {
+            return route.fulfill({
+                status: 200,
+                contentType: "application/json",
+                body: JSON.stringify({ success: true })
+            });
+        }
         const authorization = route.request().headers()["authorization"] || "";
         const data = ["Bearer smoke-test-token", "Bearer smoke-login-token", "Bearer smoke-register-token"].includes(authorization)
             ? { authenticated: true, user: { id: "smoke-user", fullName: "Smoke Learner", email: "smoke@example.test" }, access: { mode: "trial", plan: "smoke-test" } }
@@ -237,6 +252,49 @@ try {
         return key ? JSON.parse(localStorage.getItem(key)) : [];
     });
     assert.ok(userChat.some(m => m.role === "user" && m.text.includes("Past Simple")), "authenticated chat history should be scoped to the returned user id");
+
+    // A temporary /api/me outage must not downgrade an authenticated learner to the shared guest history key.
+    await page.evaluate(() => {
+        for (const key of Object.keys(localStorage)) {
+            if (key.startsWith("th_puddle_chat_v1")) localStorage.removeItem(key);
+        }
+        localStorage.setItem("th_auth_token", "smoke-test-token");
+    });
+    meScenario = "unavailable";
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await page.waitForFunction(() => document.getElementById("accessTitle")?.textContent === "Ulanish vaqtincha mavjud emas");
+    assert.equal(await page.evaluate(() => localStorage.getItem("th_auth_token")), "smoke-test-token",
+        "a temporary /api/me failure must preserve the learner token");
+    await page.locator('.desktop-sidebar [data-view="chat"]').click();
+    await page.locator("#chatInput").fill("Keep this conversation private during an account API outage.");
+    await page.locator("#sendBtn").click();
+    await page.getByText("Mock AI reply: Excellent work!", { exact: true }).waitFor();
+    assert.equal(chatRequests, 4, "chat should remain usable during a temporary account API outage");
+    assert.equal(chatAuthorization[3], "Bearer smoke-test-token", "the existing learner token should still be sent to chat");
+    assert.equal(await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith("th_puddle_chat_v1")).length), 0,
+        "chat messages must not be written to guest or user history while account identity is unknown");
+
+    // A malformed 200 response is also an unknown identity, not a guest session.
+    await page.evaluate(() => {
+        for (const key of Object.keys(localStorage)) {
+            if (key.startsWith("th_puddle_chat_v1")) localStorage.removeItem(key);
+        }
+    });
+    meScenario = "malformed";
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await page.waitForFunction(() => document.getElementById("accessTitle")?.textContent === "Ulanish vaqtincha mavjud emas");
+    assert.equal(await page.evaluate(() => localStorage.getItem("th_auth_token")), "smoke-test-token",
+        "a malformed /api/me response must not clear a potentially valid learner token");
+    await page.locator('.desktop-sidebar [data-view="chat"]').click();
+    await page.locator("#chatInput").fill("Do not attach my message to a guest identity.");
+    await page.locator("#sendBtn").click();
+    await page.getByText("Mock AI reply: Excellent work!", { exact: true }).waitFor();
+    assert.equal(chatRequests, 5, "chat should remain usable when the account response is malformed");
+    assert.equal(chatAuthorization[4], "Bearer smoke-test-token", "malformed account data must not suppress the learner Bearer token");
+    assert.equal(await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith("th_puddle_chat_v1")).length), 0,
+        "malformed account data must not create shared guest chat history");
+
+    meScenario = "normal";
     await page.evaluate(() => localStorage.removeItem("th_auth_token"));
     await page.goto("http://127.0.0.1:4173/puddle-redesign/index.html", { waitUntil: "domcontentloaded" });
 

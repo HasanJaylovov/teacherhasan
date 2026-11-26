@@ -96,6 +96,12 @@ if (!js.includes("r.status===401||(r.ok&&d.authenticated===false)") ||
     !js.includes('localStorage.removeItem("th_auth_token")')) {
     throw Error("PWA must clear an expired learner token when /api/me reports an unauthenticated session");
 }
+if (!js.includes('typeof d.authenticated!=="boolean"') ||
+    !js.includes('if(!r.ok)throw Error("Account status unavailable: "+r.status)') ||
+    !js.includes("chatIdentityReady=false;") ||
+    !js.includes("CHAT_STORAGE_KEY=null;")) {
+    throw Error("PWA must preserve learner identity and avoid shared guest chat storage when /api/me is unavailable or malformed");
+}
 if (!js.includes("Teacher Hasan javob tayyorlamoqda…")) {
     throw Error("Chat loading state should be localized into Uzbek");
 }
