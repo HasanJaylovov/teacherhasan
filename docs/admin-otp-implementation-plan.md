@@ -53,8 +53,8 @@ Keep all values private. No Render settings were changed.
 - `ADMIN_EMAIL`: one configured administrator email.
 - `ADMIN_PASSWORD_HASH`: generated with `npm run admin:password-hash`; use a password of at least 12 characters.
 - `ADMIN_OTP_PEPPER`: random secret of at least 32 bytes; generate privately, for example with `openssl rand -hex 32`.
-- `ADMIN_OTP_TTL_SECONDS=300`
-- `ADMIN_OTP_MAX_ATTEMPTS=5`
+- `ADMIN_OTP_TTL_SECONDS=300` (server clamps the maximum to 300 seconds)
+- `ADMIN_OTP_MAX_ATTEMPTS=5` (server clamps the maximum to five attempts)
 - `ADMIN_OTP_RESEND_COOLDOWN_SECONDS=60`
 - `ADMIN_SESSION_TTL_SECONDS=28800`
 - `ADMIN_LOGIN_RATE_LIMIT=10`
