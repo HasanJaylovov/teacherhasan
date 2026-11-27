@@ -155,3 +155,40 @@ ON password_reset_tokens(user_id);
 
 CREATE INDEX IF NOT EXISTS password_reset_tokens_expires_idx
 ON password_reset_tokens(expires_at);
+
+
+-- Admin email OTP challenges and opaque browser sessions.
+CREATE TABLE IF NOT EXISTS admin_otp_challenges (
+    id UUID PRIMARY KEY,
+    admin_email TEXT NOT NULL,
+    otp_hash CHAR(64) NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts >= 0),
+    last_sent_at TIMESTAMPTZ,
+    consumed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS admin_otp_challenges_email_idx
+ON admin_otp_challenges(admin_email, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS admin_otp_challenges_expiry_idx
+ON admin_otp_challenges(expires_at);
+
+CREATE TABLE IF NOT EXISTS admin_sessions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    admin_email TEXT NOT NULL,
+    token_hash CHAR(64) NOT NULL UNIQUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    expires_at TIMESTAMPTZ NOT NULL,
+    revoked_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS admin_sessions_expiry_idx
+ON admin_sessions(expires_at);
+
+CREATE TABLE IF NOT EXISTS admin_auth_rate_limits (
+    bucket_key CHAR(64) PRIMARY KEY,
+    window_started_at TIMESTAMPTZ NOT NULL,
+    attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts >= 0)
+);
