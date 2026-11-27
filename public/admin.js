@@ -1,4 +1,5 @@
 const $ = id => document.getElementById(id);
+try { localStorage.removeItem("th_admin_token"); } catch { /* Storage may be disabled. */ }
 let challengeId = null;
 let allUsers = [];
 let resendInterval = null;
@@ -95,9 +96,14 @@ async function verifyOtp(event) {
     const button = $("otpForm").querySelector('button[type="submit"]');
     button.disabled = true;
     try {
-        await api("/api/admin/auth/verify-otp", {
-            method: "POST", body: JSON.stringify({ challengeId, otp: $("otp").value.trim() })
+        const response = await fetch("/api/admin/auth/verify-otp", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "same-origin",
+            body: JSON.stringify({ challengeId, otp: $("otp").value.trim() })
         });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || "Tasdiqlash kodi noto‘g‘ri.");
         challengeId = null;
         if (resendInterval) clearInterval(resendInterval);
         $("login").classList.add("hidden");
