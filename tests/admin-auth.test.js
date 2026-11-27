@@ -56,3 +56,41 @@ test("admin cookie is HttpOnly, scoped, SameSite Strict and Secure by default", 
     assert.match(cookie, /Path=\/api\/admin/);
     assert.match(clearAdminSessionCookie(), /Max-Age=0/);
 });
+
+test("every admin data endpoint is guarded by requireAdmin", async () => {
+    const { readFile } = await import("node:fs/promises");
+    const serverSource = await readFile(new URL("../server.js", import.meta.url), "utf8");
+    const protectedRoutes = [
+        ["get", "/api/admin/dashboard"],
+        ["get", "/api/admin/users"],
+        ["patch", "/api/admin/users/:id"],
+        ["get", "/api/admin/payments"],
+        ["get", "/api/admin/speaking-results"],
+        ["get", "/api/admin/settings"],
+        ["post", "/api/admin/users/:id/premium"]
+    ];
+
+    for (const [method, route] of protectedRoutes) {
+        const escapedRoute = route.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const routePattern = new RegExp(
+            `app\\.${method}\\s*\\(\\s*["']${escapedRoute}["']\\s*,\\s*requireAdmin\\s*,`,
+            "i"
+        );
+        assert.match(
+            serverSource,
+            routePattern,
+            `${method.toUpperCase()} ${route} must use requireAdmin`
+        );
+    }
+});
+
+test("legacy one-step admin login is retired with HTTP 410", async () => {
+    const { readFile } = await import("node:fs/promises");
+    const serverSource = await readFile(new URL("../server.js", import.meta.url), "utf8");
+    assert.match(
+        serverSource,
+        /app\\.post\\s*\\(\\s*["']\\/api\\/admin\\/login["']\\s*,[\\s\\S]{0,300}?res\\.status\\(410\\)/,
+        "legacy admin login must not issue a session"
+    );
+});
+
