@@ -210,11 +210,12 @@ if (!speaking.includes('id="retryEvaluationBtn"') ||
 // Saved Speaking history: verify the actual GET response shape used by the PWA profile.
 const speakingSaveStart = legacyServer.indexOf('app.post("/api/speaking/results"');
 if (speakingSaveStart < 0) throw Error("Speaking result save API route missing");
-const speakingSaveSection = legacyServer.slice(speakingSaveStart, legacyServer.indexOf(speakingHistoryStart < 0 ? "app.get(\"/api/speaking/results\"" : 'app.get("/api/speaking/results"', speakingSaveStart + 1) < 0 ? speakingSaveStart + 5000 : legacyServer.indexOf('app.get("/api/speaking/results"', speakingSaveStart + 1));
+const speakingHistoryStart = legacyServer.indexOf('app.get("/api/speaking/results"', speakingSaveStart);
+if (speakingHistoryStart < 0) throw Error("Speaking result history API route missing");
+const speakingSaveSection = legacyServer.slice(speakingSaveStart, speakingHistoryStart);
 for (const field of ["success: true", "saved: true", "resultId: saved.rows[0].id", "createdAt: saved.rows[0].created_at"]) {
     if (!speakingSaveSection.includes(field)) throw Error("Speaking result save response field missing: " + field);
 }
-const speakingHistoryStart = legacyServer.indexOf('app.get("/api/speaking/results"');
 if (speakingHistoryStart < 0) throw Error("Speaking result history API route missing");
 const speakingHistorySection = legacyServer.slice(speakingHistoryStart, speakingHistoryStart + 1500);
 for (const field of ["success: true", "results:", "result: row.result", "createdAt: row.created_at"]) {
