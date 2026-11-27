@@ -13,7 +13,9 @@ This file distinguishes tests authored from tests actually executed. A test must
 | UT-03 | Session token is stored as a one-way SHA-256 digest | `tests/admin-auth.test.js` | PASS — isolated local run |
 | UT-04 | scrypt hash accepts only the correct password | `tests/admin-auth.test.js` | PASS — isolated local run |
 | UT-05 | Cookie parsing handles encoded and malformed values | `tests/admin-auth.test.js` | PASS — isolated local run |
-| UT-06 | Cookie is HttpOnly, SameSite Strict, scoped and Secure by default | `tests/admin-auth.test.js` | PASS — 6/6 local isolated tests |
+| UT-06 | Cookie is HttpOnly, SameSite Strict, scoped and Secure by default | `tests/admin-auth.test.js` | PASS — GitHub Actions |
+| UT-07 | Every admin data endpoint is guarded by `requireAdmin` | `tests/admin-auth.test.js` | PASS — GitHub Actions |
+| UT-08 | Legacy one-step admin login remains retired with HTTP 410 | `tests/admin-auth.test.js` | PASS — GitHub Actions |
 
 Run with:
 
@@ -92,9 +94,9 @@ Legacy route:
 
 ## Current execution record
 
-- Source changes and test cases are committed to the feature branch.
-- Six unit tests were executed locally against an isolated copy of the exact fetched `lib/admin-auth.js` and `tests/admin-auth.test.js` source; result: **6 passed, 0 failed**.
-- This local isolated run does not substitute for running `npm test` in the repository checkout.
-- GitHub Actions execution status could not be verified through the available repository status response; CI remains pending.
-- Disposable database and Gmail SMTP integration tests are pending.
-- Production has not been deployed or modified.
+- Full repository CI completed on Node.js 24.22.3 / npm 11.19.1 for commit `e3cf9d602dc1a103222bc47d3b2a13f316f9018b`: **PASS**.
+- CI successfully ran `npm ci`, all eight tests via `npm test`, and JavaScript syntax checks for `server.js`, `public/admin.js`, `lib/admin-auth.js`, and `scripts/generate-admin-password-hash.js`.
+- Workflow run: https://github.com/HasanJaylovov/teacherhasan/actions/runs/46031755698
+- The dependency installation reported **5 npm audit findings** (1 moderate, 3 high, 1 critical). The audit details have not yet been triaged; this is recorded as a separate dependency-security task and no automatic dependency upgrades were applied.
+- Disposable PostgreSQL and Gmail SMTP integration tests remain pending. No staging credentials or staging database have been configured.
+- Production has not been deployed or modified; the database schema has not been applied to any database.
