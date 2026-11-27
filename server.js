@@ -3855,7 +3855,7 @@ app.post("/api/admin/auth/verify-otp", async (req, res) => {
     if (!adminAuthReady()) return sendAdminAuthUnavailable(res);
     const challengeId = String(req.body?.challengeId || "");
     const otp = String(req.body?.otp || "").trim();
-    if (!isValidUuid(challengeId) || !/^\\d{6}$/.test(otp)) {
+    if (!isValidUuid(challengeId) || !/^\d{6}$/.test(otp)) {
         return res.status(400).json({ success: false, error: "Tasdiqlash kodini to‘g‘ri kiriting." });
     }
 
