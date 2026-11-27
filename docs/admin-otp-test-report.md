@@ -98,5 +98,22 @@ Legacy route:
 - CI successfully ran `npm ci`, all eight tests via `npm test`, and JavaScript syntax checks for `server.js`, `public/admin.js`, `lib/admin-auth.js`, and `scripts/generate-admin-password-hash.js`.
 - Workflow run: https://github.com/HasanJaylovov/teacherhasan/actions/runs/46031755698
 - The dependency installation reported **5 npm audit findings** (1 moderate, 3 high, 1 critical). The audit details have not yet been triaged; this is recorded as a separate dependency-security task and no automatic dependency upgrades were applied.
-- Disposable PostgreSQL and Gmail SMTP integration tests remain pending. No staging credentials or staging database have been configured.
-- Production has not been deployed or modified; the database schema has not been applied to any database.
+- A separate Neon staging project and Render staging web service have been provisioned. The full application schema was applied only to the new, empty staging database; initial row counts for `users`, `admin_otp_challenges`, `admin_sessions`, and `admin_auth_rate_limits` are all zero.
+- Render staging service is live at https://teacherhasan-admin-otp-staging.onrender.com and is connected only to the isolated staging database. Auto-deploy is disabled.
+- Staging includes a generated `ADMIN_OTP_PEPPER` and Gmail SMTP host/port settings. The admin mailbox, password hash, Gmail sender account, and Gmail App Password have not been configured yet; SMTP integration tests remain pending.
+- Production Render service, production Neon project, and `main` branch have not been changed. No schema was applied to production.
+
+
+## Isolated staging environment
+
+- Neon project: `teacherhasan-admin-otp-staging` (AWS US East 2), database: `teacherhasan_staging`.
+- Render service: `teacherhasan-admin-otp-staging` (Ohio), branch: `redesign/puddle-pwa`.
+- Staging URL: https://teacherhasan-admin-otp-staging.onrender.com
+- Render Dashboard: https://dashboard.render.com/web/srv-dc4r1v8u01pc73f30udg
+- Render service deploys only manually; automatic deployment is disabled.
+- Initial deploy completed successfully; application logs confirmed PostgreSQL connection and successful schema migration.
+- The staging database is a new empty project, not a branch or copy of production. Initial user/admin table counts were zero.
+- `DATABASE_URL`, `NODE_ENV`, generated `ADMIN_OTP_PEPPER`, Gmail SMTP host/port/transport settings, and OTP/session TTL settings are configured on the staging service.
+- Still required from the owner, directly in Render Environment (never in chat): `ADMIN_EMAIL`, `ADMIN_PASSWORD_HASH`, `SMTP_USER`, and `SMTP_PASSWORD`. Set `SMTP_FROM` only if a custom sender label is desired.
+- Generate the password hash locally with `npm run admin:password-hash` in a terminal on the `redesign/puddle-pwa` checkout. The script accepts the password without echoing it and prints the hash for direct entry into Render.
+- Gmail requires a Google App Password with 2-Step Verification enabled. Enter it directly as `SMTP_PASSWORD` in Render; do not share it in chat.
