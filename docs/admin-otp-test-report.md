@@ -8,11 +8,11 @@ This file distinguishes tests authored from tests actually executed. A test must
 
 | ID | Scenario | Test location | Status |
 |---|---|---|---|
-| UT-01 | OTP is always six decimal digits | `tests/admin-auth.test.js` | Authored; execution pending |
-| UT-02 | OTP digest is bound to challenge ID and code | `tests/admin-auth.test.js` | Authored; execution pending |
-| UT-03 | Session token is stored as a one-way SHA-256 digest | `tests/admin-auth.test.js` | Authored; execution pending |
-| UT-04 | scrypt hash accepts only the correct password | `tests/admin-auth.test.js` | Authored; execution pending |
-| UT-05 | Cookie parsing handles encoded and malformed values | `tests/admin-auth.test.js` | Authored; execution pending |
+| UT-01 | OTP is always six decimal digits | `tests/admin-auth.test.js` | PASS — isolated local run |
+| UT-02 | OTP digest is bound to challenge ID and code | `tests/admin-auth.test.js` | PASS — isolated local run |
+| UT-03 | Session token is stored as a one-way SHA-256 digest | `tests/admin-auth.test.js` | PASS — isolated local run |
+| UT-04 | scrypt hash accepts only the correct password | `tests/admin-auth.test.js` | PASS — isolated local run |
+| UT-05 | Cookie parsing handles encoded and malformed values | `tests/admin-auth.test.js` | PASS — isolated local run |
 | UT-06 | Cookie is HttpOnly, SameSite Strict, scoped and Secure by default | `tests/admin-auth.test.js` | PASS — 6/6 local isolated tests |
 
 Run with:
