@@ -90,10 +90,9 @@ test("legacy one-step admin login is retired with HTTP 410", async () => {
     const legacyLoginStart = serverSource.indexOf('app.post("/api/admin/login"');
     assert.notEqual(legacyLoginStart, -1, "legacy admin login route must remain explicitly retired");
     const legacyLoginBlock = serverSource.slice(legacyLoginStart, legacyLoginStart + 400);
-    assert.match(
-        legacyLoginBlock,
-        /res\\.status\\(410\\)/,
-        "legacy admin login must not issue a session"
+    assert.ok(
+        legacyLoginBlock.includes("res.status(410)"),
+        "legacy admin login must return HTTP 410 and never issue a session"
     );
 });
 
