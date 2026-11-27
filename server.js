@@ -3773,7 +3773,25 @@ function adminRateLimitKey(scope, req, identity = "") {
     const ip = String(req.ip || req.socket?.remoteAddress || "unknown");
     return crypto.createHash("sha256").update(`${scope}:${ip}:${identity}`).digest("hex");
 }
+let lastAdminAuthCleanupAt = 0;
+
+async function cleanupAdminAuthRecords() {
+    if (Date.now() - lastAdminAuthCleanupAt < 60 * 60 * 1000) return;
+    lastAdminAuthCleanupAt = Date.now();
+
+    try {
+        await pool.query("DELETE FROM admin_auth_rate_limits WHERE window_started_at < NOW() - INTERVAL '2 days'");
+        await pool.query("DELETE FROM admin_otp_challenges WHERE expires_at < NOW() - INTERVAL '2 days'");
+        await pool.query(`DELETE FROM admin_sessions
+            WHERE expires_at < NOW() - INTERVAL '30 days'
+               OR revoked_at < NOW() - INTERVAL '30 days'`);
+    } catch (error) {
+        console.warn("ADMIN auth cleanup skipped:", error?.code || "DB_ERROR");
+    }
+}
+
 async function consumeAdminRateLimit(bucketKey, maxAttempts, windowSeconds) {
+    await cleanupAdminAuthRecords();
     const result = await pool.query(
         `INSERT INTO admin_auth_rate_limits (bucket_key, window_started_at, attempts)
          VALUES ($1, NOW(), 1)
