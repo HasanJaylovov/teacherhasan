@@ -202,6 +202,11 @@ if (!speaking.includes("/api/speaking/upload") || !speaking.includes("data.evalu
 if (!speakingApiSection.includes("evaluated: true") || !speakingApiSection.includes("evaluation")) {
     throw Error("Speaking Exam server response contract missing");
 }
+if (!speaking.includes('id="retryEvaluationBtn"') ||
+    !speaking.includes("for(let i=evaluations.length;i<recordings.length;i++)") ||
+    !speaking.includes("Muvaffaqiyatli tahlil qilingan javoblar saqlandi")) {
+    throw Error("Speaking Exam must retain recordings and retry only unanswered AI evaluations");
+}
 // Saved Speaking history: verify the actual GET response shape used by the PWA profile.
 const speakingHistoryStart = legacyServer.indexOf('app.get("/api/speaking/results"');
 if (speakingHistoryStart < 0) throw Error("Speaking result history API route missing");
