@@ -1,0 +1,35 @@
+name: Admin OTP checks
+
+on:
+  push:
+    branches:
+      - redesign/puddle-pwa
+  pull_request:
+    branches:
+      - redesign/puddle-pwa
+
+jobs:
+  admin-auth-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run admin auth unit tests
+        run: npm test
+
+      - name: Check JavaScript syntax
+        run: |
+          node --check server.js
+          node --check public/admin.js
+          node --check lib/admin-auth.js
+          node --check scripts/generate-admin-password-hash.js
