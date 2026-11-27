@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "NODE_OPTIONS=--dns-result-order=ipv4first node scripts/migrate-db.js && NODE_OPTIONS=--dns-result-order=ipv4first node server.js"
+    "start": "NODE_OPTIONS=--dns-result-order=ipv4first node scripts/migrate-db.js && NODE_OPTIONS=--dns-result-order=ipv4first node server.js",
+    "test": "node --test",
+    "admin:password-hash": "node scripts/generate-admin-password-hash.js"
   },
   "dependencies": {
     "@google/genai": "^2.19.0",
