@@ -524,7 +524,7 @@ try {
     await page.goto("http://127.0.0.1:4173/puddle-redesign/index.html", { waitUntil: "domcontentloaded" });
     assert.equal(await page.locator("#speakingHistory").count(), 1, "learner profile should include saved Speaking Exam history");
 
-    console.log("Browser smoke passed: Uzbek dashboard labels, local learning module interactions and routes, AI lesson catalog routing, guest/authenticated chat headers and scoped history, login/register returnTo continuity, mocked auth token storage, external redirect blocking, clear chat, theme persistence, responsive desktop/mobile layout, Voice AI iframe/orb/transcript, Speaking Exam screen, and legal-route checks.");
+    console.log("Browser smoke passed: Uzbek dashboard labels, local learning module interactions and routes, AI lesson catalog routing, guest/authenticated chat headers and scoped history, login/register returnTo continuity, mocked auth token storage, external redirect blocking, clear chat, theme persistence, responsive desktop/mobile layout, Voice AI iframe/orb/transcript, Speaking Exam flow and resumable AI evaluation after a quota failure, and legal-route checks.");
     await context.close();
 } finally {
     if (browser) await browser.close();
