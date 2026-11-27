@@ -3961,7 +3961,17 @@ async function requireAdmin(req, res, next) {
         let sameOrigin = false;
         try {
             const origin = req.get("origin");
-            sameOrigin = Boolean(origin && new URL(origin).host === req.get("host"));
+            const originUrl = origin ? new URL(origin) : null;
+            const forwardedProto = String(req.get("x-forwarded-proto") || req.protocol)
+                .split(",")[0].trim().toLowerCase();
+            const expectedProtocol = forwardedProto.endsWith(":")
+                ? forwardedProto
+                : `${forwardedProto}:`;
+            sameOrigin = Boolean(
+                originUrl &&
+                originUrl.host.toLowerCase() === String(req.get("host") || "").toLowerCase() &&
+                originUrl.protocol === expectedProtocol
+            );
         } catch { sameOrigin = false; }
         if (!sameOrigin) return res.status(403).json({ success: false, error: "So‘rov manbasi tasdiqlanmadi." });
     }
