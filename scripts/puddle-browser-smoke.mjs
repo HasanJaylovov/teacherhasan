@@ -467,6 +467,28 @@ try {
     assert.ok(transcriptAlignment.chatScrollHeight > transcriptAlignment.chatClientHeight, "overflowing conversation should be scrollable");
 
 
+    let speakingUploadAttempts = 0;
+    let speakingResultSaveRequests = 0;
+    await page.route("**/api/speaking/upload", route => {
+        speakingUploadAttempts += 1;
+        if (speakingUploadAttempts === 2) {
+            return route.fulfill({ status: 502, contentType: "application/json", body: JSON.stringify({ success: false, error: "Temporary Gemini quota limit" }) });
+        }
+        return route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify({ success: true, evaluated: true, level: "B2", evaluation: {
+                transcript: "A clear sample answer.", grammar: 82, vocabulary: 80, fluency: 78,
+                pronunciation: 76, overall: 79, feedback: "Good structure.", strengths: ["Clear ideas"],
+                improvements: ["Add examples"], correctedVersion: "A clearer sample answer."
+            } })
+        });
+    });
+    await page.route("**/api/speaking/results", route => {
+        speakingResultSaveRequests += 1;
+        return route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify({ success: true, saved: true, resultId: "smoke-speaking-result", createdAt: "2026-11-27T00:00:00.000Z" }) });
+    });
+
     await page.evaluate(() => localStorage.setItem("th_auth_token", "smoke-test-token"));
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("http://127.0.0.1:4173/speaking-exam.html", { waitUntil: "domcontentloaded" });
@@ -478,6 +500,27 @@ try {
     assert.match(await page.locator("#partBadge").innerText(), /PART 1/);
     assert.match(await page.locator("#questionText").innerText(), /recent development/i);
     assert.equal(await page.locator("#prepBtn").isVisible(), false, "Part 1 should not show preparation timer");
+
+    // A temporary AI quota failure must preserve recorded audio and resume at the failed answer.
+    await page.evaluate(() => {
+        recordings = [
+            { blob: new Blob(["mock answer one"], { type: "audio/webm" }), level: "B2", question: "First mock question", part: 1 },
+            { blob: new Blob(["mock answer two"], { type: "audio/webm" }), level: "B2", question: "Second mock question", part: 1 }
+        ];
+        evaluations = [];
+        phase = "exam";
+    });
+    await page.evaluate(async () => { await submitExam(); });
+    await page.waitForFunction(() => document.querySelector("#retryEvaluationBtn")?.hidden === false);
+    assert.equal(speakingUploadAttempts, 2, "the first evaluation attempt should upload two answers and encounter the mocked quota error");
+    assert.equal(await page.evaluate(() => evaluations.length), 1, "the first successful evaluation should be retained");
+    await page.locator("#retryEvaluationBtn").click();
+    await page.waitForFunction(() => document.querySelector("#resultLevel")?.textContent.includes("AI taxmini"));
+    assert.equal(speakingUploadAttempts, 3, "retry should upload only the previously failed answer, not repeat the successful one");
+    assert.equal(await page.evaluate(() => evaluations.length), 2, "retry should complete the remaining evaluation");
+    assert.equal(speakingResultSaveRequests, 1, "completed retry should save the result once");
+    assert.equal(await page.locator("#retryEvaluationBtn").isHidden(), true, "retry control should hide after successful evaluation");
+
     await page.goto("http://127.0.0.1:4173/puddle-redesign/index.html", { waitUntil: "domcontentloaded" });
     assert.equal(await page.locator("#speakingHistory").count(), 1, "learner profile should include saved Speaking Exam history");
 
