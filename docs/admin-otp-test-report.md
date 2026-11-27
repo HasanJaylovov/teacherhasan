@@ -13,7 +13,7 @@ This file distinguishes tests authored from tests actually executed. A test must
 | UT-03 | Session token is stored as a one-way SHA-256 digest | `tests/admin-auth.test.js` | Authored; execution pending |
 | UT-04 | scrypt hash accepts only the correct password | `tests/admin-auth.test.js` | Authored; execution pending |
 | UT-05 | Cookie parsing handles encoded and malformed values | `tests/admin-auth.test.js` | Authored; execution pending |
-| UT-06 | Cookie is HttpOnly, SameSite Strict, scoped and Secure by default | `tests/admin-auth.test.js` | Authored; execution pending |
+| UT-06 | Cookie is HttpOnly, SameSite Strict, scoped and Secure by default | `tests/admin-auth.test.js` | PASS — 6/6 local isolated tests |
 
 Run with:
 
@@ -93,7 +93,8 @@ Legacy route:
 ## Current execution record
 
 - Source changes and test cases are committed to the feature branch.
-- No test has yet been marked PASS.
-- Automated CI execution is pending.
+- Six unit tests were executed locally against an isolated copy of the exact fetched `lib/admin-auth.js` and `tests/admin-auth.test.js` source; result: **6 passed, 0 failed**.
+- This local isolated run does not substitute for running `npm test` in the repository checkout.
+- GitHub Actions execution status could not be verified through the available repository status response; CI remains pending.
 - Disposable database and Gmail SMTP integration tests are pending.
 - Production has not been deployed or modified.
