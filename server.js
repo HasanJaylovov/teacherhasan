@@ -3748,7 +3748,7 @@ const ADMIN_LOGIN_RATE_LIMIT = Math.max(3, Math.min(20, Number(process.env.ADMIN
 
 function adminCookieOptions() {
     return {
-        secure: process.env.NODE_ENV === "production" ||
+        secure: process.env.NODE_ENV !== "development" ||
             String(process.env.ADMIN_COOKIE_SECURE || "").toLowerCase() === "true"
     };
 }
@@ -3762,7 +3762,9 @@ function clearAdminCookie(res) {
 }
 function adminAuthReady() {
     return Boolean(pool && normalizeEmail(process.env.ADMIN_EMAIL) &&
-        process.env.ADMIN_PASSWORD_HASH && process.env.ADMIN_OTP_PEPPER && mailTransporter);
+        process.env.ADMIN_PASSWORD_HASH &&
+        String(process.env.ADMIN_OTP_PEPPER || "").length >= 32 &&
+        mailTransporter);
 }
 function adminOtpHash(challengeId, otp) {
     return hashOtp(challengeId, otp, process.env.ADMIN_OTP_PEPPER);
@@ -3804,6 +3806,7 @@ function sendAdminAuthUnavailable(res) {
 
 // Stage 1: password verification only. No authenticated session is created here.
 app.post("/api/admin/auth/login", async (req, res) => {
+    res.setHeader("Cache-Control", "no-store");
     if (!adminAuthReady()) return sendAdminAuthUnavailable(res);
     const email = normalizeEmail(req.body?.email);
     const password = String(req.body?.password || "");
@@ -3852,6 +3855,7 @@ app.post("/api/admin/auth/login", async (req, res) => {
 
 // Stage 2: lock the challenge row to make attempt counting and one-time use atomic.
 app.post("/api/admin/auth/verify-otp", async (req, res) => {
+    res.setHeader("Cache-Control", "no-store");
     if (!adminAuthReady()) return sendAdminAuthUnavailable(res);
     const challengeId = String(req.body?.challengeId || "");
     const otp = String(req.body?.otp || "").trim();
@@ -3910,6 +3914,7 @@ app.post("/api/admin/auth/verify-otp", async (req, res) => {
 
 // A resend rotates the stored OTP hash; the previous code stops working immediately.
 app.post("/api/admin/auth/resend-otp", async (req, res) => {
+    res.setHeader("Cache-Control", "no-store");
     if (!adminAuthReady()) return sendAdminAuthUnavailable(res);
     const challengeId = String(req.body?.challengeId || "");
     if (!isValidUuid(challengeId)) return res.status(400).json({ success: false, error: "Tasdiqlash so‘rovi yaroqsiz." });
@@ -3951,6 +3956,7 @@ app.post("/api/admin/auth/resend-otp", async (req, res) => {
 });
 
 async function requireAdmin(req, res, next) {
+    res.setHeader("Cache-Control", "no-store");
     if (!["GET", "HEAD", "OPTIONS"].includes(req.method)) {
         let sameOrigin = false;
         try {
