@@ -87,9 +87,12 @@ test("every admin data endpoint is guarded by requireAdmin", async () => {
 test("legacy one-step admin login is retired with HTTP 410", async () => {
     const { readFile } = await import("node:fs/promises");
     const serverSource = await readFile(new URL("../server.js", import.meta.url), "utf8");
+    const legacyLoginStart = serverSource.indexOf('app.post("/api/admin/login"');
+    assert.notEqual(legacyLoginStart, -1, "legacy admin login route must remain explicitly retired");
+    const legacyLoginBlock = serverSource.slice(legacyLoginStart, legacyLoginStart + 400);
     assert.match(
-        serverSource,
-        /app\\.post\\s*\\(\\s*["']\\/api\\/admin\\/login["']\\s*,[\\s\\S]{0,300}?res\\.status\\(410\\)/,
+        legacyLoginBlock,
+        /res\\.status\\(410\\)/,
         "legacy admin login must not issue a session"
     );
 });
