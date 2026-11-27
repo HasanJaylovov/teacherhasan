@@ -7,6 +7,7 @@ import { GoogleGenAI } from "@google/genai";
 import pg from "pg";
 import multer from "multer";
 import nodemailer from "nodemailer";
+import { generateOtp, hashOtp, safeEqualHex, hashSessionToken, verifyAdminPassword, readCookie, buildAdminSessionCookie, clearAdminSessionCookie } from "./lib/admin-auth.js";
 
 const { Pool } = pg;
 
@@ -62,12 +63,6 @@ const LIVE_MODEL =
     "gemini-3.1-flash-live-preview";
 
 const CHAT_MODEL = process.env.CHAT_MODEL || "gemini-3.8-flash";
-
-const ADMIN_USERNAME =
-    process.env.ADMIN_USERNAME || "admin";
-
-const ADMIN_PASSWORD =
-    process.env.ADMIN_PASSWORD || "CHANGE_ME";
 
 const GUEST_MINUTES =
     Number(process.env.GUEST_MINUTES || 10);
@@ -361,9 +356,6 @@ function hashPassword(password) {
 // ==============================================// USER SESSIONS
 // ==============================================
 const userSessions =
-    new Map();
-
-const adminSessions =
     new Map();
 
 
@@ -3745,146 +3737,278 @@ app.post(
 
 
 // ==============================================
-// ADMIN AUTH MIDDLEWARE
-// ==============================================
+ // ADMIN OTP AUTHENTICATION
+ // ==============================================
 
+const ADMIN_OTP_TTL_SECONDS = Math.max(60, Math.min(600, Number(process.env.ADMIN_OTP_TTL_SECONDS || 300)));
+const ADMIN_OTP_MAX_ATTEMPTS = Math.max(1, Math.min(10, Number(process.env.ADMIN_OTP_MAX_ATTEMPTS || 5)));
+const ADMIN_OTP_RESEND_COOLDOWN_SECONDS = Math.max(30, Math.min(300, Number(process.env.ADMIN_OTP_RESEND_COOLDOWN_SECONDS || 60)));
+const ADMIN_SESSION_TTL_SECONDS = Math.max(900, Math.min(28800, Number(process.env.ADMIN_SESSION_TTL_SECONDS || 28800)));
+const ADMIN_LOGIN_RATE_LIMIT = Math.max(3, Math.min(20, Number(process.env.ADMIN_LOGIN_RATE_LIMIT || 10)));
 
-// ==============================================
-function requireAdmin(
-    req,
-    res,
-    next
-) {
-
-    const auth =
-        req.headers.authorization ||
-        "";
-
-    const token =
-        auth.replace(
-            /^Bearer\s+/i,
-            ""
-        );
-
-    if (!token) {
-
-        return res.status(401)
-            .json({
-                success:
-                    false,
-
-                error:
-                    "Admin sessiyasi mavjud emas."
-            });
-    }
-
-    if (
-        !adminSessions.has(token)
-    ) {
-
-        return res.status(401)
-            .json({
-                success:
-                    false,
-
-                error:
-                    "Admin sessiyasi tugagan."
-            });
-    }
-
-    req.adminToken =
-        token;
-
-    next();
+function adminCookieOptions() {
+    return {
+        secure: process.env.NODE_ENV === "production" ||
+            String(process.env.ADMIN_COOKIE_SECURE || "").toLowerCase() === "true"
+    };
+}
+function setAdminSessionCookie(res, token) {
+    res.setHeader("Set-Cookie", buildAdminSessionCookie(token, {
+        ...adminCookieOptions(), maxAgeSeconds: ADMIN_SESSION_TTL_SECONDS
+    }));
+}
+function clearAdminCookie(res) {
+    res.setHeader("Set-Cookie", clearAdminSessionCookie(adminCookieOptions()));
+}
+function adminAuthReady() {
+    return Boolean(pool && normalizeEmail(process.env.ADMIN_EMAIL) &&
+        process.env.ADMIN_PASSWORD_HASH && process.env.ADMIN_OTP_PEPPER && mailTransporter);
+}
+function adminOtpHash(challengeId, otp) {
+    return hashOtp(challengeId, otp, process.env.ADMIN_OTP_PEPPER);
+}
+function adminRateLimitKey(scope, req, identity = "") {
+    const ip = String(req.ip || req.socket?.remoteAddress || "unknown");
+    return crypto.createHash("sha256").update(`${scope}:${ip}:${identity}`).digest("hex");
+}
+async function consumeAdminRateLimit(bucketKey, maxAttempts, windowSeconds) {
+    const result = await pool.query(
+        `INSERT INTO admin_auth_rate_limits (bucket_key, window_started_at, attempts)
+         VALUES ($1, NOW(), 1)
+         ON CONFLICT (bucket_key) DO UPDATE SET
+           attempts = CASE WHEN admin_auth_rate_limits.window_started_at <= NOW() - ($2 * INTERVAL '1 second')
+             THEN 1 ELSE admin_auth_rate_limits.attempts + 1 END,
+           window_started_at = CASE WHEN admin_auth_rate_limits.window_started_at <= NOW() - ($2 * INTERVAL '1 second')
+             THEN NOW() ELSE admin_auth_rate_limits.window_started_at END
+         RETURNING attempts`,
+        [bucketKey, windowSeconds]
+    );
+    return Number(result.rows[0]?.attempts || 0) <= maxAttempts;
+}
+async function sendAdminOtpEmail(email, otp) {
+    if (!mailTransporter) throw new Error("SMTP_NOT_CONFIGURED");
+    await mailTransporter.sendMail({
+        from: SMTP_FROM,
+        to: email,
+        subject: "Teacher Hasan — admin tasdiqlash kodi",
+        text: `Teacher Hasan admin paneliga kirish kodingiz: ${otp}\n\nKod ${Math.floor(ADMIN_OTP_TTL_SECONDS / 60)} daqiqa amal qiladi. Uni hech kimga bermang.\n\nAgar bu so‘rovni siz yubormagan bo‘lsangiz, xabarni e’tiborsiz qoldiring.`,
+        html: `<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;padding:28px;color:#172033"><h2>Teacher Hasan — Admin</h2><p>Admin paneliga kirish uchun tasdiqlash kodingiz:</p><div style="font-size:32px;font-weight:800;letter-spacing:8px;padding:18px 20px;background:#f2f4fa;border-radius:12px;text-align:center">${otp}</div><p>Ushbu kod <b>${Math.floor(ADMIN_OTP_TTL_SECONDS / 60)} daqiqa</b> amal qiladi.</p><p style="color:#68738a;font-size:13px">Kodni hech kimga bermang. Agar bu siz bo‘lmasangiz, xabarni e’tiborsiz qoldiring.</p></div>`
+    });
+}
+function isValidUuid(value) {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ""));
+}
+function sendAdminAuthUnavailable(res) {
+    return res.status(503).json({ success: false, error: "Admin autentifikatsiyasi hozircha sozlanmagan." });
 }
 
+// Stage 1: password verification only. No authenticated session is created here.
+app.post("/api/admin/auth/login", async (req, res) => {
+    if (!adminAuthReady()) return sendAdminAuthUnavailable(res);
+    const email = normalizeEmail(req.body?.email);
+    const password = String(req.body?.password || "");
+    if (!email || email.length > 320 || !password || password.length > 1024) {
+        return res.status(400).json({ success: false, error: "Email va parolni kiriting." });
+    }
+    try {
+        const allowed = await consumeAdminRateLimit(adminRateLimitKey("login", req, email), ADMIN_LOGIN_RATE_LIMIT, 900);
+        if (!allowed) return res.status(429).json({ success: false, error: "Kirish urinishlari ko‘paydi. 15 daqiqadan keyin qayta urinib ko‘ring." });
 
-// ==============================================// ADMIN LOGIN
-// ==============================================
-app.post(
-    "/api/admin/login",
-    (req, res) => {
-
-        const username =
-            String(
-                req.body?.username ||
-                ""
-            ).trim();
-
-        const password =
-            String(
-                req.body?.password ||
-                ""
-            );
-
-        if (
-            username !==
-            ADMIN_USERNAME ||
-            password !==
-            ADMIN_PASSWORD
-        ){
-
-            return res.status(401)
-                .json({
-
-                    success:
-                        false,
-
-                    error:
-                        "Login yoki parol noto‘g‘ri."
-                });
+        const configuredEmail = normalizeEmail(process.env.ADMIN_EMAIL);
+        const passwordValid = await verifyAdminPassword(password, process.env.ADMIN_PASSWORD_HASH).catch(() => false);
+        if (email !== configuredEmail || !passwordValid) {
+            return res.status(401).json({ success: false, error: "Email yoki parol noto‘g‘ri." });
         }
 
-        const token =
-            generateToken();
-
-        adminSessions.set(
-            token,
-            {
-                username,
-                createdAt:
-                    Date.now()
-            }
+        const challengeId = crypto.randomUUID();
+        const otp = generateOtp();
+        await pool.query(
+            "UPDATE admin_otp_challenges SET consumed_at = COALESCE(consumed_at, NOW()) WHERE admin_email = $1 AND consumed_at IS NULL",
+            [configuredEmail]
         );
-
-        console.log(
-            "🔐 ADMIN LOGIN:",
-            username
+        await pool.query(
+            `INSERT INTO admin_otp_challenges (id, admin_email, otp_hash, expires_at, attempts, last_sent_at)
+             VALUES ($1, $2, $3, NOW() + ($4 * INTERVAL '1 second'), 0, NOW())`,
+            [challengeId, configuredEmail, adminOtpHash(challengeId, otp), ADMIN_OTP_TTL_SECONDS]
         );
-
+        try {
+            await sendAdminOtpEmail(configuredEmail, otp);
+        } catch (mailError) {
+            await pool.query("UPDATE admin_otp_challenges SET consumed_at = NOW() WHERE id = $1", [challengeId]);
+            console.error("ADMIN OTP email delivery failed:", mailError?.code || "SMTP_ERROR");
+            return res.status(503).json({ success: false, error: "Tasdiqlash xatini yuborib bo‘lmadi. Keyinroq qayta urinib ko‘ring." });
+        }
         return res.json({
-
-            success:
-                true,
-
-            token,
-
-            admin: {
-                username
-            }
+            success: true, challengeId,
+            expiresInSeconds: ADMIN_OTP_TTL_SECONDS,
+            resendAfterSeconds: ADMIN_OTP_RESEND_COOLDOWN_SECONDS,
+            message: "Tasdiqlash kodi admin emailingizga yuborildi."
         });
+    } catch (error) {
+        console.error("ADMIN OTP login error:", error?.code || "AUTH_ERROR");
+        return res.status(503).json({ success: false, error: "Kirish so‘rovini bajarib bo‘lmadi. Keyinroq qayta urinib ko‘ring." });
     }
-);
+});
 
+// Stage 2: lock the challenge row to make attempt counting and one-time use atomic.
+app.post("/api/admin/auth/verify-otp", async (req, res) => {
+    if (!adminAuthReady()) return sendAdminAuthUnavailable(res);
+    const challengeId = String(req.body?.challengeId || "");
+    const otp = String(req.body?.otp || "").trim();
+    if (!isValidUuid(challengeId) || !/^\\d{6}$/.test(otp)) {
+        return res.status(400).json({ success: false, error: "Tasdiqlash kodini to‘g‘ri kiriting." });
+    }
 
-// ==============================================// ADMIN LOGOUT
-// ==============================================
-app.post(
-    "/api/admin/logout",
-    requireAdmin,
-    (req, res) => {
+    let client;
+    try {
+        const allowed = await consumeAdminRateLimit(adminRateLimitKey("verify", req, challengeId), ADMIN_OTP_MAX_ATTEMPTS + 2, 900);
+        if (!allowed) return res.status(429).json({ success: false, error: "Tasdiqlash urinishlari vaqtincha cheklangan." });
 
-        adminSessions.delete(
-            req.adminToken
+        client = await pool.connect();
+        await client.query("BEGIN");
+        const result = await client.query(
+            "SELECT id, admin_email, otp_hash, expires_at, attempts, consumed_at FROM admin_otp_challenges WHERE id = $1 FOR UPDATE",
+            [challengeId]
         );
+        const challenge = result.rows[0];
+        if (!challenge || challenge.consumed_at ||
+            new Date(challenge.expires_at).getTime() <= Date.now() ||
+            Number(challenge.attempts) >= ADMIN_OTP_MAX_ATTEMPTS) {
+            await client.query("ROLLBACK");
+            return res.status(401).json({ success: false, error: "Kod noto‘g‘ri yoki uning amal qilish muddati tugagan." });
+        }
 
-        res.json({
-            success:
-                true
-        });
+        if (!safeEqualHex(challenge.otp_hash, adminOtpHash(challengeId, otp))) {
+            await client.query(
+                `UPDATE admin_otp_challenges SET attempts = attempts + 1,
+                 consumed_at = CASE WHEN attempts + 1 >= $2 THEN NOW() ELSE consumed_at END
+                 WHERE id = $1`,
+                [challengeId, ADMIN_OTP_MAX_ATTEMPTS]
+            );
+            await client.query("COMMIT");
+            return res.status(401).json({ success: false, error: "Kod noto‘g‘ri yoki uning amal qilish muddati tugagan." });
+        }
+
+        const token = generateToken();
+        const session = await client.query(
+            `INSERT INTO admin_sessions (admin_email, token_hash, expires_at)
+             VALUES ($1, $2, NOW() + ($3 * INTERVAL '1 second')) RETURNING id, expires_at`,
+            [challenge.admin_email, hashSessionToken(token), ADMIN_SESSION_TTL_SECONDS]
+        );
+        await client.query("UPDATE admin_otp_challenges SET consumed_at = NOW() WHERE id = $1", [challengeId]);
+        await client.query("COMMIT");
+        setAdminSessionCookie(res, token);
+        return res.json({ success: true, admin: { email: challenge.admin_email }, expiresAt: session.rows[0].expires_at });
+    } catch (error) {
+        if (client) await client.query("ROLLBACK").catch(() => {});
+        console.error("ADMIN OTP verification error:", error?.code || "AUTH_ERROR");
+        return res.status(503).json({ success: false, error: "Tasdiqlashni bajarib bo‘lmadi. Qayta urinib ko‘ring." });
+    } finally {
+        client?.release();
     }
-);
+});
 
+// A resend rotates the stored OTP hash; the previous code stops working immediately.
+app.post("/api/admin/auth/resend-otp", async (req, res) => {
+    if (!adminAuthReady()) return sendAdminAuthUnavailable(res);
+    const challengeId = String(req.body?.challengeId || "");
+    if (!isValidUuid(challengeId)) return res.status(400).json({ success: false, error: "Tasdiqlash so‘rovi yaroqsiz." });
+
+    try {
+        const allowed = await consumeAdminRateLimit(adminRateLimitKey("resend", req, challengeId), 10, 3600);
+        if (!allowed) return res.status(429).json({ success: false, error: "Kod yuborish so‘rovlari vaqtincha cheklangan." });
+
+        const otp = generateOtp();
+        const result = await pool.query(
+            `UPDATE admin_otp_challenges
+             SET otp_hash = $2, expires_at = NOW() + ($3 * INTERVAL '1 second'),
+                 attempts = 0, last_sent_at = NOW()
+             WHERE id = $1 AND consumed_at IS NULL AND expires_at > NOW()
+               AND attempts < $4
+               AND COALESCE(last_sent_at, '-infinity'::timestamptz) <= NOW() - ($5 * INTERVAL '1 second')
+             RETURNING admin_email`,
+            [challengeId, adminOtpHash(challengeId, otp), ADMIN_OTP_TTL_SECONDS, ADMIN_OTP_MAX_ATTEMPTS, ADMIN_OTP_RESEND_COOLDOWN_SECONDS]
+        );
+        const challenge = result.rows[0];
+        if (!challenge) return res.status(429).json({ success: false, error: "Kodni qayta yuborish hozircha mumkin emas. Biroz kuting yoki qayta kiring." });
+
+        try {
+            await sendAdminOtpEmail(challenge.admin_email, otp);
+        } catch (mailError) {
+            await pool.query("UPDATE admin_otp_challenges SET consumed_at = NOW() WHERE id = $1", [challengeId]);
+            console.error("ADMIN OTP resend failed:", mailError?.code || "SMTP_ERROR");
+            return res.status(503).json({ success: false, error: "Yangi kodni yuborib bo‘lmadi. Qayta kirishni boshlang." });
+        }
+        return res.json({
+            success: true, expiresInSeconds: ADMIN_OTP_TTL_SECONDS,
+            resendAfterSeconds: ADMIN_OTP_RESEND_COOLDOWN_SECONDS,
+            message: "Yangi tasdiqlash kodi yuborildi."
+        });
+    } catch (error) {
+        console.error("ADMIN OTP resend error:", error?.code || "AUTH_ERROR");
+        return res.status(503).json({ success: false, error: "Kodni yuborib bo‘lmadi. Keyinroq qayta urinib ko‘ring." });
+    }
+});
+
+async function requireAdmin(req, res, next) {
+    if (!["GET", "HEAD", "OPTIONS"].includes(req.method)) {
+        let sameOrigin = false;
+        try {
+            const origin = req.get("origin");
+            sameOrigin = Boolean(origin && new URL(origin).host === req.get("host"));
+        } catch { sameOrigin = false; }
+        if (!sameOrigin) return res.status(403).json({ success: false, error: "So‘rov manbasi tasdiqlanmadi." });
+    }
+
+    const token = readCookie(req.headers.cookie, "th_admin_session");
+    if (!token) {
+        clearAdminCookie(res);
+        return res.status(401).json({ success: false, error: "Admin sessiyasi mavjud emas." });
+    }
+    if (!pool) return sendAdminAuthUnavailable(res);
+
+    try {
+        const result = await pool.query(
+            `SELECT id, admin_email, expires_at FROM admin_sessions
+             WHERE token_hash = $1 AND revoked_at IS NULL AND expires_at > NOW() LIMIT 1`,
+            [hashSessionToken(token)]
+        );
+        const session = result.rows[0];
+        if (!session) {
+            clearAdminCookie(res);
+            return res.status(401).json({ success: false, error: "Admin sessiyasi tugagan." });
+        }
+        req.adminSessionId = session.id;
+        req.adminEmail = session.admin_email;
+        req.adminExpiresAt = session.expires_at;
+        return next();
+    } catch (error) {
+        console.error("ADMIN session lookup failed:", error?.code || "DB_ERROR");
+        return res.status(503).json({ success: false, error: "Admin sessiyasini tekshirib bo‘lmadi." });
+    }
+}
+
+app.get("/api/admin/auth/me", requireAdmin, (req, res) => {
+    return res.json({ success: true, admin: { email: req.adminEmail }, expiresAt: req.adminExpiresAt });
+});
+app.post("/api/admin/auth/logout", requireAdmin, async (req, res) => {
+    try {
+        await pool.query("UPDATE admin_sessions SET revoked_at = NOW() WHERE id = $1 AND revoked_at IS NULL", [req.adminSessionId]);
+        clearAdminCookie(res);
+        return res.json({ success: true });
+    } catch (error) {
+        console.error("ADMIN logout failed:", error?.code || "DB_ERROR");
+        return res.status(503).json({ success: false, error: "Sessiyani yakunlab bo‘lmadi. Qayta urinib ko‘ring." });
+    }
+});
+
+// Retire the former one-step username/password endpoint: it can never issue a session.
+app.post("/api/admin/login", (req, res) => {
+    return res.status(410).json({
+        success: false,
+        error: "Eski admin login o‘chirilgan. Email, parol va OTP orqali kiring."
+    });
+});
 
 // ==============================================// ADMIN DASHBOARD
 // ==============================================
