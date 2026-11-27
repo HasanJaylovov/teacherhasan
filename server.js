@@ -3740,8 +3740,8 @@ app.post(
  // ADMIN OTP AUTHENTICATION
  // ==============================================
 
-const ADMIN_OTP_TTL_SECONDS = Math.max(60, Math.min(600, Number(process.env.ADMIN_OTP_TTL_SECONDS || 300)));
-const ADMIN_OTP_MAX_ATTEMPTS = Math.max(1, Math.min(10, Number(process.env.ADMIN_OTP_MAX_ATTEMPTS || 5)));
+const ADMIN_OTP_TTL_SECONDS = Math.max(60, Math.min(300, Number(process.env.ADMIN_OTP_TTL_SECONDS || 300)));
+const ADMIN_OTP_MAX_ATTEMPTS = Math.max(1, Math.min(5, Number(process.env.ADMIN_OTP_MAX_ATTEMPTS || 5)));
 const ADMIN_OTP_RESEND_COOLDOWN_SECONDS = Math.max(30, Math.min(300, Number(process.env.ADMIN_OTP_RESEND_COOLDOWN_SECONDS || 60)));
 const ADMIN_SESSION_TTL_SECONDS = Math.max(900, Math.min(28800, Number(process.env.ADMIN_SESSION_TTL_SECONDS || 28800)));
 const ADMIN_LOGIN_RATE_LIMIT = Math.max(3, Math.min(20, Number(process.env.ADMIN_LOGIN_RATE_LIMIT || 10)));
