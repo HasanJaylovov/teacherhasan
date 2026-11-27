@@ -58,9 +58,10 @@ Keep all values private. No Render settings were changed.
 - `ADMIN_OTP_RESEND_COOLDOWN_SECONDS=60`
 - `ADMIN_SESSION_TTL_SECONDS=28800`
 - `ADMIN_LOGIN_RATE_LIMIT=10`
+- `ADMIN_COOKIE_SECURE`: optional; cookies are Secure by default except when `NODE_ENV=development` (set true to force Secure locally).
 - Existing SMTP variables: `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=587`, `SMTP_SECURE=false`, `SMTP_USER`, `SMTP_PASSWORD` (Google App Password), and `SMTP_FROM`.
 
-The schema is committed to this branch only. It has not been applied to any database. The app's existing startup migration will apply the additive `CREATE TABLE IF NOT EXISTS` statements only when a deployment is later authorized.
+Authentication and protected admin API responses use `Cache-Control: no-store`. The admin session cookie is HttpOnly, SameSite=Strict and Secure by default outside explicit development mode.\n\nThe schema is committed to this branch only. It has not been applied to any database. The app's existing startup migration will apply the additive `CREATE TABLE IF NOT EXISTS` statements only when a deployment is later authorized.
 
 ## Verification status
 
