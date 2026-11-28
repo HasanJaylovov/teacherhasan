@@ -30,7 +30,7 @@ async function account(){
         }
 
         const access=d.access||{};
-        const mode=access.mode||"unknown";
+        const mode=authenticated?(access.mode||"unknown"):((r.status===401||d.authenticated===false)?"guest":"unknown");
         const card=document.getElementById("accountAccessCard");
         if(card){
             const title=document.getElementById("accessTitle"),sub=document.getElementById("accessSubtitle"),badge=document.getElementById("accessBadge"),info=document.getElementById("accessInfo"),bar=document.getElementById("accessProgress");

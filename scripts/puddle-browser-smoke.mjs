@@ -24,6 +24,8 @@ const server = http.createServer((req, res) => {
         return;
     }
     if (pathname === "/") pathname = "/index.html";
+    // Mirror the Express alias used by the deployed application.
+    if (pathname === "/admin") pathname = "/admin.html";
     const file = path.resolve(publicRoot, "." + pathname);
     if (!file.startsWith(publicRoot + path.sep) || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
         res.writeHead(404).end("Not found");
@@ -89,12 +91,63 @@ try {
         return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true }) });
     });
     const adminRequestBodies = {};
-    const adminApiAuthorization = [];
-    const adminLogoutAuthorization = [];
-    await page.route("**/api/admin/login", route => {
-        adminRequestBodies.login = route.request().postDataJSON();
-        return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, token: "smoke-admin-token", admin: { username: "admin" } }) });
+    const adminAuthMeCookies = [];
+    const adminApiCookies = [];
+    const adminLogoutCookies = [];
+
+    await page.route("**/api/admin/auth/me", route => {
+        const cookie = route.request().headers()["cookie"] || "";
+        adminAuthMeCookies.push(cookie);
+        const hasSession = cookie.includes("th_admin_session=smoke-admin-cookie");
+        return route.fulfill({
+            status: hasSession ? 200 : 401,
+            contentType: "application/json",
+            body: JSON.stringify(hasSession
+                ? { success: true, admin: { email: "admin@example.test" }, expiresAt: "2026-11-28T20:00:00.000Z" }
+                : { success: false, error: "Admin sessiyasi mavjud emas." })
+        });
     });
+    await page.route("**/api/admin/auth/login", route => {
+        adminRequestBodies.login = route.request().postDataJSON();
+        return route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify({
+                success: true, challengeId: "smoke-admin-challenge",
+                expiresInSeconds: 300, resendAfterSeconds: 1,
+                message: "Tasdiqlash kodi admin emailingizga yuborildi."
+            })
+        });
+    });
+    await page.route("**/api/admin/auth/resend-otp", route => {
+        adminRequestBodies.resend = route.request().postDataJSON();
+        return route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify({ success: true, expiresInSeconds: 300, resendAfterSeconds: 1, message: "Yangi tasdiqlash kodi yuborildi." })
+        });
+    });
+    await page.route("**/api/admin/auth/verify-otp", async route => {
+        adminRequestBodies.verify = route.request().postDataJSON();
+        if (adminRequestBodies.verify.otp !== "123456") {
+            return route.fulfill({
+                status: 401,
+                contentType: "application/json",
+                body: JSON.stringify({ success: false, error: "Kod noto‘g‘ri yoki uning amal qilish muddati tugagan." })
+            });
+        }
+        await context.addCookies([{
+            name: "th_admin_session", value: "smoke-admin-cookie",
+            domain: "127.0.0.1", path: "/api/admin",
+            httpOnly: true, sameSite: "Strict"
+        }]);
+        return route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify({ success: true, admin: { email: "admin@example.test" }, expiresAt: "2026-11-28T20:00:00.000Z" })
+        });
+    });
+
     const adminResponses = {
         "/api/admin/dashboard": { success: true, stats: { users: 0, premium: 0, trial: 0, blocked: 0, payments: 0, revenue: 0, speakingResults: 0, serverTime: "2026-11-24T00:00:00.000Z" }, recentUsers: [], recentPayments: [] },
         "/api/admin/users": { success: true, users: [] },
@@ -104,14 +157,36 @@ try {
     };
     for (const [endpoint, payload] of Object.entries(adminResponses)) {
         await page.route("**" + endpoint, route => {
-            adminApiAuthorization.push({ endpoint, authorization: route.request().headers()["authorization"] || "" });
-            return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(payload) });
+            const headers = route.request().headers();
+            const cookie = headers["cookie"] || "";
+            const authorization = headers["authorization"] || "";
+            const hasSession = cookie.includes("th_admin_session=smoke-admin-cookie") && !authorization;
+            adminApiCookies.push({ endpoint, cookie, authorization });
+            return route.fulfill({
+                status: hasSession ? 200 : 401,
+                contentType: "application/json",
+                body: JSON.stringify(hasSession ? payload : { success: false, error: "Admin sessiyasi mavjud emas." })
+            });
         });
     }
-    await page.route("**/api/admin/logout", route => {
-        adminLogoutAuthorization.push(route.request().headers()["authorization"] || "");
-        return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true }) });
+    await page.route("**/api/admin/auth/logout", async route => {
+        const headers = route.request().headers();
+        const cookie = headers["cookie"] || "";
+        const authorization = headers["authorization"] || "";
+        const hasSession = cookie.includes("th_admin_session=smoke-admin-cookie") && !authorization;
+        adminLogoutCookies.push({ cookie, authorization });
+        if (hasSession) await context.clearCookies();
+        return route.fulfill({
+            status: hasSession ? 200 : 401,
+            contentType: "application/json",
+            body: JSON.stringify(hasSession ? { success: true } : { success: false, error: "Admin sessiyasi mavjud emas." })
+        });
     });
+    await page.route("**/api/admin/login", route => route.fulfill({
+        status: 410,
+        contentType: "application/json",
+        body: JSON.stringify({ success: false, error: "Eski admin login o‘chirilgan." })
+    }));
 
     const chatAuthorization = [];
     await page.route("**/api/chat", route => {
@@ -229,6 +304,7 @@ try {
     await page.evaluate(() => localStorage.setItem("th_auth_token", "smoke-invalid-token"));
     await page.reload({ waitUntil: "domcontentloaded" });
     await page.waitForFunction(() => localStorage.getItem("th_auth_token") === null);
+    await page.waitForFunction(() => document.getElementById("accessTitle")?.textContent === "Mehmon rejimi");
     assert.equal(await page.evaluate(() => localStorage.getItem("th_auth_token")), null,
         "an invalid learner token must be removed after /api/me returns authenticated:false");
     await page.locator('.desktop-sidebar [data-view="chat"]').click();
@@ -380,38 +456,102 @@ try {
     await page.waitForFunction(() => document.querySelector("#pName")?.textContent === "Smoke Learner");
     assert.equal(await page.evaluate(() => localStorage.getItem("th_auth_token")), "smoke-login-token");
     assert.equal(new URL(page.url()).pathname, "/profile.html", "successful login from a profile deep link must return to profile, not dashboard");
+    const premiumBuyLink = page.locator('.plans a[href="/payment.html"]');
+    assert.equal(await premiumBuyLink.count(), 1, "the profile should expose the real Premium purchase route");
+    await premiumBuyLink.click();
+    await page.waitForURL("**/payment.html");
+    assert.equal(new URL(page.url()).pathname, "/payment.html", "Premium purchase should reach the payment page");
+    assert.match(await page.locator("#planPreview").innerText(), /1 oy Premium/);
+    await page.goBack();
+    await page.waitForURL("**/profile.html?returnTo=%2Fpuddle-redesign%2F");
     await page.locator("#logout").click();
     await page.waitForURL("**/login.html?returnTo=%2Fpuddle-redesign%2F");
     assert.equal(await page.evaluate(() => localStorage.getItem("th_auth_token")), null, "profile logout should clear learner token");
     assert.deepEqual(logoutAuthorization, ["Bearer smoke-login-token"], "profile logout should revoke the current learner session with Bearer auth");
 
-    // Admin browser flow uses a separate token namespace and protected API Bearer headers.
+    // Admin browser flow: email/password creates an OTP challenge; only OTP verification sets an HttpOnly cookie.
     await page.evaluate(() => {
         localStorage.removeItem("th_admin_token");
+        localStorage.setItem("th_admin_token", "stale-admin-token");
         localStorage.setItem("th_auth_token", "smoke-learner-token");
     });
-    await page.goto("http://127.0.0.1:4173/admin.html", { waitUntil: "domcontentloaded" });
-    await page.locator("#username").fill("admin");
+    await page.goto("http://127.0.0.1:4173/admin", { waitUntil: "domcontentloaded" });
+    assert.equal(await page.title(), "Teacher Hasan — Admin", "the Express /admin alias should resolve to the admin page");
+    assert.equal(await page.locator("#email").count(), 1, "admin login should request an email address");
+    await page.waitForFunction(() => document.querySelector("#loginForm")?.classList.contains("hidden") === false);
+    assert.equal(await page.evaluate(() => localStorage.getItem("th_admin_token")), null,
+        "legacy admin browser token must be cleared");
+    await page.locator("#email").fill("admin@example.test");
     await page.locator("#password").fill("mocked-admin-password");
-    await page.locator("#loginForm button").click();
+    await page.locator("#loginForm button[type=submit]").click();
+    await page.waitForFunction(() => !document.querySelector("#otpForm")?.classList.contains("hidden"));
+    assert.deepEqual(adminRequestBodies.login, { email: "admin@example.test", password: "mocked-admin-password" },
+        "admin stage one should send email and password only");
+    assert.equal((await page.context().cookies()).filter(cookie => cookie.name === "th_admin_session").length, 0,
+        "password verification alone must not create an admin session");
+    assert.equal(await page.evaluate(() => localStorage.getItem("th_admin_token")), null,
+        "admin OTP challenge must not store a bearer token");
+
+    await page.locator("#otp").fill("000000");
+    await page.locator("#otpForm button[type=submit]").click();
+    await page.getByText("Kod noto‘g‘ri yoki uning amal qilish muddati tugagan.", { exact: true }).waitFor();
+    assert.equal((await page.context().cookies()).filter(cookie => cookie.name === "th_admin_session").length, 0,
+        "an invalid OTP must not create an admin session");
+
+    await page.waitForFunction(() => document.querySelector("#resendOtp")?.disabled === false, null, { timeout: 5000 });
+    await page.locator("#resendOtp").click();
+    await page.getByText("Yangi tasdiqlash kodi yuborildi.", { exact: true }).waitFor();
+    assert.deepEqual(adminRequestBodies.resend, { challengeId: "smoke-admin-challenge" },
+        "OTP resend should reuse only the active challenge id");
+
+    await page.locator("#otp").fill("123456");
+    await page.locator("#otpForm button[type=submit]").click();
     await page.waitForFunction(() => !document.querySelector("#app")?.classList.contains("hidden"));
     await page.waitForFunction(() => document.querySelector("#usersN")?.textContent === "0");
-    assert.deepEqual(adminRequestBodies.login, { username: "admin", password: "mocked-admin-password" });
-    assert.equal(await page.evaluate(() => localStorage.getItem("th_admin_token")), "smoke-admin-token");
+    assert.deepEqual(adminRequestBodies.verify, { challengeId: "smoke-admin-challenge", otp: "123456" },
+        "admin stage two should submit the challenge id and six-digit OTP");
+    assert.equal(await page.evaluate(() => localStorage.getItem("th_admin_token")), null,
+        "admin session must not be stored in localStorage");
     assert.equal(await page.evaluate(() => localStorage.getItem("th_auth_token")), "smoke-learner-token",
-        "admin login must not overwrite the learner token");
-    assert.equal(adminApiAuthorization.length, 5, "admin dashboard should load all five protected read endpoints");
-    assert.ok(adminApiAuthorization.every(item => item.authorization === "Bearer smoke-admin-token"),
-        "all admin API requests must use the dedicated admin Bearer token");
-    const adminLogoutResponse = page.waitForResponse(response => response.url().endsWith("/api/admin/logout"));
+        "admin login must not overwrite the learner Bearer token");
+    assert.equal(adminApiCookies.length, 5, "admin dashboard should load all five protected read endpoints");
+    assert.ok(adminApiCookies.every(item =>
+        item.cookie.includes("th_admin_session=smoke-admin-cookie") && item.authorization === ""
+    ), "all admin API requests must use the HttpOnly session cookie and no Authorization header");
+
+    const adminMeResponse = await page.evaluate(async () => {
+        const response = await fetch("/api/admin/auth/me", { credentials: "same-origin" });
+        return { status: response.status, data: await response.json() };
+    });
+    assert.equal(adminMeResponse.status, 200, "a valid admin cookie should restore the session");
+    assert.equal(adminMeResponse.data.admin.email, "admin@example.test");
+    assert.ok(adminAuthMeCookies.some(cookie => cookie.includes("th_admin_session=smoke-admin-cookie")),
+        "session restoration should send the admin cookie");
+
+    const adminLogoutResponse = page.waitForResponse(response => response.url().endsWith("/api/admin/auth/logout"));
     await page.locator("#logout").click();
     await adminLogoutResponse;
+    assert.equal((await page.context().cookies()).filter(cookie => cookie.name === "th_admin_session").length, 0,
+        "admin logout should clear the HttpOnly session cookie");
     assert.equal(await page.evaluate(() => localStorage.getItem("th_admin_token")), null,
-        "admin logout should clear the admin token");
+        "admin logout should leave no legacy admin token");
     assert.equal(await page.evaluate(() => localStorage.getItem("th_auth_token")), "smoke-learner-token",
         "admin logout must not clear the learner token");
-    assert.deepEqual(adminLogoutAuthorization, ["Bearer smoke-admin-token"],
-        "admin logout should revoke the dedicated admin session");
+    assert.equal(adminLogoutCookies.length, 1);
+    assert.ok(adminLogoutCookies[0].cookie.includes("th_admin_session=smoke-admin-cookie") &&
+        adminLogoutCookies[0].authorization === "",
+        "admin logout should revoke the cookie session without a bearer header");
+
+    const retiredAdminLogin = await page.evaluate(async () => {
+        const response = await fetch("/api/admin/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username: "admin", password: "legacy-password" })
+        });
+        return { status: response.status, data: await response.json() };
+    });
+    assert.equal(retiredAdminLogin.status, 410, "the legacy one-step admin login endpoint must remain retired");
+    assert.equal(retiredAdminLogin.data.success, false);
 
     // External redirect attempts must fail closed to the local root.
     await page.evaluate(() => localStorage.removeItem("th_auth_token"));
@@ -469,8 +609,15 @@ try {
 
     let speakingUploadAttempts = 0;
     let speakingResultSaveRequests = 0;
+    const speakingUploadRequests = [];
+    const speakingResultSaveHeaders = [];
     await page.route("**/api/speaking/upload", route => {
         speakingUploadAttempts += 1;
+        const headers = route.request().headers();
+        speakingUploadRequests.push({
+            authorization: headers["authorization"] || "",
+            contentType: headers["content-type"] || ""
+        });
         if (speakingUploadAttempts === 2) {
             return route.fulfill({ status: 502, contentType: "application/json", body: JSON.stringify({ success: false, error: "Temporary Gemini quota limit" }) });
         }
@@ -486,6 +633,11 @@ try {
     });
     await page.route("**/api/speaking/results", route => {
         speakingResultSaveRequests += 1;
+        const headers = route.request().headers();
+        speakingResultSaveHeaders.push({
+            authorization: headers["authorization"] || "",
+            contentType: headers["content-type"] || ""
+        });
         return route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify({ success: true, saved: true, resultId: "smoke-speaking-result", createdAt: "2026-11-27T00:00:00.000Z" }) });
     });
 
@@ -519,12 +671,19 @@ try {
     assert.equal(speakingUploadAttempts, 3, "retry should upload only the previously failed answer, not repeat the successful one");
     assert.equal(await page.evaluate(() => evaluations.length), 2, "retry should complete the remaining evaluation");
     assert.equal(speakingResultSaveRequests, 1, "completed retry should save the result once");
+    assert.equal(speakingUploadRequests.length, 3, "each real evaluation attempt should issue one audio upload request");
+    assert.ok(speakingUploadRequests.every(item =>
+        item.authorization === "Bearer smoke-test-token" && item.contentType.startsWith("multipart/form-data;")
+    ), "Speaking audio uploads must use the learner Bearer token and multipart form data");
+    assert.deepEqual(speakingResultSaveHeaders, [{
+        authorization: "Bearer smoke-test-token", contentType: "application/json"
+    }], "Speaking result save must use the learner Bearer token and JSON response contract");
     assert.equal(await page.locator("#retryEvaluationBtn").isHidden(), true, "retry control should hide after successful evaluation");
 
     await page.goto("http://127.0.0.1:4173/puddle-redesign/index.html", { waitUntil: "domcontentloaded" });
     assert.equal(await page.locator("#speakingHistory").count(), 1, "learner profile should include saved Speaking Exam history");
 
-    console.log("Browser smoke passed: Uzbek dashboard labels, local learning module interactions and routes, AI lesson catalog routing, guest/authenticated chat headers and scoped history, login/register returnTo continuity, mocked auth token storage, external redirect blocking, clear chat, theme persistence, responsive desktop/mobile layout, Voice AI iframe/orb/transcript, Speaking Exam flow and resumable AI evaluation after a quota failure, and legal-route checks.");
+    console.log("Browser smoke passed: Puddle module routes and honest demo labels, learner Bearer-token auth and scoped chat, login/register/logout returnTo, Premium payment route, HttpOnly admin OTP/cookie login-resend-restore-logout, retired legacy admin login, responsive Voice AI iframe/orb/transcript, Speaking Exam multipart AI evaluation/save/retry, and legal-route checks.");
     await context.close();
 } finally {
     if (browser) await browser.close();

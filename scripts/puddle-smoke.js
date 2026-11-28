@@ -102,6 +102,9 @@ if (!js.includes('typeof d.authenticated!=="boolean"') ||
     !js.includes("CHAT_STORAGE_KEY=null;")) {
     throw Error("PWA must preserve learner identity and avoid shared guest chat storage when /api/me is unavailable or malformed");
 }
+if (!js.includes('((r.status===401||d.authenticated===false)?"guest":"unknown")')) {
+    throw Error("PWA should display guest access when /api/me confirms an unauthenticated session");
+}
 if (!js.includes("Teacher Hasan javob tayyorlamoqda…")) {
     throw Error("Chat loading state should be localized into Uzbek");
 }
@@ -170,6 +173,10 @@ if (!html.includes('href="/profile.html?returnTo=%2Fpuddle-redesign%2F"') ||
     html.includes('href="/offer.html"') || !html.includes("Maxfiylik siyosati")) {
     throw Error("Premium/profile routes or localized privacy link are incorrect");
 }
+if (!legacyProfile.includes('href="/payment.html"') ||
+    !fs.existsSync(path.join(publicRoot, "payment.html"))) {
+    throw Error("Premium purchase route must resolve to the existing payment page");
+}
 if (!js.includes('location.href="./index.html"')) throw Error("PWA logout must return to redesigned home");
 if (!legacyProfile.includes('id="profile"') || !legacyProfile.includes('id="logout"')) {
     throw Error("Profile page auth hooks missing");
@@ -192,12 +199,25 @@ for (const field of ["token:", "model:", "learner:", "access:"]) {
     if (!liveTokenSection.includes(field)) throw Error("Live-token API response missing: " + field);
 }
 
+// Learner sessions remain Bearer-token based; the admin cookie is deliberately separate.
+const learnerAuthStart = legacyServer.indexOf("async function getAuthenticatedUser");
+const learnerAuthSection = legacyServer.slice(learnerAuthStart, learnerAuthStart + 1100);
+for (const feature of ["req.headers.authorization", "userSessions.get(token)", 'req.headers["x-auth-token"]']) {
+    if (!learnerAuthSection.includes(feature)) throw Error("Legacy learner Bearer-token authentication missing " + feature);
+}
+if (!legacyServer.includes("userSessions.delete(") || !legacyAuth.includes('setAuthToken(data.token)')) {
+    throw Error("Learner login/logout token lifecycle is incomplete");
+}
+
 // Speaking Exam is a real upload/evaluation integration, not a static mock.
 const chatEndpointStart = legacyServer.indexOf('"/api/chat"', speakingApiStart);
 const speakingApiSection = legacyServer.slice(speakingApiStart, chatEndpointStart);
 if (!speaking.includes("/api/speaking/upload") || !speaking.includes("data.evaluated") ||
     !speaking.includes("data.evaluation") || !speaking.includes("evaluations.push")) {
     throw Error("Speaking Exam client must require real evaluation data");
+}
+if (!speaking.includes('headers:{Authorization:"Bearer "+token}')) {
+    throw Error("Speaking audio upload must send the active learner Bearer token");
 }
 if (!speakingApiSection.includes("evaluated: true") || !speakingApiSection.includes("evaluation")) {
     throw Error("Speaking Exam server response contract missing");
@@ -303,38 +323,64 @@ if (!legacyServer.includes("user.id") || !legacyServer.includes("authenticated:"
     throw Error("Puddle account chat key must use the actual /api/me identity field");
 }
 
-// Admin uses its own token and protected endpoints, separate from learner auth.
-if (!legacyAdmin.includes("th_admin_token") || !legacyAdmin.includes("Authorization") ||
-    !legacyAdminHtml.includes('id="loginForm"') || !legacyAdminHtml.includes('id="app"')) {
-    throw Error("Admin login/session hooks missing");
-}
-const adminLoginStart = legacyServer.indexOf('"/api/admin/login"');
-const adminLogoutStart = legacyServer.indexOf('"/api/admin/logout"', adminLoginStart);
-const adminLoginSection = legacyServer.slice(adminLoginStart, adminLogoutStart);
-for (const field of ["success:", "token", "admin:", "username"]) {
-    if (!adminLoginSection.includes(field)) throw Error("Admin login response contract missing " + field);
-}
-if (!legacyAdmin.includes("localStorage.setItem('th_admin_token',token)") ||
-    !legacyAdmin.includes("localStorage.removeItem('th_admin_token')") ||
-    !legacyAdmin.includes("Authorization:'Bearer '+token")) {
-    throw Error("Admin token storage, Bearer header or logout behavior missing");
-}
-for (const endpoint of [
-    "/api/admin/login", "/api/admin/logout", "/api/admin/dashboard",
-    "/api/admin/users", "/api/admin/payments", "/api/admin/speaking-results", "/api/admin/settings"
-]) {
+// Admin uses a dedicated HttpOnly cookie session and a two-step email OTP flow.
+const adminAuthRoutes = [
+    "/api/admin/auth/login", "/api/admin/auth/verify-otp",
+    "/api/admin/auth/resend-otp", "/api/admin/auth/me", "/api/admin/auth/logout"
+];
+for (const endpoint of adminAuthRoutes) {
     if (!legacyAdmin.includes(endpoint) || !legacyServer.includes('"' + endpoint + '"')) {
-        throw Error("Admin endpoint compatibility missing: " + endpoint);
+        throw Error("Admin OTP endpoint compatibility missing: " + endpoint);
+    }
 }
+if (!legacyAdmin.includes('localStorage.removeItem("th_admin_token")') ||
+    legacyAdmin.includes('localStorage.setItem("th_admin_token"') ||
+    legacyAdmin.includes("Authorization") ||
+    !legacyAdmin.includes('credentials: "same-origin"') ||
+    !legacyAdminHtml.includes('id="email"') ||
+    !legacyAdminHtml.includes('id="otpForm"') ||
+    !legacyAdminHtml.includes('id="app"')) {
+    throw Error("Admin must use email OTP and same-origin HttpOnly cookie sessions, not browser bearer tokens");
 }
+
+const adminLoginStart = legacyServer.indexOf('app.post("/api/admin/auth/login"');
+const adminVerifyStart = legacyServer.indexOf('app.post("/api/admin/auth/verify-otp"', adminLoginStart);
+const adminResendStart = legacyServer.indexOf('app.post("/api/admin/auth/resend-otp"', adminVerifyStart);
+if (adminLoginStart < 0 || adminVerifyStart < 0 || adminResendStart < 0) {
+    throw Error("Admin OTP server route sequence missing");
+}
+const adminLoginSection = legacyServer.slice(adminLoginStart, adminVerifyStart);
+for (const field of ["success: true, challengeId", "expiresInSeconds", "resendAfterSeconds"]) {
+    if (!adminLoginSection.includes(field)) throw Error("Admin OTP challenge response missing " + field);
+}
+const adminVerifySection = legacyServer.slice(adminVerifyStart, adminResendStart);
+for (const field of ["hashSessionToken(token)", "setAdminSessionCookie(res, token)", "admin_sessions", "expiresAt"]) {
+    if (!adminVerifySection.includes(field)) throw Error("Admin OTP verification/session contract missing " + field);
+}
+
+const requireAdminStart = legacyServer.indexOf("async function requireAdmin");
+const requireAdminEnd = legacyServer.indexOf('app.get("/api/admin/auth/me"', requireAdminStart);
+const requireAdminSection = legacyServer.slice(requireAdminStart, requireAdminEnd);
+for (const feature of ['readCookie(req.headers.cookie, "th_admin_session")', "sameOrigin", "Cache-Control", "hashSessionToken(token)"]) {
+    if (!requireAdminSection.includes(feature)) throw Error("Admin cookie/session validation missing " + feature);
+}
+
+const retiredAdminStart = legacyServer.indexOf('app.post("/api/admin/login"');
+const retiredAdminSection = legacyServer.slice(retiredAdminStart, retiredAdminStart + 400);
+if (retiredAdminStart < 0 || !retiredAdminSection.includes("res.status(410)") || retiredAdminSection.includes("token:")) {
+    throw Error("Legacy one-step admin login must remain retired with HTTP 410");
+}
+
 for (const endpoint of [
-    "/api/admin/logout", "/api/admin/dashboard", "/api/admin/users",
-    "/api/admin/users/:id", "/api/admin/users/:id/premium",
+    "/api/admin/auth/me", "/api/admin/auth/logout", "/api/admin/dashboard",
+    "/api/admin/users", "/api/admin/users/:id", "/api/admin/users/:id/premium",
     "/api/admin/payments", "/api/admin/speaking-results", "/api/admin/settings"
 ]) {
     const start = legacyServer.indexOf('"' + endpoint + '"');
-    const section = legacyServer.slice(start, start + 260);
-    if (!section.includes("requireAdmin")) throw Error("Admin route is not guarded: " + endpoint);
+    const section = legacyServer.slice(start, start + 320);
+    if (start < 0 || !section.includes("requireAdmin")) {
+        throw Error("Admin route is not guarded by the cookie session: " + endpoint);
+    }
 }
 
 console.log(
